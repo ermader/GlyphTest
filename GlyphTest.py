@@ -7,6 +7,7 @@ Created on June 18, 2020
 """
 
 from fontTools.ttLib import ttFont
+import ContourPlotter
 
 class Glyph(object):
     def handleSegment(self, segment):
@@ -78,6 +79,13 @@ def handleSegment(segment):
 def main():
     font = ttFont.TTFont("/Users/emader/PycharmProjects/IndicShaper/Fonts/Noto-2019/NotoSansDevanagari-Regular.ttf")
     kaGlyph = Glyph(font, "kadeva")
+
+    cp = ContourPlotter.ContourPlotter()
+
+    for contour in kaGlyph.contours:
+        cp.drawContour(contour)
+
+    print(cp.generateFinalImage())
 
     print(f"Number of contours = {len(kaGlyph.contours)}")
     print(f"Number of segments = {len(kaGlyph.contours[0])}")
