@@ -12,7 +12,7 @@ import ContourPlotter
 class Glyph(object):
     def handleSegment(self, segment):
         if len(segment) <= 3:
-            segments.append(segment)
+            self.segments.append(segment)
         else:
             # a starting on-curve point, two or more off-curve points, and a final on-curve point
             startPoint = segment[0]
@@ -38,8 +38,8 @@ class Glyph(object):
         yMax = headTable.yMax
         self.bounds = (xMin, yMin, xMax, yMax)
         self.glyfTable = font["glyf"]
-        self.glyph = self.glyfTable["kadeva"]
-        self.glyphID = self.glyfTable.getGlyphID("kadeva")
+        self.glyph = self.glyfTable["kassadeva"]
+        self.glyphID = self.glyfTable.getGlyphID("kassadeva")
 
         self.contours = []
 
@@ -57,38 +57,20 @@ class Glyph(object):
 
             contour.append(contour[0])
             contourFlags.append(contourFlags[0])
-            start = limitPoint
+            startPoint = limitPoint
 
             while len(contour) > 1:
                 firstOnCurve = contourFlags.index(1)
                 nextOnCurve = contourFlags.index(1, firstOnCurve + 1)
-                handleSegment(contour[firstOnCurve:nextOnCurve + 1])
+                self.handleSegment(contour[firstOnCurve:nextOnCurve + 1])
                 contour = contour[nextOnCurve:]
                 contourFlags = contourFlags[nextOnCurve:]
 
-            self.contours.append(segments)
-
-
-
-
-segments = []
-def handleSegment(segment):
-    if len(segment) <= 3:
-        segments.append(segment)
-    else:
-        # a starting on-curve point, two or more off-curve points, and a final on-curve point
-        startPoint = segment[0]
-        for i in range(1, len(segment) - 2):
-            p1x, p1y = segment[i]
-            p2x, p2y = segment[i+1]
-            impliedPoint = (0.5 * (p1x + p2x), 0.5 * (p1y + p2y))
-            segments.append((startPoint, segment[i], impliedPoint))
-            startPoint = impliedPoint
-        segments.append((startPoint, segment[-2], segment[-1]))
+            self.contours.append(self.segments)
 
 def main():
     font = ttFont.TTFont("/Users/emader/PycharmProjects/IndicShaper/Fonts/Noto-2019/NotoSansDevanagari-Regular.ttf")
-    kaGlyph = Glyph(font, "kadeva")
+    kaGlyph = Glyph(font, "kassadeva")
 
     cp = ContourPlotter.ContourPlotter(kaGlyph.bounds)
 
@@ -96,7 +78,7 @@ def main():
         cp.drawContour(contour)
 
     image = cp.generateFinalImage()
-    file = open("kaglyph.svg", "wt", encoding="UTF-8")
+    file = open("kassaglyph.svg", "wt", encoding="UTF-8")
     file.write(image)
     file.close()
 

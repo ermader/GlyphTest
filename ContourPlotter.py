@@ -61,5 +61,5 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
                     self._pen = segment[2]
 
         path += "".join(commands)
-        path += f"' fill='none' {self._strokeAttributes()}/>"
+        path += f"Z' fill='none' {self._strokeAttributes()}/>"
         self._content.append(path)
