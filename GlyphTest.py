@@ -26,7 +26,17 @@ class Glyph(object):
 
     def __init__(self, font, glyphName):
         self.font = font
-        self.unitsPerEm = font['head'].unitsPerEm
+        headTable = font['head']
+        hheaTable = font['hhea']
+        self.ascent = hheaTable.ascent
+        self.descent = hheaTable.descent
+        self.maxAdvanceWidth = hheaTable.advanceWidthMax
+        self.unitsPerEm = headTable.unitsPerEm
+        xMin = headTable.xMin
+        yMin = headTable.yMin
+        xMax = headTable.xMax
+        yMax = headTable.yMax
+        self.bounds = (xMin, yMin, xMax, yMax)
         self.glyfTable = font["glyf"]
         self.glyph = self.glyfTable["kadeva"]
         self.glyphID = self.glyfTable.getGlyphID("kadeva")
@@ -36,7 +46,7 @@ class Glyph(object):
         halfEm = self.unitsPerEm // 2
         coords, endPoints, flags = self.glyph.getCoordinates(self.glyfTable)
         coords = coords.copy()
-        coords.translate((halfEm, halfEm))
+        # coords.translate((halfEm, halfEm))
 
         startPoint = 0
         for endPoint in endPoints:
@@ -80,48 +90,18 @@ def main():
     font = ttFont.TTFont("/Users/emader/PycharmProjects/IndicShaper/Fonts/Noto-2019/NotoSansDevanagari-Regular.ttf")
     kaGlyph = Glyph(font, "kadeva")
 
-    cp = ContourPlotter.ContourPlotter()
+    cp = ContourPlotter.ContourPlotter(kaGlyph.bounds)
 
     for contour in kaGlyph.contours:
         cp.drawContour(contour)
 
-    print(cp.generateFinalImage())
+    image = cp.generateFinalImage()
+    file = open("kaglyph.svg", "wt", encoding="UTF-8")
+    file.write(image)
+    file.close()
 
     print(f"Number of contours = {len(kaGlyph.contours)}")
     print(f"Number of segments = {len(kaGlyph.contours[0])}")
-    # unitsPerEm = font["head"].unitsPerEm
-    # halfEm = unitsPerEm // 2
-    # glyfTable = font["glyf"]
-    # kaGlyph = glyfTable["kadeva"]
-    # kaGlyphID = glyfTable.getGlyphID("kadeva")
-    # print(f"UnitsPerEm = {unitsPerEm}")
-    # print(f"Glyph ID of 'kadeva' = {kaGlyphID}")
-    #
-    # coords, endPoints, flags = kaGlyph.getCoordinates(glyfTable)
-    # coords = coords.copy()
-    # coords.translate((halfEm, halfEm))
-    #
-    # print(f"Number of coordinates = {len(coords)}")
-    # print(f"Number of contours = {len(endPoints)}")
-    #
-    # startPoint = 0
-    # for endPoint in endPoints:
-    #     limitPoint = endPoint + 1
-    #     contour = coords[startPoint:limitPoint]
-    #     contourFlags = [flag & 0x1 for flag in flags[startPoint:limitPoint]]
-    #
-    #     contour.append(contour[0])
-    #     contourFlags.append(contourFlags[0])
-    #     start = limitPoint
-    #
-    #     while len(contour) > 1:
-    #         firstOnCurve = contourFlags.index(1)
-    #         nextOnCurve = contourFlags.index(1, firstOnCurve + 1)
-    #         handleSegment(contour[firstOnCurve:nextOnCurve + 1])
-    #         contour = contour[nextOnCurve:]
-    #         contourFlags = contourFlags[nextOnCurve:]
-    #
-    #     print(f"Number of segments = {len(segments)}")
 
 if __name__ == "__main__":
     main()

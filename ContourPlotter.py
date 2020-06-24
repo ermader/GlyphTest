@@ -11,9 +11,9 @@ from FontDocTools import GlyphPlotterEngine
 class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
     lastCommand = ""
 
-    def __init__(self):
+    def __init__(self, bounds):
         GlyphPlotterEngine.GlyphPlotterEngine.__init__(self)
-        self._boundsAggregator.addBounds((0, 0, 2000, 2000))  # a major hack...
+        self._boundsAggregator.addBounds(bounds)
 
     def pointToString(self, point):
         return " ".join([str(i) for i in point])
