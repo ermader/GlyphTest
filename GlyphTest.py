@@ -83,7 +83,7 @@ def main():
     file.close()
 
     print(f"Number of contours = {len(kaGlyph.contours)}")
-    print(f"Number of segments = {len(kaGlyph.contours[0])}")
+    print(f"Number of segments = {[len(contour) for contour in kaGlyph.contours]}")
 
 if __name__ == "__main__":
     main()
