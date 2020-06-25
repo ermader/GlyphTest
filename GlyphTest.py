@@ -6,8 +6,70 @@ Created on June 18, 2020
 @author Eric Mader
 """
 
+from os.path import basename
+from sys import argv, exit, stderr
 from fontTools.ttLib import ttFont
+from FontDocTools.ArgumentIterator import ArgumentIterator
 import ContourPlotter
+
+class GlyphTestArgs:
+    """\
+    Interprets and checks the command line options for the GlyphTest tool,
+    and condenses them into a specification for what the tool should do.
+    """
+
+    def __init__(self):
+        self.fontFile = None
+        self.fontName = None
+        self.glyphName = None
+
+    def completeInit(self):
+        """\
+        Complete initialization of a shaping spec after some values have
+        been set from the argument list.
+        Check that required data has been provided and fill in defaults for others.
+        Raise ValueError if required options are missing, or invalid option
+        combinations are detected.
+        """
+
+        if not self.fontFile:
+            raise ValueError("Missing “--font” option.")
+        if not self.glyphName:
+            raise ValueError("Missing “--glyphName” option.")
+
+
+
+    @classmethod
+    def forArguments(cls, argumentList):
+        """\
+        Return a new GlyphShaperSpec object representing the given
+        argument list.
+        Raise ValueError if the argument list is missing required options,
+        is missing required extra arguments for options,
+        has unsupported options, or has unsupported extra arguments.
+        """
+
+        # pylint: disable=too-many-branches
+
+        arguments = ArgumentIterator(argumentList)
+        args = GlyphTestArgs()
+        argumentsSeen = {}
+
+        for argument in arguments:
+            if argument in argumentsSeen:
+                raise ValueError("Duplicate option “" + argument + "”.")
+            argumentsSeen[argument] = True
+
+            if argument == "--font":
+                (args.fontFile, args.fontName) = arguments.nextExtraAsFont("font")
+            elif argument == "--glyphName":
+                extra = arguments.nextExtra("glyph name")
+                args.glyphName = extra
+            else:
+                raise ValueError(f"Unrecognized option “{argument}”.")
+
+        args.completeInit()
+        return args
 
 class Glyph(object):
     def handleSegment(self, segment):
@@ -38,8 +100,8 @@ class Glyph(object):
         yMax = headTable.yMax
         self.bounds = (xMin, yMin, xMax, yMax)
         self.glyfTable = font["glyf"]
-        self.glyph = self.glyfTable["kassadeva"]
-        self.glyphID = self.glyfTable.getGlyphID("kassadeva")
+        self.glyph = self.glyfTable[glyphName]
+        self.glyphID = self.glyfTable.getGlyphID(glyphName)
 
         self.contours = []
 
@@ -69,21 +131,53 @@ class Glyph(object):
             self.contours.append(self.segments)
 
 def main():
-    font = ttFont.TTFont("/Users/emader/PycharmProjects/IndicShaper/Fonts/Noto-2019/NotoSansDevanagari-Regular.ttf")
-    kaGlyph = Glyph(font, "kassadeva")
+    argumentList = argv
+    programName = basename(argumentList.pop(0))
+    if len(argumentList) == 0:
+        print(__doc__, file=stderr)
+        exit(1)
+    try:
+        args = GlyphTestArgs.forArguments(argumentList)
+    except ValueError as error:
+        print(programName + ": " + str(error), file=stderr)
+        exit(1)
 
-    cp = ContourPlotter.ContourPlotter(kaGlyph.bounds)
+    try:
+        font = ttFont.TTFont(args.fontFile)
+        glyph = Glyph(font, args.glyphName)
 
-    for contour in kaGlyph.contours:
-        cp.drawContour(contour)
+        cp = ContourPlotter.ContourPlotter(glyph.bounds)
 
-    image = cp.generateFinalImage()
-    file = open("kassaglyph.svg", "wt", encoding="UTF-8")
-    file.write(image)
-    file.close()
+        for contour in glyph.contours:
+            cp.drawContour(contour)
 
-    print(f"Number of contours = {len(kaGlyph.contours)}")
-    print(f"Number of segments = {[len(contour) for contour in kaGlyph.contours]}")
+        image = cp.generateFinalImage()
+        imageFile = open(args.glyphName + ".svg", "wt", encoding="UTF-8")
+        imageFile.write(image)
+        imageFile.close()
+
+        print(f"Number of contours = {len(glyph.contours)}")
+        print(f"Number of segments = {[len(contour) for contour in glyph.contours]}")
+
+    except ValueError as error:
+        print(programName + ": " + str(error), file=stderr)
+        exit(1)
+
+    # font = ttFont.TTFont("/Users/emader/PycharmProjects/IndicShaper/Fonts/Noto-2019/NotoSansDevanagari-Regular.ttf")
+    # kaGlyph = Glyph(font, "kassadeva")
+    #
+    # cp = ContourPlotter.ContourPlotter(kaGlyph.bounds)
+    #
+    # for contour in kaGlyph.contours:
+    #     cp.drawContour(contour)
+    #
+    # image = cp.generateFinalImage()
+    # file = open("kassaglyph.svg", "wt", encoding="UTF-8")
+    # file.write(image)
+    # file.close()
+    #
+    # print(f"Number of contours = {len(kaGlyph.contours)}")
+    # print(f"Number of segments = {[len(contour) for contour in kaGlyph.contours]}")
 
 if __name__ == "__main__":
     main()
