@@ -8,7 +8,8 @@ Created on June 18, 2020
 
 from os.path import basename
 from sys import argv, exit, stderr
-from fontTools.ttLib import ttFont
+from logging import getLogger, ERROR
+from fontTools.ttLib import ttFont, TTLibError
 from FontDocTools.ArgumentIterator import ArgumentIterator
 import ContourPlotter
 
@@ -22,6 +23,8 @@ class GlyphTestArgs:
         self.fontFile = None
         self.fontName = None
         self.glyphName = None
+        self.glyphID = None
+        self.character = None
 
     def completeInit(self):
         """\
@@ -34,8 +37,8 @@ class GlyphTestArgs:
 
         if not self.fontFile:
             raise ValueError("Missing “--font” option.")
-        if not self.glyphName:
-            raise ValueError("Missing “--glyphName” option.")
+        if not self.glyphName and not self.glyphID and not self.character:
+            raise ValueError("Missing “--glyphName, --glyphID or --character” option.")
 
 
 
@@ -65,6 +68,10 @@ class GlyphTestArgs:
             elif argument == "--glyphName":
                 extra = arguments.nextExtra("glyph name")
                 args.glyphName = extra
+            elif argument == "--glyphID":
+                args.glyphID = arguments.nextExtraAsPosInt("glyph ID")
+            elif argument == "--character":
+                args.character = arguments.nextExtra("character")
             else:
                 raise ValueError(f"Unrecognized option “{argument}”.")
 
@@ -105,10 +112,8 @@ class Glyph(object):
 
         self.contours = []
 
-        halfEm = self.unitsPerEm // 2
         coords, endPoints, flags = self.glyph.getCoordinates(self.glyfTable)
         coords = coords.copy()
-        # coords.translate((halfEm, halfEm))
 
         startPoint = 0
         for endPoint in endPoints:
@@ -130,6 +135,70 @@ class Glyph(object):
 
             self.contours.append(self.segments)
 
+def _getFontName(ttFont, nameID):
+    nameRecord = ttFont["name"].getName(nameID, 3, 1) # PostScriptName, Windows, Unicode BMP
+    if nameRecord is None:
+        nameRecord = ttFont["name"].getName(nameID, 1, 0) # PostScriptName, Mac, Roman
+    if nameRecord is not None:
+        return str(nameRecord)
+    return None
+
+def _getPostScriptName(ttFont):
+    return _getFontName(ttFont, 6)
+    # postScriptNameRecord = ttFont["name"].getName(6, 3, 1) # PostScriptName, Windows, Unicode BMP
+    # if postScriptNameRecord is None:
+    #     postScriptNameRecord = ttFont["name"].getName(6, 1, 0) # PostScriptName, Mac, Roman
+    # if postScriptNameRecord is not None:
+    #     return str(postScriptNameRecord)
+    # return None
+
+def _getFullName(ttFont):
+    return _getFontName(ttFont, 4)
+
+def openFont(args):
+    # TTFont sometimes logs warnings while opening fonts that we’re
+    # not concerned with. Let’s turn them off.
+    getLogger("fontTools.ttLib").setLevel(ERROR)
+
+    # Now onward with our own business.
+    if args.fontFile.endswith(".ttf") or args.fontFile.endswith(".otf"):
+        font = ttFont.TTFont(args.fontFile)
+    else:
+        assert args.fontFile.endswith(".ttc") or args.fontFile.endswith(".otc")
+        # assert (args.fontName is None) == (args.fontNumber is not None)
+        if args.fontName:
+            fontNumber = 0
+            fontNames = []
+            while True:
+                try:
+                    font = ttFont.TTFont(args.fontFile, fontNumber=fontNumber)
+                except TTLibError:
+                    raise ValueError(
+                        "Could not find font " + args.fontName + " within file " + args.fontFile + ". Available names: " + ", ".join(
+                            fontNames) + ".")
+                postScriptName = _getPostScriptName(font)
+                if postScriptName == args.fontName:
+                    break
+                fontNames.append(postScriptName)
+                font.close()
+                fontNumber += 1
+        # else:
+        #     try:
+        #         font = ttFont.TTFont(args.fontFile, fontNumber=args.fontNumber)
+        #     except TTLibError as error:
+        #         if fontNumber > 0:
+        #             raise StopIteration()
+        #         raise error
+
+    return font
+
+def getGlyphName(args, font):
+    if args.glyphName: return args.glyphName
+    if args.glyphID: return font.getGlyphName(args.glyphID)
+    if args.character: return font.getBestCmap()[ord(args.character)]
+
+    return None
+
 def main():
     argumentList = argv
     programName = basename(argumentList.pop(0))
@@ -143,8 +212,13 @@ def main():
         exit(1)
 
     try:
-        font = ttFont.TTFont(args.fontFile)
-        glyph = Glyph(font, args.glyphName)
+        font = openFont(args)
+        glyphName = getGlyphName(args, font)
+        glyph = Glyph(font, glyphName)
+
+        fontBasename = basename(args.fontFile)
+        fontPostscriptName = _getPostScriptName(font)
+        print(f"Drawing glyph {glyphName} from font {fontBasename}/{fontPostscriptName}")
 
         cp = ContourPlotter.ContourPlotter(glyph.bounds)
 
@@ -152,7 +226,10 @@ def main():
             cp.drawContour(contour)
 
         image = cp.generateFinalImage()
-        imageFile = open(args.glyphName + ".svg", "wt", encoding="UTF-8")
+
+        fullName = _getFullName(font)
+        if fullName.startswith("."): fullName = fullName[1:]
+        imageFile = open(f"{fullName}_{glyphName}.svg", "wt", encoding="UTF-8")
         imageFile.write(image)
         imageFile.close()
 
@@ -162,22 +239,6 @@ def main():
     except ValueError as error:
         print(programName + ": " + str(error), file=stderr)
         exit(1)
-
-    # font = ttFont.TTFont("/Users/emader/PycharmProjects/IndicShaper/Fonts/Noto-2019/NotoSansDevanagari-Regular.ttf")
-    # kaGlyph = Glyph(font, "kassadeva")
-    #
-    # cp = ContourPlotter.ContourPlotter(kaGlyph.bounds)
-    #
-    # for contour in kaGlyph.contours:
-    #     cp.drawContour(contour)
-    #
-    # image = cp.generateFinalImage()
-    # file = open("kassaglyph.svg", "wt", encoding="UTF-8")
-    # file.write(image)
-    # file.close()
-    #
-    # print(f"Number of contours = {len(kaGlyph.contours)}")
-    # print(f"Number of segments = {[len(contour) for contour in kaGlyph.contours]}")
 
 if __name__ == "__main__":
     main()
