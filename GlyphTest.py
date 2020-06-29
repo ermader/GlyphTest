@@ -37,8 +37,8 @@ class GlyphTestArgs:
 
         if not self.fontFile:
             raise ValueError("Missing “--font” option.")
-        if not self.glyphName and not self.glyphID and not self.character:
-            raise ValueError("Missing “--glyphName, --glyphID or --character” option.")
+        if sum([self.glyphName is not None, self.glyphID is not None, self.character is not None]) != 1:
+            raise ValueError("Just one of --glyphName, --glyphID, --character must be sepcified.")
 
 
 
