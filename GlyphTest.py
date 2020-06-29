@@ -190,6 +190,9 @@ def openFont(args):
         #             raise StopIteration()
         #         raise error
 
+    if not "glyf" in font:
+        raise ValueError(f"{_getFullName(font)} does not have a 'glyf' table.")
+
     return font
 
 def getGlyphName(args, font):
