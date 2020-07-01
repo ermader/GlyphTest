@@ -152,7 +152,7 @@ class Glyph(object):
             self.contours.append(self.segments)
 
 def _getFontName(ttFont, nameID):
-    nameRecord = ttFont["name"].getName(nameID, 3, 1) # PostScriptName, Windows, Unicode BMP
+    nameRecord = ttFont["name"].getName(nameID, 3, 1, 0x0409) # PostScriptName, Windows, Unicode BMP, English
     if nameRecord is None:
         nameRecord = ttFont["name"].getName(nameID, 1, 0) # PostScriptName, Mac, Roman
     if nameRecord is not None:
