@@ -19,8 +19,8 @@ class GlyphTestAgrumentIterator(ArgumentIterator):
         """\
         Returns the next extra argument as a character code: either a hex
         integer preceded by an optional 0x or U+, or a single character.
-        Raise ValueError if there’s no more argument, or if the next
-        argument starts with “--”, or if it’s not a positive integer value.
+        Raise ValueError if there are no more arguments, or if the next
+        argument starts with “--”, or if the char code is zero.
         """
         charCode = None
         value = self.nextExtra(valueName)
