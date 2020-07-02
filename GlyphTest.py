@@ -15,9 +15,10 @@ from FontDocTools.ArgumentIterator import ArgumentIterator
 import ContourPlotter
 
 class GlyphTestAgrumentIterator(ArgumentIterator):
-    def nexExtraAsCharCode(self, valueName):
+    def nextExtraAsCharCode(self, valueName):
         """\
-        Returns the next extra argument as a positive hex integer.
+        Returns the next extra argument as a character code: either a hex
+        integer preceded by an optional 0x or U+, or a single character.
         Raise ValueError if there’s no more argument, or if the next
         argument starts with “--”, or if it’s not a positive integer value.
         """
@@ -92,7 +93,7 @@ class GlyphTestArgs:
             elif argument == "--glyphID":
                 args.glyphID = arguments.nextExtraAsPosInt("glyph ID")
             elif argument == "--charCode":
-                args.charCode = arguments.nexExtraAsCharCode("character code")
+                args.charCode = arguments.nextExtraAsCharCode("character code")
             else:
                 raise ValueError(f"Unrecognized option “{argument}”.")
 
