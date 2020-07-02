@@ -15,16 +15,24 @@ from FontDocTools.ArgumentIterator import ArgumentIterator
 import ContourPlotter
 
 class GlyphTestAgrumentIterator(ArgumentIterator):
-    def nexExtraAsHexNumber(self, valueName):
+    def nexExtraAsCharCode(self, valueName):
         """\
         Returns the next extra argument as a positive hex integer.
         Raise ValueError if there’s no more argument, or if the next
         argument starts with “--”, or if it’s not a positive integer value.
         """
+        charCode = None
         value = self.nextExtra(valueName)
-        if not fullmatch(r"[0-9A-Za-z]+", value) or int(value, 16) == 0:
-            raise ValueError(f"Argument “{valueName}” for option “{self._optionName}” should be a positive hex integer; got “{value}”.")
-        return int(value, 16)
+        m = fullmatch(r"(?:0x|U\+)?([0-9A-Za-z]+)", value)
+        if m:
+            v = m.groups()[0]
+            charCode = int(v, 16)
+        elif fullmatch(r".", value):
+                charCode = ord(value)
+
+        if not charCode or charCode == 0:
+            raise ValueError(f"Argument “{valueName}” for option “{self._optionName}” should be a positive hex integer or a single character; got “{value}”.")
+        return charCode
 
 class GlyphTestArgs:
     """\
@@ -38,7 +46,6 @@ class GlyphTestArgs:
         self.glyphName = None
         self.glyphID = None
         self.charCode = None
-        self.character = None
 
     def completeInit(self):
         """\
@@ -51,8 +58,8 @@ class GlyphTestArgs:
 
         if not self.fontFile:
             raise ValueError("Missing “--font” option.")
-        if sum([self.glyphName is not None, self.glyphID is not None, self.charCode is not None, self.character is not None]) != 1:
-            raise ValueError("One of --glyphName, --glyphID, --charCode, --character must be sepcified.")
+        if sum([self.glyphName is not None, self.glyphID is not None, self.charCode is not None]) != 1:
+            raise ValueError("One of --glyphName, --glyphID, --charCode must be sepcified.")
 
 
 
@@ -85,9 +92,7 @@ class GlyphTestArgs:
             elif argument == "--glyphID":
                 args.glyphID = arguments.nextExtraAsPosInt("glyph ID")
             elif argument == "--charCode":
-                args.charCode = arguments.nexExtraAsHexNumber("character code")
-            elif argument == "--character":
-                args.character = arguments.nextExtra("character")
+                args.charCode = arguments.nexExtraAsCharCode("character code")
             else:
                 raise ValueError(f"Unrecognized option “{argument}”.")
 
@@ -215,7 +220,6 @@ def getGlyphName(args, font):
     if args.glyphName: return args.glyphName
     if args.glyphID: return font.getGlyphName(args.glyphID)
     if args.charCode: return font.getBestCmap()[args.charCode]
-    if args.character: return font.getBestCmap()[ord(args.character)]
 
     return None
 
