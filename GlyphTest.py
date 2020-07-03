@@ -14,27 +14,6 @@ from fontTools.ttLib import ttFont, TTLibError
 from FontDocTools.ArgumentIterator import ArgumentIterator
 import ContourPlotter
 
-class GlyphTestAgrumentIterator(ArgumentIterator):
-    def nextExtraAsCharCode(self, valueName):
-        """\
-        Returns the next extra argument as a character code: either a hex
-        integer preceded by an optional 0x or U+, or a single character.
-        Raise ValueError if there are no more arguments, or if the next
-        argument starts with “--”, or if the char code is zero.
-        """
-        charCode = None
-        value = self.nextExtra(valueName)
-        m = fullmatch(r"(?:0x|U\+)?([0-9A-Za-z]+)", value)
-        if m:
-            v = m.groups()[0]
-            charCode = int(v, 16)
-        elif len(value) == 1:
-                charCode = ord(value)
-
-        if not charCode or charCode == 0:
-            raise ValueError(f"Argument “{valueName}” for option “{self._optionName}” should be a positive hex integer or a single character; got “{value}”.")
-        return charCode
-
 class GlyphTestArgs:
     """\
     Interprets and checks the command line options for the GlyphTest tool,
@@ -60,9 +39,20 @@ class GlyphTestArgs:
         if not self.fontFile:
             raise ValueError("Missing “--font” option.")
         if sum([self.glyphName is not None, self.glyphID is not None, self.charCode is not None]) != 1:
-            raise ValueError("One of --glyphName, --glyphID, --charCode must be sepcified.")
+            raise ValueError("Missing “--glyph”")
 
 
+    @classmethod
+    def getHexCharCode(cls, arg):
+        if not fullmatch(r"[0-9a-fA-F]{4,6}", arg) or int(arg, 16) == 0:
+            raise ValueError(f"Char code must be a non-zero hex number; got {arg}")
+        return int(arg, 16)
+
+    @classmethod
+    def getGlyphID(cls, arg):
+        if not fullmatch(r"[0-9]{1,5}", arg) or int(arg) == 0:
+            raise ValueError(f"GlyphID must be a positive integer; got {arg}")
+        return int(arg)
 
     @classmethod
     def forArguments(cls, argumentList):
@@ -76,7 +66,7 @@ class GlyphTestArgs:
 
         # pylint: disable=too-many-branches
 
-        arguments = GlyphTestAgrumentIterator(argumentList)
+        arguments = ArgumentIterator(argumentList)
         args = GlyphTestArgs()
         argumentsSeen = {}
 
@@ -87,13 +77,16 @@ class GlyphTestArgs:
 
             if argument == "--font":
                 (args.fontFile, args.fontName) = arguments.nextExtraAsFont("font")
-            elif argument == "--glyphName":
-                extra = arguments.nextExtra("glyph name")
-                args.glyphName = extra
-            elif argument == "--glyphID":
-                args.glyphID = arguments.nextExtraAsPosInt("glyph ID")
-            elif argument == "--charCode":
-                args.charCode = arguments.nextExtraAsCharCode("character code")
+            elif argument == "--glyph":
+                extra = arguments.nextExtra("glyph")
+                if len(extra) == 1:
+                    args.charCode = ord(extra)
+                elif extra[0] == "/":
+                    args.glyphName = extra[1:]
+                elif extra[0] == "u":
+                    args.charCode = cls.getHexCharCode(extra[1:])
+                elif extra[0:3] == "gid":
+                    args.glyphID = cls.getGlyphID(extra[3:])
             else:
                 raise ValueError(f"Unrecognized option “{argument}”.")
 
@@ -167,12 +160,6 @@ def _getFontName(ttFont, nameID):
 
 def _getPostScriptName(ttFont):
     return _getFontName(ttFont, 6)
-    # postScriptNameRecord = ttFont["name"].getName(6, 3, 1) # PostScriptName, Windows, Unicode BMP
-    # if postScriptNameRecord is None:
-    #     postScriptNameRecord = ttFont["name"].getName(6, 1, 0) # PostScriptName, Mac, Roman
-    # if postScriptNameRecord is not None:
-    #     return str(postScriptNameRecord)
-    # return None
 
 def _getFullName(ttFont):
     return _getFontName(ttFont, 4)
