@@ -28,7 +28,7 @@ class GlyphTestAgrumentIterator(ArgumentIterator):
         if m:
             v = m.groups()[0]
             charCode = int(v, 16)
-        elif fullmatch(r".", value):
+        elif len(value) == 1:
                 charCode = ord(value)
 
         if not charCode or charCode == 0:
