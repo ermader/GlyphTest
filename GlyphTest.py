@@ -95,6 +95,12 @@ class GlyphTestArgs:
 
 class Glyph(object):
     def handleSegment(self, segment):
+        for x, y in segment:
+            self.minX = min(self.minX, x)
+            self.minY = min(self.minY, y)
+            self.maxX = max(self.maxX, x)
+            self.maxY = max(self.maxY, y)
+
         if len(segment) <= 3:
             self.segments.append(segment)
         else:
@@ -116,15 +122,12 @@ class Glyph(object):
         self.descent = hheaTable.descent
         self.maxAdvanceWidth = hheaTable.advanceWidthMax
         self.unitsPerEm = headTable.unitsPerEm
-        xMin = headTable.xMin
-        yMin = headTable.yMin
-        xMax = headTable.xMax
-        yMax = headTable.yMax
-        self.bounds = (xMin, yMin, xMax, yMax)
         self.glyfTable = font["glyf"]
         self.glyph = self.glyfTable[glyphName]
         self.glyphID = self.glyfTable.getGlyphID(glyphName)
 
+        self.minX = self.minY = 65536
+        self.maxX = self.maxY = -65536
         self.contours = []
 
         coords, endPoints, flags = self.glyph.getCoordinates(self.glyfTable)
@@ -149,6 +152,8 @@ class Glyph(object):
                 contourFlags = contourFlags[nextOnCurve:]
 
             self.contours.append(self.segments)
+
+        self.bounds = (self.minX, self.minY, self.maxX, self.maxY)
 
 def _getFontName(ttFont, nameID):
     nameRecord = ttFont["name"].getName(nameID, 3, 1, 0x0409) # PostScriptName, Windows, Unicode BMP, English
