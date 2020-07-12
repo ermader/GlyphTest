@@ -220,6 +220,14 @@ def pointOnLine(point, line):
 
     return bounds.enclosesPoint(point) and slope(line) == slope([line[0], point])
 
+def rotatePointAbout(point, about):
+    px, py = point
+    a, b = about
+
+    return (a+b-py, px-a+b)
+
+
+
 # Helvetica Neue H
 hContours = [[[(78, 714), (78, 0)], [(78, 0), (173, 0)], [(173, 0), (173, 327)], [(173, 327), (549, 327)], [(549, 327), (549, 0)], [(549, 0), (644, 0)], [(644, 0), (644, 714)], [(644, 714), (549, 714)], [(549, 714), (549, 407)], [(549, 407), (173, 407)], [(173, 407), (173, 714)], [(173, 714), (78, 714)]]]
 xContours = [[[(248, 367), (0, 0)], [(0, 0), (106, 0)], [(106, 0), (304, 295)], [(304, 295), (496, 0)], [(496, 0), (612, 0)], [(612, 0), (361, 367)], [(361, 367), (597, 714)], [(597, 714), (491, 714)], [(491, 714), (305, 435)], [(305, 435), (127, 714)], [(127, 714), (13, 714)], [(13, 714), (248, 367)]]]
@@ -257,6 +265,7 @@ def test():
     hVerticals = verticalLinesCrossing(hContours[0], hBounds.height / 4)
     hStroke = BoundsRectangle(*hVerticals[0], *hVerticals[1])
     print(f"vertical stroke width of Helvetica Neue H = {hStroke.width}")
+    print(f"rotated point = {rotatePointAbout(hVerticals[0][1], hVerticals[0][0])}")
 
     hHorizontals = horizontalLinesCrossing(hContours[0], hBounds.width / 2)
     vStroke = BoundsRectangle(*hHorizontals[0], *hHorizontals[1])
