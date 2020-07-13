@@ -13,6 +13,7 @@ from re import fullmatch
 from fontTools.ttLib import ttFont, TTLibError
 from FontDocTools.ArgumentIterator import ArgumentIterator
 import ContourPlotter
+import PathUtilities
 
 class GlyphTestArgs:
     """\
@@ -26,6 +27,7 @@ class GlyphTestArgs:
         self.glyphName = None
         self.glyphID = None
         self.charCode = None
+        self.rotate = False
 
     def completeInit(self):
         """\
@@ -77,6 +79,8 @@ class GlyphTestArgs:
 
             if argument == "--font":
                 (args.fontFile, args.fontName) = arguments.nextExtraAsFont("font")
+            elif argument == "--rotate":
+                args.rotate = True
             elif argument == "--glyph":
                 extra = arguments.nextExtra("glyph")
                 if len(extra) == 1:
@@ -153,7 +157,7 @@ class Glyph(object):
 
             self.contours.append(self.segments)
 
-        self.bounds = (self.minX, self.minY, self.maxX, self.maxY)
+        self.bounds = PathUtilities.BoundsRectangle((self.minX, self.minY), (self.maxX, self.maxY))
 
 def _getFontName(ttFont, nameID):
     nameRecord = ttFont["name"].getName(nameID, 3, 1, 0x0409) # PostScriptName, Windows, Unicode BMP, English
@@ -237,16 +241,24 @@ def main():
         fontPostscriptName = _getPostScriptName(font)
         print(f"Drawing glyph {glyphName} from font {fontBasename}/{fontPostscriptName}")
 
-        cp = ContourPlotter.ContourPlotter(glyph.bounds)
+        contours = glyph.contours
+        boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+        centerPoint = boundingRect.centerPoint
 
-        for contour in glyph.contours:
+        if args.rotate:
+            contours = PathUtilities.rotateContoursAbout(contours, centerPoint)
+            boundingRect = boundingRect.rotateAbout(centerPoint)
+        cp = ContourPlotter.ContourPlotter(boundingRect.points)
+
+        for contour in contours:
             cp.drawContour(contour)
 
         image = cp.generateFinalImage()
 
         fullName = _getFullName(font)
         if fullName.startswith("."): fullName = fullName[1:]
-        imageFile = open(f"{fullName}_{glyphName}.svg", "wt", encoding="UTF-8")
+
+        imageFile = open(f"{fullName}_{glyphName}{'_Rotated' if args.rotate else ''}.svg", "wt", encoding="UTF-8")
         imageFile.write(image)
         imageFile.close()
 

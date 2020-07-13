@@ -65,6 +65,10 @@ class BoundsRectangle:
     def centerPoint(self):
         return midpoint([self.leftTop, self.rightBottom])
 
+    @property
+    def points(self):
+        return (self.leftTop[0], self.leftTop[1], self.rightBottom[0], self.rightBottom[1])
+
     def enclosesPoint(self, point):
         left, top = self.leftTop
         right, bottom = self.rightBottom
@@ -110,6 +114,10 @@ class BoundsRectangle:
 
         if newRight < newLeft or newTop < newBottom: return None  # maybe want <=, >=?
         return BoundsRectangle((newLeft, newTop), (newRight, newBottom))
+
+    def rotateAbout(self, about):
+        rotatedLine = rotateSegmentAbout([self.leftTop, self.rightBottom], about)
+        return BoundsRectangle(rotatedLine[0], rotatedLine[1])
 
 
 def minMax(a, b):
@@ -226,6 +234,26 @@ def rotatePointAbout(point, about):
 
     return (a+b-py, px-a+b)
 
+def rotateSegmentAbout(segment, about):
+    rotated = []
+    for point in segment:
+        rotated.append(rotatePointAbout(point, about))
+
+    return rotated
+
+def rotateContourAbout(contour, about):
+    rotated = []
+    for segment in contour:
+        rotated.append(rotateSegmentAbout(segment, about))
+
+    return rotated
+
+def rotateContoursAbout(contours, about):
+    rotated = []
+    for contour in contours:
+        rotated.append(rotateContourAbout(contour, about))
+
+    return rotated
 
 
 # Helvetica Neue H
@@ -275,6 +303,19 @@ def test():
     diagonals = list(filter(lambda s: not isHorizontal(s), xContours[0]))
     diag_25 = list(filter(lambda s: crossesY(s, hBounds.height / 4), diagonals))
     diag_75 = list(filter(lambda s: crossesY(s, hBounds.height * .75), diagonals))
+
+    #
+    # To calculate the stroke width:
+    # 1) find the midpoint of the leftmost line
+    # 2) rotate the line 90 degrees around the midpoint
+    # 3) intersect the rotation with the 2nd line
+    # 4) width is the length of the line from the midpoint to the intersection
+    #
+    midPoint = midpoint(diagonals[0])
+    perpendicular = rotateSegmentAbout(diagonals[0], midPoint)
+    intersection = intersectionPoint(perpendicular, diagonals[1])
+    xWidth = length([midPoint, intersection])
+    print(f"stroke width of Helvetica Neue X = {xWidth}")
 
     print(f"diagonal strokes of Helvetica Neue X = {diagonals}")
     print()
