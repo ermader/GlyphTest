@@ -27,7 +27,7 @@ class GlyphTestArgs:
         self.glyphName = None
         self.glyphID = None
         self.charCode = None
-        self.rotate = False
+        self.rotate = None
 
     def completeInit(self):
         """\
@@ -80,7 +80,7 @@ class GlyphTestArgs:
             if argument == "--font":
                 (args.fontFile, args.fontName) = arguments.nextExtraAsFont("font")
             elif argument == "--rotate":
-                args.rotate = True
+                args.rotate = arguments.nextExtraAsPosInt("rotation")
             elif argument == "--glyph":
                 extra = arguments.nextExtra("glyph")
                 if len(extra) == 1:
@@ -246,8 +246,9 @@ def main():
         centerPoint = boundingRect.centerPoint
 
         if args.rotate:
-            contours = PathUtilities.rotateContoursAbout(contours, centerPoint)
-            boundingRect = boundingRect.rotateAbout(centerPoint)
+            contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate)
+            # boundingRect = boundingRect.rotateAbout(centerPoint)
+            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
         cp = ContourPlotter.ContourPlotter(boundingRect.points)
 
         for contour in contours:
@@ -258,7 +259,8 @@ def main():
         fullName = _getFullName(font)
         if fullName.startswith("."): fullName = fullName[1:]
 
-        imageFile = open(f"{fullName}_{glyphName}{'_Rotated' if args.rotate else ''}.svg", "wt", encoding="UTF-8")
+        rotated = f"_Rotated_{args.rotate}" if args.rotate else ""
+        imageFile = open(f"{fullName}_{glyphName}{rotated}.svg", "wt", encoding="UTF-8")
         imageFile.write(image)
         imageFile.close()
 

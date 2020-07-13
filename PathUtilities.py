@@ -228,32 +228,85 @@ def pointOnLine(point, line):
 
     return bounds.enclosesPoint(point) and slope(line) == slope([line[0], point])
 
-def rotatePointAbout(point, about):
-    px, py = point
+def sin(degrees):
+    return round(math.sin(math.radians(degrees)), 15)
+
+def cos(degrees):
+    return round(math.cos(math.radians(degrees)), 15)
+
+def multiplyRowByMatrix(row, matrix):
+    r1, r2, r3 = row
+    m1, m2, m3 = matrix
+    m11, m12, m13 = m1
+    m21, m22, m23 = m2
+    m31, m32, m33 = m3
+
+    return [r1*m11 + r2*m21 + r3*m31, r1*m12 + r2*m22 + r3*m32, r1*m13 + r2*m23 + r3*m33]
+
+def multiplyMatrixByMatrix(m1, m2):
+    result = []
+    for row in m1:
+        result.append(multiplyRowByMatrix(row, m2))
+
+    return result
+
+def rotationTransform(about, degrees):
     a, b = about
+    st = sin(degrees)
+    ct = cos(degrees)
+    m1 = [[1, 0, 0], [0, 1, 0], [-a, -b, 1]]
+    m2 = [[ct, st, 0], [-st, ct, 0], [0, 0, 1]]
+    m3 = [[1, 0, 0], [0, 1, 0], [a, b, 1]]
 
-    return (a+b-py, px-a+b)
+    pp = multiplyMatrixByMatrix(m1, m2)
+    return multiplyMatrixByMatrix(pp, m3)
 
-def rotateSegmentAbout(segment, about):
+def rotatePointByTransform(point, transform):
+    px, py = point
+    rp = multiplyRowByMatrix([px, py, 1], transform)
+
+    return (rp[0], rp[1])
+
+def rotateSegmentByTransform(segment, transform):
     rotated = []
     for point in segment:
-        rotated.append(rotatePointAbout(point, about))
+        rotated.append(rotatePointByTransform(point, transform))
 
     return rotated
 
-def rotateContourAbout(contour, about):
+def rotateContourByTransform(contour,transform):
     rotated = []
     for segment in contour:
-        rotated.append(rotateSegmentAbout(segment, about))
+        rotated.append(rotateSegmentByTransform(segment, transform))
 
     return rotated
 
-def rotateContoursAbout(contours, about):
+def rotateContoursByTransform(contours, transform):
     rotated = []
     for contour in contours:
-        rotated.append(rotateContourAbout(contour, about))
+        rotated.append(rotateContourByTransform(contour, transform))
 
     return rotated
+
+def rotatePointAbout(point, about, degrees=90):
+    rt = rotationTransform(about, degrees)
+
+    return rotatePointByTransform(point, rt)
+
+def rotateSegmentAbout(segment, about, degrees=90):
+    rt = rotationTransform(about, degrees)
+
+    return rotateSegmentByTransform(segment, rt)
+
+def rotateContourAbout(contour, about, degrees=90):
+    rt = rotationTransform(about, degrees)
+
+    return rotateContourByTransform(contour, rt)
+
+def rotateContoursAbout(contours, about, degrees=90):
+    rt = rotationTransform(about, degrees)
+
+    return rotateContoursByTransform(contours, rt)
 
 
 # Helvetica Neue H
@@ -332,5 +385,12 @@ def test():
     print(f"horizontal stroke width of New York H = {hStroke.height}")
     print(f"intersection of vertical and horizontal strokes = {vStroke.intersection(hStroke)}")
 
+    m1 = [[1, 0, 0], [0, 1, 0], [-4, -3, 1]]
+    m2 = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
+    m3 = [[1, 0, 0], [0, 1, 0], [4, 3, 1]]
+
+    pp = multiplyMatrixByMatrix(m1, m2)
+    fp = multiplyMatrixByMatrix(pp, m3)
+    print(fp)
 if __name__ == "__main__":
     test()
