@@ -416,8 +416,7 @@ def test():
     m2 = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
     m3 = [[1, 0, 0], [0, 1, 0], [4, 3, 1]]
 
-    pp = multiplyMatrixByMatrix(m1, m2)
-    fp = multiplyMatrixByMatrix(pp, m3)
+    fp = concatenateTransforms(m1, m2, m3)
     print(fp)
     print(multiplyRowByMatrix([8, 6, 1], fp))
 
