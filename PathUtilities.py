@@ -250,22 +250,45 @@ def multiplyMatrixByMatrix(m1, m2):
 
     return result
 
+def concatenateTransforms(*transforms):
+    concatenation = transforms[0]
+    for transform in transforms[1:]:
+        concatenation = multiplyMatrixByMatrix(concatenation, transform)
+
+    return concatenation
+
 def rotationTransform(about, degrees):
     a, b = about
-    st = sin(degrees)
-    ct = cos(degrees)
-    m1 = [[1, 0, 0], [0, 1, 0], [-a, -b, 1]]
-    m2 = [[ct, st, 0], [-st, ct, 0], [0, 0, 1]]
-    m3 = [[1, 0, 0], [0, 1, 0], [a, b, 1]]
+    st = sin(degrees)  # sin(theta)
+    ct = cos(degrees)  # cos(theta)
 
-    pp = multiplyMatrixByMatrix(m1, m2)
-    return multiplyMatrixByMatrix(pp, m3)
+    # Translate about point to origin
+    m1 = [
+        [  1,   0,   0],
+        [  0,   1,   0],
+        [ -a,  -b,   1]]
+
+    # rotate
+    m2 = [
+        [ ct,  st,   0],
+        [-st,  ct,   0],
+        [  0,   0,   1]]
+
+    # translate back to about point
+    m3 = [
+        [  1,   0,   0],
+        [  0,   1,   0],
+        [  a,   b,   1]]
+
+
+    return concatenateTransforms(m1, m2, m3)
 
 def rotatePointByTransform(point, transform):
     px, py = point
     rp = multiplyRowByMatrix([px, py, 1], transform)
 
-    return (rp[0], rp[1])
+    return (rp[0]/rp[2], rp[1]/rp[2])
+    # return (rp[0], rp[1])
 
 def rotateSegmentByTransform(segment, transform):
     rotated = []
@@ -385,6 +408,10 @@ def test():
     print(f"horizontal stroke width of New York H = {hStroke.height}")
     print(f"intersection of vertical and horizontal strokes = {vStroke.intersection(hStroke)}")
 
+    #
+    # Example 2-6 from Mathematical Elements for Computer Graphics
+    # Second Edition
+    #
     m1 = [[1, 0, 0], [0, 1, 0], [-4, -3, 1]]
     m2 = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
     m3 = [[1, 0, 0], [0, 1, 0], [4, 3, 1]]
@@ -392,5 +419,14 @@ def test():
     pp = multiplyMatrixByMatrix(m1, m2)
     fp = multiplyMatrixByMatrix(pp, m3)
     print(fp)
+    print(multiplyRowByMatrix([8, 6, 1], fp))
+
+    # mp = [
+    #     [  1,   0,   0],
+    #     [  0,   1,  .1],
+    #     [  0,   0,   1]
+    # ]
+    #
+    # print(rotateContourByTransform([[(10, 0), (20, 0)], [(20, 0), (20, 20)], [(20, 20), (10, 20)]], mp))
 if __name__ == "__main__":
     test()
