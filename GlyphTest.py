@@ -247,8 +247,17 @@ def main():
 
         if args.rotate:
             contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate)
-            # boundingRect = boundingRect.rotateAbout(centerPoint)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+        # else:
+        #     cpx, cpy = centerPoint
+        #     mp = [
+        #         [  1,     0,   0],
+        #         [  0,     1, .001],
+        #         [-cpx, -cpy,   1]
+        #     ]
+        #     contours = PathUtilities.transformContours(contours, mp)
+        #     boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+
         cp = ContourPlotter.ContourPlotter(boundingRect.points)
 
         for contour in contours:

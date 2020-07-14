@@ -8,7 +8,7 @@ Created on July 7, 2020
 
 import math
 
-class BoundsRectangle:
+class BoundsRectangle(object):
     def __init__(self, *points):
         right = top = -32768
         left = bottom = 32768
@@ -234,102 +234,127 @@ def sin(degrees):
 def cos(degrees):
     return round(math.cos(math.radians(degrees)), 15)
 
-def multiplyRowByMatrix(row, matrix):
-    r1, r2, r3 = row
-    m1, m2, m3 = matrix
-    m11, m12, m13 = m1
-    m21, m22, m23 = m2
-    m31, m32, m33 = m3
+class Transform(object):
+    @staticmethod
+    def multiplyRowByMatrix(row, matrix):
+        r1, r2, r3 = row
+        m1, m2, m3 = matrix
+        m11, m12, m13 = m1
+        m21, m22, m23 = m2
+        m31, m32, m33 = m3
 
-    return [r1*m11 + r2*m21 + r3*m31, r1*m12 + r2*m22 + r3*m32, r1*m13 + r2*m23 + r3*m33]
+        return [r1 * m11 + r2 * m21 + r3 * m31, r1 * m12 + r2 * m22 + r3 * m32, r1 * m13 + r2 * m23 + r3 * m33]
 
-def multiplyMatrixByMatrix(m1, m2):
-    result = []
-    for row in m1:
-        result.append(multiplyRowByMatrix(row, m2))
+    @staticmethod
+    def multiplyMatrixByMatrix(m1, m2):
+        result = []
+        for row in m1:
+            result.append(Transform.multiplyRowByMatrix(row, m2))
 
-    return result
+        return result
 
-def concatenateTransforms(*transforms):
-    concatenation = transforms[0]
-    for transform in transforms[1:]:
-        concatenation = multiplyMatrixByMatrix(concatenation, transform)
+    @staticmethod
+    def concatenateTransforms(*transforms):
+        concatenation = transforms[0]
+        for transform in transforms[1:]:
+            concatenation = Transform.multiplyMatrixByMatrix(concatenation, transform)
 
-    return concatenation
+        return concatenation
 
-def rotationTransform(about, degrees):
-    a, b = about
-    st = sin(degrees)  # sin(theta)
-    ct = cos(degrees)  # cos(theta)
+    @staticmethod
+    def sin(degrees):
+        # We use round() because sin values that should be zero
+        # are actually around 1e-16
+        return round(math.sin(math.radians(degrees)), 15)
 
-    # Translate about point to origin
-    m1 = [
-        [  1,   0,   0],
-        [  0,   1,   0],
-        [ -a,  -b,   1]]
+    @staticmethod
+    def cos(degrees):
+        # We use round() because cos values that should be zero
+        # are actually around 1e-16
+        return round(math.cos(math.radians(degrees)), 15)
 
-    # rotate
-    m2 = [
-        [ ct,  st,   0],
-        [-st,  ct,   0],
-        [  0,   0,   1]]
+    def __init__(self, *transforms):
+        self._transform = Transform.concatenateTransforms(*transforms)
 
-    # translate back to about point
-    m3 = [
-        [  1,   0,   0],
-        [  0,   1,   0],
-        [  a,   b,   1]]
+    @property
+    def transform(self):
+        return self._transform
+
+    @classmethod
+    def rotation(cls, about, degrees=90):
+        a, b = about
+        st = Transform.sin(degrees)  # sin(theta)
+        ct = Transform.cos(degrees)  # cos(theta)
+
+        # Translate about point to origin
+        m1 = [
+            [1, 0, 0],
+            [0, 1, 0],
+            [-a, -b, 1]]
+
+        # rotate
+        m2 = [
+            [ct, st, 0],
+            [-st, ct, 0],
+            [0, 0, 1]]
+
+        # translate back to about point
+        m3 = [
+            [1, 0, 0],
+            [0, 1, 0],
+            [a, b, 1]]
+
+        return Transform(m1, m2, m3)
+
+    def applyToPoint(self, point):
+        px, py = point
+        rp = Transform.multiplyRowByMatrix([px, py, 1], self.transform)
+
+        return (rp[0]/rp[2], rp[1]/rp[2])
 
 
-    return concatenateTransforms(m1, m2, m3)
+    def applyToSegment(self, segment):
+        rotated = []
+        for point in segment:
+            rotated.append(self.applyToPoint(point))
 
-def rotatePointByTransform(point, transform):
-    px, py = point
-    rp = multiplyRowByMatrix([px, py, 1], transform)
+        return rotated
 
-    return (rp[0]/rp[2], rp[1]/rp[2])
-    # return (rp[0], rp[1])
 
-def rotateSegmentByTransform(segment, transform):
-    rotated = []
-    for point in segment:
-        rotated.append(rotatePointByTransform(point, transform))
+    def transformContour(self, contour):
+        rotated = []
+        for segment in contour:
+            rotated.append(self.applyToSegment(segment))
 
-    return rotated
+        return rotated
 
-def rotateContourByTransform(contour,transform):
-    rotated = []
-    for segment in contour:
-        rotated.append(rotateSegmentByTransform(segment, transform))
 
-    return rotated
+    def transformContours(self, contours):
+        rotated = []
+        for contour in contours:
+            rotated.append(self.applyToContour(contour))
 
-def rotateContoursByTransform(contours, transform):
-    rotated = []
-    for contour in contours:
-        rotated.append(rotateContourByTransform(contour, transform))
-
-    return rotated
+        return rotated
 
 def rotatePointAbout(point, about, degrees=90):
-    rt = rotationTransform(about, degrees)
+    rt = Transform.rotation(about, degrees)
 
-    return rotatePointByTransform(point, rt)
+    return rt.applyToPoint(point)
 
 def rotateSegmentAbout(segment, about, degrees=90):
-    rt = rotationTransform(about, degrees)
+    rt = Transform.rotation(about, degrees)
 
-    return rotateSegmentByTransform(segment, rt)
+    return rt.applyToSegment(segment)
 
 def rotateContourAbout(contour, about, degrees=90):
-    rt = rotationTransform(about, degrees)
+    rt = Transform.rotation(about, degrees)
 
-    return rotateContourByTransform(contour, rt)
+    return rt.applyToContour(contour)
 
 def rotateContoursAbout(contours, about, degrees=90):
-    rt = rotationTransform(about, degrees)
+    rt = Transform.rotation(about, degrees)
 
-    return rotateContoursByTransform(contours, rt)
+    return rt.applyToContours(contours)
 
 
 # Helvetica Neue H
@@ -416,9 +441,9 @@ def test():
     m2 = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
     m3 = [[1, 0, 0], [0, 1, 0], [4, 3, 1]]
 
-    fp = concatenateTransforms(m1, m2, m3)
-    print(fp)
-    print(multiplyRowByMatrix([8, 6, 1], fp))
+    fp = Transform(m1, m2, m3)
+    print(fp.transform)
+    print(fp.multiplyRowByMatrix([8, 6, 1], fp.transform))
 
     # mp = [
     #     [  1,   0,   0],
