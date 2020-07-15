@@ -276,6 +276,35 @@ class Transform(object):
     def __init__(self, *transforms):
         self._transform = Transform.concatenateTransforms(*transforms)
 
+    @staticmethod
+    def _translateMatrix(fromPoint, toPoint):
+        fpx, fpy = fromPoint
+        tpx, tpy = toPoint
+        tx = tpx - fpx
+        ty = tpy - fpy
+
+        return [
+            [ 1,  0,  0],
+            [ 0,  1,  0],
+            [tx, ty,  1]]
+
+    @staticmethod
+    def _rotationMatrix(degrees):
+        st = Transform.sin(degrees)  # sin(theta)
+        ct = Transform.cos(degrees)  # cos(theta)
+
+        return [
+            [ ct, st,  0],
+            [-st, ct,  0],
+            [  0,  0,  1]]
+
+    @staticmethod
+    def _perspective(p, q, s):
+        return [
+            [1, 0, p],
+            [0, 1, q],
+            [0, 0, s]]
+
     @property
     def transform(self):
         return self._transform
@@ -287,22 +316,13 @@ class Transform(object):
         ct = Transform.cos(degrees)  # cos(theta)
 
         # Translate about point to origin
-        m1 = [
-            [1, 0, 0],
-            [0, 1, 0],
-            [-a, -b, 1]]
+        m1 = Transform._translateMatrix(about, (0, 0))
 
         # rotate
-        m2 = [
-            [ct, st, 0],
-            [-st, ct, 0],
-            [0, 0, 1]]
+        m2 = Transform._rotationMatrix(degrees)
 
         # translate back to about point
-        m3 = [
-            [1, 0, 0],
-            [0, 1, 0],
-            [a, b, 1]]
+        m3 = Transform._translateMatrix((0, 0), about)
 
         return Transform(m1, m2, m3)
 
@@ -321,7 +341,7 @@ class Transform(object):
         return rotated
 
 
-    def transformContour(self, contour):
+    def applyToContour(self, contour):
         rotated = []
         for segment in contour:
             rotated.append(self.applyToSegment(segment))
@@ -329,7 +349,7 @@ class Transform(object):
         return rotated
 
 
-    def transformContours(self, contours):
+    def applyToContours(self, contours):
         rotated = []
         for contour in contours:
             rotated.append(self.applyToContour(contour))

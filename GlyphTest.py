@@ -245,17 +245,19 @@ def main():
         boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
         centerPoint = boundingRect.centerPoint
 
+        nameSuffix = ""
         if args.rotate:
+            nameSuffix = f"_Rotated_{args.rotate}"
             contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+
         # else:
-        #     cpx, cpy = centerPoint
-        #     mp = [
-        #         [  1,     0,   0],
-        #         [  0,     1, .001],
-        #         [-cpx, -cpy,   1]
-        #     ]
-        #     contours = PathUtilities.transformContours(contours, mp)
+        #     nameSuffix = "_Projected"
+        #     m1 = PathUtilities.Transform._translationMatrix(centerPoint, (0, 0))
+        #     m2 = PathUtilities.Transform._perspectiveMatrix(0, .001, 1)
+        #     m3 = PathUtilities.Transform._translationMatrix((0, 0), centerPoint)
+        #     transform = PathUtilities.Transform(m1, m2, m3)
+        #     contours = transform.applyToContours(contours)
         #     boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
 
         cp = ContourPlotter.ContourPlotter(boundingRect.points)
@@ -268,8 +270,7 @@ def main():
         fullName = _getFullName(font)
         if fullName.startswith("."): fullName = fullName[1:]
 
-        rotated = f"_Rotated_{args.rotate}" if args.rotate else ""
-        imageFile = open(f"{fullName}_{glyphName}{rotated}.svg", "wt", encoding="UTF-8")
+        imageFile = open(f"{fullName}_{glyphName}{nameSuffix}.svg", "wt", encoding="UTF-8")
         imageFile.write(image)
         imageFile.close()
 
