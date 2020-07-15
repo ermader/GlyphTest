@@ -114,9 +114,9 @@ class Glyph(object):
                 p1x, p1y = segment[i]
                 p2x, p2y = segment[i + 1]
                 impliedPoint = (0.5 * (p1x + p2x), 0.5 * (p1y + p2y))
-                self.segments.append((startPoint, segment[i], impliedPoint))
+                self.segments.append([startPoint, segment[i], impliedPoint])
                 startPoint = impliedPoint
-            self.segments.append((startPoint, segment[-2], segment[-1]))
+            self.segments.append([startPoint, segment[-2], segment[-1]])
 
     def __init__(self, font, glyphName):
         self.font = font
