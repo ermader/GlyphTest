@@ -248,10 +248,10 @@ class Transform(object):
         return result
 
     @staticmethod
-    def concatenateTransforms(*transforms):
-        concatenation = transforms[0]
-        for transform in transforms[1:]:
-            concatenation = Transform.multiplyMatrixByMatrix(concatenation, transform)
+    def concatenateMatrices(*matrices):
+        concatenation = matrices[0]
+        for matrix in matrices[1:]:
+            concatenation = Transform.multiplyMatrixByMatrix(concatenation, matrix)
 
         return concatenation
 
@@ -267,8 +267,23 @@ class Transform(object):
         # are actually around 1e-16
         return round(math.cos(math.radians(degrees)), 15)
 
-    def __init__(self, *transforms):
-        self._transform = Transform.concatenateTransforms(*transforms)
+    def __init__(self, *matrices):
+        self._transform = Transform.concatenateMatrices(*matrices)
+
+    @staticmethod
+    def _matrix(a=1.0, b=0.0, c=0.0, d=1.0, m=0.0, n=0.0, p=0.0, q=0.0, s=1.0):
+        return [
+            [a, b, p],
+            [c, d, q],
+            [m, n, s]]
+
+    @staticmethod
+    def _identityMatrix():
+        return Transform._matrix()
+
+    @staticmethod
+    def _scaleMatrix(sx=1.0, sy=1.0):
+        return Transform._matrix(a=sx, c=sy)
 
     @staticmethod
     def _translateMatrix(fromPoint, toPoint):
@@ -277,27 +292,18 @@ class Transform(object):
         tx = tpx - fpx
         ty = tpy - fpy
 
-        return [
-            [ 1,  0,  0],
-            [ 0,  1,  0],
-            [tx, ty,  1]]
+        return Transform._matrix(m=tx, n=ty)
 
     @staticmethod
     def _rotationMatrix(degrees):
         st = Transform.sin(degrees)  # sin(theta)
         ct = Transform.cos(degrees)  # cos(theta)
 
-        return [
-            [ ct, st,  0],
-            [-st, ct,  0],
-            [  0,  0,  1]]
+        return Transform._matrix(a=ct, b=st, c=-st, d=ct)
 
     @staticmethod
     def _perspectiveMatrix(p, q, s):
-        return [
-            [1, 0, p],
-            [0, 1, q],
-            [0, 0, s]]
+        return Transform._matrix(p=p, q=q, s=s)
 
     @property
     def transform(self):
@@ -305,10 +311,6 @@ class Transform(object):
 
     @classmethod
     def rotation(cls, about, degrees=90):
-        a, b = about
-        st = Transform.sin(degrees)  # sin(theta)
-        ct = Transform.cos(degrees)  # cos(theta)
-
         # Translate about point to origin
         m1 = Transform._translateMatrix(about, (0, 0))
 
