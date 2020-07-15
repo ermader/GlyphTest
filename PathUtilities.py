@@ -299,7 +299,7 @@ class Transform(object):
             [  0,  0,  1]]
 
     @staticmethod
-    def _perspective(p, q, s):
+    def _perspectiveMatrix(p, q, s):
         return [
             [1, 0, p],
             [0, 1, q],
