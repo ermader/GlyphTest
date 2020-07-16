@@ -12,8 +12,23 @@ from logging import getLogger, ERROR
 from re import fullmatch
 from fontTools.ttLib import ttFont, TTLibError
 from FontDocTools.ArgumentIterator import ArgumentIterator
+from FontDocTools.Color import Color
 import ContourPlotter
 import PathUtilities
+
+black = Color(0, 0, 0)
+red = Color(255, 0, 0)
+orange = Color(255, 165, 0)
+darkOrange = Color(155, 140, 0)
+yellow = Color(255, 255, 0)
+gold = Color(255, 215, 0)
+lime = Color(0, 255, 0)
+green = Color(0, 128, 0)
+blue = Color(0, 0, 255)
+cyan = Color(0, 255, 255)
+indigo = Color(75, 0, 130)
+violet = Color(238, 130, 238)
+purple = Color(128, 0, 128)
 
 class GlyphTestArgs:
     """\
@@ -261,6 +276,8 @@ def main():
         centerPoint = boundingRect.centerPoint
 
         nameSuffix = ""
+        colors = None
+        shapes = [(contours, None)]
         if args.rotate:
             nameSuffix = f"_Rotated_{args.rotate}"
             contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate)
@@ -273,6 +290,7 @@ def main():
             transform = PathUtilities.Transform(m1, m2, m3)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            shapes = [(contours, None)]
         elif args.mirror:
             nameSuffix = "_Mirrored"
             cx, _ = centerPoint
@@ -282,35 +300,41 @@ def main():
             transform = PathUtilities.Transform(m1, m2, m3)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            shapes = [(contours, None)]
         elif args.shear:
             nameSuffix = "_Sheared"
             m1 = PathUtilities.Transform._matrix(c=0.5)
             transform = PathUtilities.Transform(m1)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            shapes = [(contours, None)]
         elif args.stretch:
             nameSuffix = "_Stretched"
             m1 = PathUtilities.Transform._matrix(a=2.0)
             transform = PathUtilities.Transform(m1)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            shapes = [(contours, None)]
         elif args.pinwheel:
             nameSuffix = "_PinWheel"
-            originalContours = contours
+            colors = [red, orange, gold, lime, green, blue, indigo, violet, purple]
+            colorIndex = 1
+            shapes = [(contours, colors[0])]
             for degrees in range(45, 360, 45):
                 m1 = PathUtilities.Transform._rotationMatrix(degrees)
                 transform = PathUtilities.Transform(m1)
-                rc = transform.applyToContours(originalContours)
+                rc = transform.applyToContours(contours)
                 bounds = PathUtilities.BoundsRectangle.fromCoutours(rc)
-                for c in rc:
-                    contours.append(c)
+                shapes.append([rc, colors[colorIndex]])
+                colorIndex += 1
 
                 boundingRect = boundingRect.union(bounds)
 
         cp = ContourPlotter.ContourPlotter(boundingRect.points)
 
-        for contour in contours:
-            cp.drawContour(contour)
+        for contours, color in shapes:
+            for contour in contours:
+                cp.drawContour(contour, color)
 
         image = cp.generateFinalImage()
 

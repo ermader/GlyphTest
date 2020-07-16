@@ -27,7 +27,12 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
 
         return command
 
-    def drawContour(self, contour):
+    def drawContour(self, contour, color=None):
+        if color:
+            self._strokeColor = color
+            # self._strokeOpacity = 0.90
+            self._strokeWidth = 2
+
         firstPoint = contour[0][0]
         self.moveToXY(*firstPoint)
         path = f"<path d='M{self.pointToString(firstPoint)}"
