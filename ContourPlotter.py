@@ -30,7 +30,7 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
     def drawContour(self, contour, color=None):
         if color:
             self._strokeColor = color
-            # self._strokeOpacity = 0.90
+            # self._strokeOpacity = 0.50
             self._strokeWidth = 2
 
         firstPoint = contour[0][0]

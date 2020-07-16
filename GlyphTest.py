@@ -16,19 +16,37 @@ from FontDocTools.Color import Color
 import ContourPlotter
 import PathUtilities
 
-black = Color(0, 0, 0)
-red = Color(255, 0, 0)
-orange = Color(255, 165, 0)
-darkOrange = Color(155, 140, 0)
-yellow = Color(255, 255, 0)
-gold = Color(255, 215, 0)
-lime = Color(0, 255, 0)
-green = Color(0, 128, 0)
-blue = Color(0, 0, 255)
-cyan = Color(0, 255, 255)
-indigo = Color(75, 0, 130)
-violet = Color(238, 130, 238)
-purple = Color(128, 0, 128)
+_colors = {
+    'black': (0, 0, 0),
+    'orange': (255, 165, 0),
+    'darkorange': (155, 140, 0),
+    'gold': (255, 215, 0),
+    'cyan': (0, 255, 255),
+    'indigo': (75, 0, 130),
+    'violet': (238, 130, 238),
+    'silver': (192, 192, 192),
+    'gray': (128, 128, 128),
+    'white': (255, 255, 255),
+    'maroon': (128, 0, 0),
+    'red': (255, 0, 0),
+    'fuchsia': (255, 0, 255),
+    'green': (0, 128, 0),
+    'lime': (0, 255, 0),
+    'olive': (128, 128, 0),
+    'yellow': (255, 255, 0),
+    'navy': (0, 0, 128),
+    'blue': (0, 0, 255),
+    'teal': (0, 128, 128),
+    'aqua': (0, 255, 255),
+    'magenta': (0, 255, 255)
+}
+
+def colorFromName(name):
+    if name in _colors:
+        red, green, blue = _colors[name]
+        return Color(red, green, blue)
+
+    return None
 
 class GlyphTestArgs:
     """\
@@ -42,6 +60,7 @@ class GlyphTestArgs:
         self.glyphName = None
         self.glyphID = None
         self.charCode = None
+        self.color = None
         self.rotate = None
         self.mirror = None
         self.shear = None
@@ -99,6 +118,10 @@ class GlyphTestArgs:
 
             if argument == "--font":
                 (args.fontFile, args.fontName) = arguments.nextExtraAsFont("font")
+            elif argument ==  "--color":
+                colorName = arguments.nextExtra("color")
+                args.color = colorFromName(colorName)
+                if args.color is None: raise ValueError(f"{colorName} is not a valid color name")
             elif argument == "--rotate":
                 args.rotate = arguments.nextExtraAsPosInt("rotation")
             elif argument == "--shear":
@@ -277,11 +300,12 @@ def main():
 
         nameSuffix = ""
         colors = None
-        shapes = [(contours, None)]
+        shapes = [(contours, args.color)]
         if args.rotate:
             nameSuffix = f"_Rotated_{args.rotate}"
             contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            shapes = [(contours, args.color)]
         elif args.project:
             nameSuffix = "_Projected"
             m1 = PathUtilities.Transform._translateMatrix(centerPoint, (0, 0))
@@ -290,7 +314,7 @@ def main():
             transform = PathUtilities.Transform(m1, m2, m3)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
-            shapes = [(contours, None)]
+            shapes = [(contours, args.color)]
         elif args.mirror:
             nameSuffix = "_Mirrored"
             cx, _ = centerPoint
@@ -300,32 +324,32 @@ def main():
             transform = PathUtilities.Transform(m1, m2, m3)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
-            shapes = [(contours, None)]
+            shapes = [(contours, args.color)]
         elif args.shear:
             nameSuffix = "_Sheared"
             m1 = PathUtilities.Transform._matrix(c=0.5)
             transform = PathUtilities.Transform(m1)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
-            shapes = [(contours, None)]
+            shapes = [(contours, args.color)]
         elif args.stretch:
             nameSuffix = "_Stretched"
             m1 = PathUtilities.Transform._matrix(a=2.0)
             transform = PathUtilities.Transform(m1)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
-            shapes = [(contours, None)]
+            shapes = [(contours, args.color)]
         elif args.pinwheel:
             nameSuffix = "_PinWheel"
-            colors = [red, orange, gold, lime, green, blue, indigo, violet, purple]
+            colors = ["red", "orange", "gold", "lime", "green", "blue", "indigo", "violet", "purple"]
             colorIndex = 1
-            shapes = [(contours, colors[0])]
+            shapes = [(contours, colorFromName(colors[0]))]  # the original shape with the first color
             for degrees in range(45, 360, 45):
                 m1 = PathUtilities.Transform._rotationMatrix(degrees)
                 transform = PathUtilities.Transform(m1)
                 rc = transform.applyToContours(contours)
                 bounds = PathUtilities.BoundsRectangle.fromCoutours(rc)
-                shapes.append([rc, colors[colorIndex]])
+                shapes.append([rc, colorFromName(colors[colorIndex])])
                 colorIndex += 1
 
                 boundingRect = boundingRect.union(bounds)
