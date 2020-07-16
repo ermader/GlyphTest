@@ -32,6 +32,7 @@ class GlyphTestArgs:
         self.shear = None
         self.stretch = None
         self.project = None
+        self.pinwheel = None
 
     def completeInit(self):
         """\
@@ -93,6 +94,8 @@ class GlyphTestArgs:
                 args.mirror = True
             elif argument == "--project":
                 args.project = True
+            elif argument == "--pinwheel":
+                args.pinwheel = True
             elif argument == "--glyph":
                 extra = arguments.nextExtra("glyph")
                 if len(extra) == 1:
@@ -291,6 +294,18 @@ def main():
             transform = PathUtilities.Transform(m1)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+        elif args.pinwheel:
+            nameSuffix = "_PinWheel"
+            originalContours = contours
+            for degrees in range(45, 360, 45):
+                m1 = PathUtilities.Transform._rotationMatrix(degrees)
+                transform = PathUtilities.Transform(m1)
+                rc = transform.applyToContours(originalContours)
+                bounds = PathUtilities.BoundsRectangle.fromCoutours(rc)
+                for c in rc:
+                    contours.append(c)
+
+                boundingRect = boundingRect.union(bounds)
 
         cp = ContourPlotter.ContourPlotter(boundingRect.points)
 
