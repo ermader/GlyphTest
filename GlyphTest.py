@@ -28,6 +28,10 @@ class GlyphTestArgs:
         self.glyphID = None
         self.charCode = None
         self.rotate = None
+        self.mirror = None
+        self.shear = None
+        self.stretch = None
+        self.project = None
 
     def completeInit(self):
         """\
@@ -81,6 +85,14 @@ class GlyphTestArgs:
                 (args.fontFile, args.fontName) = arguments.nextExtraAsFont("font")
             elif argument == "--rotate":
                 args.rotate = arguments.nextExtraAsPosInt("rotation")
+            elif argument == "--shear":
+                args.shear = True
+            elif argument == "--stretch":
+                args.stretch = True
+            elif argument == "--mirror":
+                args.mirror = True
+            elif argument == "--project":
+                args.project = True
             elif argument == "--glyph":
                 extra = arguments.nextExtra("glyph")
                 if len(extra) == 1:
@@ -157,7 +169,7 @@ class Glyph(object):
 
             self.contours.append(self.segments)
 
-        self.bounds = PathUtilities.BoundsRectangle((self.minX, self.minY), (self.maxX, self.maxY))
+        self.bounds = PathUtilities.BoundsRectangle((self.minX, self.maxY), (self.maxX, self.minY))
 
 def _getFontName(ttFont, nameID):
     nameRecord = ttFont["name"].getName(nameID, 3, 1, 0x0409) # PostScriptName, Windows, Unicode BMP, English
@@ -250,15 +262,35 @@ def main():
             nameSuffix = f"_Rotated_{args.rotate}"
             contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
-
-        # else:
-        #     nameSuffix = "_Projected"
-        #     m1 = PathUtilities.Transform._translationMatrix(centerPoint, (0, 0))
-        #     m2 = PathUtilities.Transform._perspectiveMatrix(0, .001, 1)
-        #     m3 = PathUtilities.Transform._translationMatrix((0, 0), centerPoint)
-        #     transform = PathUtilities.Transform(m1, m2, m3)
-        #     contours = transform.applyToContours(contours)
-        #     boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+        elif args.project:
+            nameSuffix = "_Projected"
+            m1 = PathUtilities.Transform._translateMatrix(centerPoint, (0, 0))
+            m2 = PathUtilities.Transform._perspectiveMatrix(0, .001, 1)
+            m3 = PathUtilities.Transform._translateMatrix((0, 0), centerPoint)
+            transform = PathUtilities.Transform(m1, m2, m3)
+            contours = transform.applyToContours(contours)
+            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+        elif args.mirror:
+            nameSuffix = "_Mirrored"
+            cx, _ = centerPoint
+            m1 = PathUtilities.Transform._matrix(m=-cx)
+            m2 = PathUtilities.Transform._matrix(a=-1)
+            m3 = PathUtilities.Transform._matrix(m=cx)
+            transform = PathUtilities.Transform(m1, m2, m3)
+            contours = transform.applyToContours(contours)
+            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+        elif args.shear:
+            nameSuffix = "_Sheared"
+            m1 = PathUtilities.Transform._matrix(c=0.5)
+            transform = PathUtilities.Transform(m1)
+            contours = transform.applyToContours(contours)
+            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+        elif args.stretch:
+            nameSuffix = "_Stretched"
+            m1 = PathUtilities.Transform._matrix(a=2.0)
+            transform = PathUtilities.Transform(m1)
+            contours = transform.applyToContours(contours)
+            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
 
         cp = ContourPlotter.ContourPlotter(boundingRect.points)
 
