@@ -61,6 +61,7 @@ class GlyphTestArgs:
         self.glyphID = None
         self.charCode = None
         self.color = None
+        self.fill = False
         self.rotate = None
         self.mirror = None
         self.shear = None
@@ -122,18 +123,34 @@ class GlyphTestArgs:
                 colorName = arguments.nextExtra("color")
                 args.color = colorFromName(colorName)
                 if args.color is None: raise ValueError(f"{colorName} is not a valid color name")
-            elif argument == "--rotate":
-                args.rotate = arguments.nextExtraAsPosInt("rotation")
-            elif argument == "--shear":
-                args.shear = True
-            elif argument == "--stretch":
-                args.stretch = True
-            elif argument == "--mirror":
-                args.mirror = True
-            elif argument == "--project":
-                args.project = True
-            elif argument == "--pinwheel":
-                args.pinwheel = True
+            elif argument == "--fill":
+                opacity = arguments.nextExtraAsNumber("opacity")  # should make sure 0 < opacity <= 1
+                args.fill = opacity
+            elif argument == "--transform":
+                transform = arguments.nextExtra("transform type")
+
+                if transform == "rotate":
+                    args.rotate = arguments.nextExtraAsNumber("angle in degrees")
+                elif transform == "project":
+                    p = arguments.nextExtraAsNumber("p")
+                    q = arguments.nextExtraAsNumber("q")
+                    args.project = (p, q)
+                elif transform == "mirror":
+                    args.mirror = arguments.nextExtra("mirror axis")  # should check this x, y, xy
+                elif transform == "shear":
+                    x = arguments.nextExtraAsNumber("x shear")
+                    y = arguments.nextExtraAsNumber("y shear")
+                    args.shear = (x, y)
+                elif transform == "stretch":
+                    x = arguments.nextExtraAsNumber("x stretch")
+                    y = arguments.nextExtraAsNumber("y stretch")
+                    args.stretch = (x, y)
+                elif transform == "pinwheel":
+                    args.pinwheel = True
+                    args.fill = 0.2
+                else:
+                    raise ValueError(f"Unrecognized transform “{transform}”.")
+
             elif argument == "--glyph":
                 extra = arguments.nextExtra("glyph")
                 if len(extra) == 1:
@@ -300,7 +317,6 @@ def main():
 
         nameSuffix = ""
         colors = None
-        fill = False
         shapes = [(contours, args.color)]
         if args.rotate:
             nameSuffix = f"_Rotated_{args.rotate}"
@@ -309,8 +325,9 @@ def main():
             shapes = [(contours, args.color)]
         elif args.project:
             nameSuffix = "_Projected"
+            p, q = args.project
             m1 = PathUtilities.Transform._translateMatrix(centerPoint, (0, 0))
-            m2 = PathUtilities.Transform._perspectiveMatrix(0, .001, 1)
+            m2 = PathUtilities.Transform._perspectiveMatrix(p, q, 1)
             m3 = PathUtilities.Transform._translateMatrix((0, 0), centerPoint)
             transform = PathUtilities.Transform(m1, m2, m3)
             contours = transform.applyToContours(contours)
@@ -318,24 +335,35 @@ def main():
             shapes = [(contours, args.color)]
         elif args.mirror:
             nameSuffix = "_Mirrored"
-            cx, _ = centerPoint
-            m1 = PathUtilities.Transform._matrix(m=-cx)
-            m2 = PathUtilities.Transform._matrix(a=-1)
-            m3 = PathUtilities.Transform._matrix(m=cx)
-            transform = PathUtilities.Transform(m1, m2, m3)
-            contours = transform.applyToContours(contours)
+            cx, cy = centerPoint
+            if args.mirror.startswith("x"):
+                m1 = PathUtilities.Transform._matrix(m=-cx)
+                m2 = PathUtilities.Transform._matrix(a=-1)
+                m3 = PathUtilities.Transform._matrix(m=cx)
+                transform = PathUtilities.Transform(m1, m2, m3)
+                contours = transform.applyToContours(contours)
+
+            if args.mirror.endswith("y"):
+                m1 = PathUtilities.Transform._matrix(n=-cy)
+                m2 = PathUtilities.Transform._matrix(d=-1)
+                m3 = PathUtilities.Transform._matrix(n=cy)
+                transform = PathUtilities.Transform(m1, m2, m3)
+                contours = transform.applyToContours(contours)
+
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.shear:
             nameSuffix = "_Sheared"
-            m1 = PathUtilities.Transform._matrix(c=0.5)
+            x, y = args.shear
+            m1 = PathUtilities.Transform._matrix(b=y, c=x)
             transform = PathUtilities.Transform(m1)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.stretch:
             nameSuffix = "_Stretched"
-            m1 = PathUtilities.Transform._matrix(a=2.0)
+            x, y = args.stretch
+            m1 = PathUtilities.Transform._matrix(a=x, d=y)
             transform = PathUtilities.Transform(m1)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
@@ -343,7 +371,6 @@ def main():
         elif args.pinwheel:
             nameSuffix = "_PinWheel"
             colors = ["red", "orange", "gold", "lime", "green", "blue", "indigo", "violet", "purple"]
-            fill = True
             colorIndex = 1
             shapes = [(contours, colorFromName(colors[0]))]  # the original shape with the first color
             for degrees in range(45, 360, 45):
@@ -359,7 +386,7 @@ def main():
         cp = ContourPlotter.ContourPlotter(boundingRect.points)
 
         for contours, color in shapes:
-            cp.drawContours(contours, color, fill)
+            cp.drawContours(contours, color, args.fill)
 
         image = cp.generateFinalImage()
 
