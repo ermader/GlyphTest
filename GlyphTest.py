@@ -300,6 +300,7 @@ def main():
 
         nameSuffix = ""
         colors = None
+        fill = False
         shapes = [(contours, args.color)]
         if args.rotate:
             nameSuffix = f"_Rotated_{args.rotate}"
@@ -342,6 +343,7 @@ def main():
         elif args.pinwheel:
             nameSuffix = "_PinWheel"
             colors = ["red", "orange", "gold", "lime", "green", "blue", "indigo", "violet", "purple"]
+            fill = True
             colorIndex = 1
             shapes = [(contours, colorFromName(colors[0]))]  # the original shape with the first color
             for degrees in range(45, 360, 45):
@@ -357,8 +359,7 @@ def main():
         cp = ContourPlotter.ContourPlotter(boundingRect.points)
 
         for contours, color in shapes:
-            for contour in contours:
-                cp.drawContour(contour, color)
+            cp.drawContours(contours, color, fill)
 
         image = cp.generateFinalImage()
 

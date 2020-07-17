@@ -461,12 +461,13 @@ def test():
     print(fp.transform)
     print(fp.multiplyRowByMatrix([8, 6, 1], fp.transform))
 
-    # mp = [
-    #     [  1,   0,   0],
-    #     [  0,   1,  .1],
-    #     [  0,   0,   1]
-    # ]
-    #
-    # print(rotateContourByTransform([[(10, 0), (20, 0)], [(20, 0), (20, 20)], [(20, 20), (10, 20)]], mp))
+    # s1 = [(253, 239), (242, 210), (216, 136), (199, 80)]
+    # s2 = [(253, 239), (242, 210), (229, 173), (216, 136), (199, 80)]
+    # m1 = Transform._rotationMatrix(45)
+    # transform = Transform(m1)
+    # r1 = transform.applyToSegment(s1)
+    # r2 = transform.applyToSegment(s2)
+    # print(r1)
+    # print(r2)
 if __name__ == "__main__":
     test()
