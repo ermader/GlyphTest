@@ -124,8 +124,8 @@ class GlyphTestArgs:
                 args.color = colorFromName(colorName)
                 if args.color is None: raise ValueError(f"{colorName} is not a valid color name")
             elif argument == "--fill":
-                opacity = arguments.nextExtraAsNumber("opacity")  # should make sure 0 < opacity <= 1
-                args.fill = opacity
+                # opacity = arguments.nextExtraAsNumber("opacity")  # should make sure 0 < opacity <= 1
+                args.fill = 1.0
             elif argument == "--transform":
                 transform = arguments.nextExtra("transform type")
 
