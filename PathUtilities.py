@@ -134,13 +134,13 @@ def getDeltas(segment):
 
     return (p1x - p0x, p1y - p0y)
 
-def isVertical(segment):
+def isVerticalLine(segment):
     dx, _ = getDeltas(segment)
-    return dx == 0
+    return len(segment) == 2 and dx == 0
 
-def isHorizontal(segment):
+def isHorizontalLine(segment):
     _, dy = getDeltas(segment)
-    return dy == 0
+    return len(segment) == 2 and dy == 0
 
 def length(segment):
     dx, dy = getDeltas(segment)
@@ -189,20 +189,33 @@ def intersectionPoint(l1, l2):
 
     return intersection if b1.enclosesPoint(intersection) and b2.enclosesPoint(intersection) else None
 
+# The result of this function cannot be used to create an SVG path...
 def flatten(contours):
     return [segment for contour in contours for segment in contour]
 
-def verticalLines(contour):
-    return list(filter(lambda s: isVertical(s), contour))
+def verticalLines(contours):
+    v = []
+    for contour in contours:
+        for segment in contour:
+            if isVerticalLine(segment):
+                v.append(segment)
 
-def verticalLinesCrossing(contour, y):
-    return list(filter(lambda s: crossesY(s, y), sortByX((verticalLines(contour)))))
+    return v
 
-def horizontalLines(contour):
-    return list(filter(lambda s: isHorizontal(s), contour))
+def verticalLinesCrossing(contours, y):
+    return list(filter(lambda s: crossesY(s, y), sortByX(verticalLines(contours))))
 
-def horizontalLinesCrossing(contour, x):
-    return list(filter(lambda s: crossesX(s, x), sortByY((horizontalLines(contour)))))
+def horizontalLines(contours):
+    h = []
+    for contour in contours:
+        for segment in contour:
+            if isHorizontalLine(segment):
+                h.append(segment)
+
+    return h
+
+def horizontalLinesCrossing(contours, x):
+    return list(filter(lambda s: crossesX(s, x), sortByY((horizontalLines(contours)))))
 
 def sortByX(contour):
     return sorted(contour, key=lambda s: s[0][0])
@@ -407,17 +420,17 @@ def test():
     print(pointOnLine((-300, -400), l2))
     print()
 
-    hVerticals = verticalLinesCrossing(hContours[0], hBounds.height / 4)
+    hVerticals = verticalLinesCrossing(hContours, hBounds.height / 4)
     hStroke = BoundsRectangle(*hVerticals[0], *hVerticals[1])
     print(f"vertical stroke width of Helvetica Neue H = {hStroke.width}")
     print(f"rotated point = {rotatePointAbout(hVerticals[0][1], hVerticals[0][0])}")
 
-    hHorizontals = horizontalLinesCrossing(hContours[0], hBounds.width / 2)
+    hHorizontals = horizontalLinesCrossing(hContours, hBounds.width / 2)
     vStroke = BoundsRectangle(*hHorizontals[0], *hHorizontals[1])
     print(f"horizontal stroke width of Helvetica Neue H = {vStroke.height}")
     print()
 
-    diagonals = list(filter(lambda s: not isHorizontal(s), xContours[0]))
+    diagonals = list(filter(lambda s: not isHorizontalLine(s), xContours[0]))
     diag_25 = list(filter(lambda s: crossesY(s, hBounds.height / 4), diagonals))
     diag_75 = list(filter(lambda s: crossesY(s, hBounds.height * .75), diagonals))
 
@@ -438,28 +451,29 @@ def test():
     print()
 
     nyhBounds =  BoundsRectangle.fromCoutours(newYorkHContours)
-    newYorkHFlat = flatten(newYorkHContours)
 
-    newYorkHVert = verticalLinesCrossing(newYorkHFlat, nyhBounds.height / 4)
+    newYorkHVert = verticalLinesCrossing(newYorkHContours, nyhBounds.height / 4)
     vStroke = BoundsRectangle(*newYorkHVert[0], *newYorkHVert[1])
     print(f"vertical stroke width of New York H = {vStroke.width}")
 
-    newYorkHHoriz = horizontalLinesCrossing(newYorkHFlat, nyhBounds.width / 2)
+    newYorkHHoriz = horizontalLinesCrossing(newYorkHContours, nyhBounds.width / 2)
     hStroke = BoundsRectangle(*newYorkHHoriz[0], *newYorkHHoriz[1])
     print(f"horizontal stroke width of New York H = {hStroke.height}")
     print(f"intersection of vertical and horizontal strokes = {vStroke.intersection(hStroke)}")
+    print()
 
     #
     # Example 2-6 from Mathematical Elements for Computer Graphics
     # Second Edition
     #
+    print("Example 2-6 from Mathematical Elements for Computer Graphics:")
     m1 = [[1, 0, 0], [0, 1, 0], [-4, -3, 1]]
     m2 = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
     m3 = [[1, 0, 0], [0, 1, 0], [4, 3, 1]]
 
     fp = Transform(m1, m2, m3)
-    print(fp.transform)
-    print(fp.multiplyRowByMatrix([8, 6, 1], fp.transform))
+    print(f"rotation transform = {fp.transform}")
+    print(f"rotation of (8, 6) = {fp.multiplyRowByMatrix([8, 6, 1], fp.transform)}")
 
     # s1 = [(253, 239), (242, 210), (216, 136), (199, 80)]
     # s2 = [(253, 239), (242, 210), (229, 173), (216, 136), (199, 80)]
