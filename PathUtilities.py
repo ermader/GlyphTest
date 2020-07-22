@@ -7,6 +7,39 @@ Created on July 7, 2020
 """
 
 import math
+from FontDocTools.Color import Color
+
+_colors = {
+    'black': (0, 0, 0),
+    'orange': (255, 165, 0),
+    'darkorange': (155, 140, 0),
+    'gold': (255, 215, 0),
+    'cyan': (0, 255, 255),
+    'indigo': (75, 0, 130),
+    'violet': (238, 130, 238),
+    'silver': (192, 192, 192),
+    'gray': (128, 128, 128),
+    'white': (255, 255, 255),
+    'maroon': (128, 0, 0),
+    'red': (255, 0, 0),
+    'fuchsia': (255, 0, 255),
+    'green': (0, 128, 0),
+    'lime': (0, 255, 0),
+    'olive': (128, 128, 0),
+    'yellow': (255, 255, 0),
+    'navy': (0, 0, 128),
+    'blue': (0, 0, 255),
+    'teal': (0, 128, 128),
+    'aqua': (0, 255, 255),
+    'magenta': (0, 255, 255)
+}
+
+def colorFromName(name):
+    if name in _colors:
+        red, green, blue = _colors[name]
+        return Color(red, green, blue)
+
+    return None
 
 class BoundsRectangle(object):
     def __init__(self, *points):

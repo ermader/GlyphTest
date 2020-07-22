@@ -17,38 +17,6 @@ from FontDocTools.Color import Color
 import ContourPlotter
 import PathUtilities
 
-_colors = {
-    'black': (0, 0, 0),
-    'orange': (255, 165, 0),
-    'darkorange': (155, 140, 0),
-    'gold': (255, 215, 0),
-    'cyan': (0, 255, 255),
-    'indigo': (75, 0, 130),
-    'violet': (238, 130, 238),
-    'silver': (192, 192, 192),
-    'gray': (128, 128, 128),
-    'white': (255, 255, 255),
-    'maroon': (128, 0, 0),
-    'red': (255, 0, 0),
-    'fuchsia': (255, 0, 255),
-    'green': (0, 128, 0),
-    'lime': (0, 255, 0),
-    'olive': (128, 128, 0),
-    'yellow': (255, 255, 0),
-    'navy': (0, 0, 128),
-    'blue': (0, 0, 255),
-    'teal': (0, 128, 128),
-    'aqua': (0, 255, 255),
-    'magenta': (0, 255, 255)
-}
-
-def colorFromName(name):
-    if name in _colors:
-        red, green, blue = _colors[name]
-        return Color(red, green, blue)
-
-    return None
-
 class GlyphTestArgs:
     """\
     Interprets and checks the command line options for the GlyphTest tool,
@@ -122,7 +90,7 @@ class GlyphTestArgs:
                 (args.fontFile, args.fontName) = arguments.nextExtraAsFont("font")
             elif argument ==  "--color":
                 colorName = arguments.nextExtra("color")
-                args.color = colorFromName(colorName)
+                args.color = PathUtilities.colorFromName(colorName)
                 if args.color is None: raise ValueError(f"{colorName} is not a valid color name")
             elif argument == "--fill":
                 # opacity = arguments.nextExtraAsNumber("opacity")  # should make sure 0 < opacity <= 1
@@ -378,13 +346,13 @@ def main():
             nameSuffix = "_PinWheel"
             colors = ["red", "orange", "gold", "lime", "green", "blue", "indigo", "violet", "purple"]
             colorIndex = 1
-            shapes = [(contours, colorFromName(colors[0]))]  # the original shape with the first color
+            shapes = [(contours, PathUtilities.colorFromName(colors[0]))]  # the original shape with the first color
             for degrees in range(45, 360, 45):
                 m1 = PathUtilities.Transform._rotationMatrix(degrees)
                 transform = PathUtilities.Transform(m1)
                 rc = transform.applyToContours(contours)
                 bounds = PathUtilities.BoundsRectangle.fromCoutours(rc)
-                shapes.append([rc, colorFromName(colors[colorIndex])])
+                shapes.append([rc, PathUtilities.colorFromName(colors[colorIndex])])
                 colorIndex += 1
 
                 boundingRect = boundingRect.union(bounds)
