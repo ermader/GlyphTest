@@ -262,17 +262,21 @@ def crossesY(line, y):
 def crossesX(line, x):
     return BoundsRectangle(*line).crossesX(x)
 
+def verticalStrokeWidth(contours, atHeight):
+    verticals = verticalLinesCrossing(contours, atHeight)
+    vStroke = BoundsRectangle(*verticals[0], *verticals[1])
+    return vStroke.width
+
+def horizontalStrokeWidth(contours, atWidth):
+    horizontals = horizontalLinesCrossing(contours, atWidth)
+    hStroke = BoundsRectangle(*horizontals[0], *horizontals[1])
+    return hStroke.height
+
 # There must be a better way to do this...
 def pointOnLine(point, line):
     bounds = BoundsRectangle(*line)
 
     return bounds.enclosesPoint(point) and slope(line) == slope([line[0], point])
-
-def sin(degrees):
-    return round(math.sin(math.radians(degrees)), 15)
-
-def cos(degrees):
-    return round(math.cos(math.radians(degrees)), 15)
 
 class Transform(object):
     @staticmethod
@@ -424,6 +428,7 @@ hContours = [[[(78, 714), (78, 0)], [(78, 0), (173, 0)], [(173, 0), (173, 327)],
 xContours = [[[(248, 367), (0, 0)], [(0, 0), (106, 0)], [(106, 0), (304, 295)], [(304, 295), (496, 0)], [(496, 0), (612, 0)], [(612, 0), (361, 367)], [(361, 367), (597, 714)], [(597, 714), (491, 714)], [(491, 714), (305, 435)], [(305, 435), (127, 714)], [(127, 714), (13, 714)], [(13, 714), (248, 367)]]]
 
 newYorkHContours = [[[(414, 155), (414, 1289)], [(414, 1289), (414, 1331), (424.0, 1354.0)], [(424.0, 1354.0), (434, 1377), (463.5, 1389.0)], [(463.5, 1389.0), (493, 1401), (550, 1409)], [(550, 1409), (550, 1444)], [(550, 1444), (56, 1444)], [(56, 1444), (56, 1410)], [(56, 1410), (118, 1401), (148.0, 1388.5)], [(148.0, 1388.5), (178, 1376), (188.0, 1351.5)], [(188.0, 1351.5), (198, 1327), (198, 1283)], [(198, 1283), (198, 161)], [(198, 161), (198, 117), (188.0, 92.5)], [(188.0, 92.5), (178, 68), (148.0, 55.5)], [(148.0, 55.5), (118, 43), (56, 34)], [(56, 34), (56, 0)], [(56, 0), (550, 0)], [(550, 0), (550, 34)], [(550, 34), (493, 43), (463.5, 55.0)], [(463.5, 55.0), (434, 67), (424.0, 90.0)], [(424.0, 90.0), (414, 113), (414, 155)]], [[(1352, 161), (1352, 1283)], [(1352, 1283), (1352, 1328), (1362.5, 1352.0)], [(1362.5, 1352.0), (1373, 1376), (1403.5, 1388.5)], [(1403.5, 1388.5), (1434, 1401), (1494, 1410)], [(1494, 1410), (1494, 1444)], [(1494, 1444), (1000, 1444)], [(1000, 1444), (1000, 1410)], [(1000, 1410), (1059, 1401), (1088.0, 1389.0)], [(1088.0, 1389.0), (1117, 1377), (1126.5, 1354.5)], [(1126.5, 1354.5), (1136, 1332), (1136, 1289)], [(1136, 1289), (1136, 155)], [(1136, 155), (1136, 113), (1126.5, 90.0)], [(1126.5, 90.0), (1117, 67), (1088.0, 55.0)], [(1088.0, 55.0), (1059, 43), (1000, 34)], [(1000, 34), (1000, 0)], [(1000, 0), (1494, 0)], [(1494, 0), (1494, 34)], [(1494, 34), (1434, 43), (1403.5, 55.5)], [(1403.5, 55.5), (1373, 68), (1362.5, 92.5)], [(1362.5, 92.5), (1352, 117), (1352, 161)]], [[(306, 717), (1244, 717)], [(1244, 717), (1244, 762)], [(1244, 762), (306, 762)], [(306, 762), (306, 717)]]]
+newYorkpContours = [[[(1080, 492), (1080, 649), (1023.5, 759.0)], [(1023.5, 759.0), (967, 869), (875.0, 927.0)], [(875.0, 927.0), (783, 985), (677, 985)], [(677, 985), (571, 985), (483.5, 935.0)], [(483.5, 935.0), (396, 885), (356, 802)], [(356, 802), (356, 978)], [(356, 978), (40, 942)], [(40, 942), (40, 912)], [(40, 912), (99, 894)], [(99, 894), (140, 881), (150.5, 866.5)], [(150.5, 866.5), (161, 852), (161, 812)], [(161, 812), (161, -328)], [(161, -328), (161, -361), (153.0, -379.5)], [(153.0, -379.5), (145, -398), (119.5, -408.0)], [(119.5, -408.0), (94, -418), (40, -426)], [(40, -426), (40, -460)], [(40, -460), (490, -460)], [(490, -460), (490, -426)], [(490, -426), (431, -418), (403.0, -407.0)], [(403.0, -407.0), (375, -396), (366.5, -375.0)], [(366.5, -375.0), (358, -354), (358, -316)], [(358, -316), (358, 105)], [(358, 105), (392, 50), (458.0, 16.0)], [(458.0, 16.0), (524, -18), (613, -18)], [(613, -18), (743, -18), (848.5, 46.0)], [(848.5, 46.0), (954, 110), (1017.0, 224.5)], [(1017.0, 224.5), (1080, 339), (1080, 492)]], [[(875, 468), (875, 276), (790.5, 158.0)], [(790.5, 158.0), (706, 40), (568, 40)], [(568, 40), (498, 40), (440.0, 73.0)], [(440.0, 73.0), (382, 106), (358, 155)], [(358, 155), (358, 771)], [(358, 771), (392, 830), (448.0, 861.0)], [(448.0, 861.0), (504, 892), (582, 892)], [(582, 892), (710, 892), (792.5, 777.0)], [(792.5, 777.0), (875, 662), (875, 468)]]]
 
 hBounds = BoundsRectangle.fromCoutours(hContours)
 hCenter = hBounds.centerPoint
@@ -453,14 +458,8 @@ def test():
     print(pointOnLine((-300, -400), l2))
     print()
 
-    hVerticals = verticalLinesCrossing(hContours, hBounds.height / 4)
-    hStroke = BoundsRectangle(*hVerticals[0], *hVerticals[1])
-    print(f"vertical stroke width of Helvetica Neue H = {hStroke.width}")
-    print(f"rotated point = {rotatePointAbout(hVerticals[0][1], hVerticals[0][0])}")
-
-    hHorizontals = horizontalLinesCrossing(hContours, hBounds.width / 2)
-    vStroke = BoundsRectangle(*hHorizontals[0], *hHorizontals[1])
-    print(f"horizontal stroke width of Helvetica Neue H = {vStroke.height}")
+    print(f"vertical stroke width of Helvetica Neue H = {verticalStrokeWidth(hContours, hBounds.height / 4)}")
+    print(f"horizontal stroke width of Helvetica Neue H = {horizontalStrokeWidth(hContours, hBounds.width / 2)}")
     print()
 
     diagonals = list(filter(lambda s: not isHorizontalLine(s), xContours[0]))
@@ -484,15 +483,13 @@ def test():
     print()
 
     nyhBounds =  BoundsRectangle.fromCoutours(newYorkHContours)
+    print(f"vertical stroke width of New York H = {verticalStrokeWidth(newYorkHContours, nyhBounds.height / 4)}")
+    print(f"horizontal stroke width of New York H = {horizontalStrokeWidth(newYorkHContours, nyhBounds.width / 2)}")
+    # print(f"intersection of vertical and horizontal strokes = {vStroke.intersection(hStroke)}")
+    print()
 
-    newYorkHVert = verticalLinesCrossing(newYorkHContours, nyhBounds.height / 4)
-    vStroke = BoundsRectangle(*newYorkHVert[0], *newYorkHVert[1])
-    print(f"vertical stroke width of New York H = {vStroke.width}")
-
-    newYorkHHoriz = horizontalLinesCrossing(newYorkHContours, nyhBounds.width / 2)
-    hStroke = BoundsRectangle(*newYorkHHoriz[0], *newYorkHHoriz[1])
-    print(f"horizontal stroke width of New York H = {hStroke.height}")
-    print(f"intersection of vertical and horizontal strokes = {vStroke.intersection(hStroke)}")
+    nypBounds = BoundsRectangle.fromCoutours(newYorkpContours)
+    print(f"vertical stroke width of New York p = {verticalStrokeWidth(newYorkpContours, nypBounds.height / 4)}")
     print()
 
     #
