@@ -11,10 +11,11 @@ from FontDocTools import GlyphPlotterEngine
 class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
     lastCommand = ""
 
-    def __init__(self, bounds):
+    def __init__(self, bounds, poly=False):
         GlyphPlotterEngine.GlyphPlotterEngine.__init__(self)
         self._boundsAggregator.addBounds(bounds)
         self._contentMargins = GlyphPlotterEngine.Margins(10, 10, 10, 10)
+        self._poly = poly
 
     def pointToString(self, point):
         return " ".join([str(i) for i in point])
@@ -22,7 +23,7 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
     def getCommand(self, command):
         if self.lastCommand != command:
             self.lastCommand = command
-        else:
+        elif self._poly:
             command = " "
 
         return command
@@ -79,3 +80,33 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         else:
             path += f"' fill='none' {self._strokeAttributes()}/>"
         self._content.append(path)
+
+def test():
+    import PathUtilities
+    from FontDocTools.Color import Color
+
+    testContour = [[(292, 499), (292, 693), (376.5, 810.5)], [(376.5, 810.5), (461, 928), (599, 928)], [(599, 928), (670, 928), (727.5, 895.5)], [(727.5, 895.5), (785, 863), (809, 813)], [(809, 813), (809, 197)], [(809, 197), (775, 139), (719.0, 107.0)], [(719.0, 107.0), (663, 75), (584, 75)], [(584, 75), (457, 75), (374.5, 190.5)], [(374.5, 190.5), (292, 306), (292, 499)]]
+    testBounds = PathUtilities.BoundsRectangle.fromContour(testContour)
+
+    cp = ContourPlotter(testBounds.points)
+
+    cp.drawContours([testContour], Color(0, 255, 0), False)
+
+    image = cp.generateFinalImage()
+
+    imageFile = open(f"Curve Test.svg", "wt", encoding="UTF-8")
+    imageFile.write(image)
+    imageFile.close()
+
+    pcp = ContourPlotter(testBounds.points, poly=True)
+    pcp.drawContours([testContour], Color(255, 0, 0), False)
+
+    polyImage = pcp.generateFinalImage()
+
+
+    polyImageFile = open(f"Poly Curve Test.svg", "wt", encoding="UTF-8")
+    polyImageFile.write(polyImage)
+    polyImageFile.close()
+
+if __name__ == "__main__":
+    test()

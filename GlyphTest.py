@@ -11,6 +11,7 @@ from sys import argv, exit, stderr
 from logging import getLogger, ERROR
 from re import fullmatch
 from fontTools.ttLib import ttFont, TTLibError
+from fontTools.pens import svgPathPen
 from FontDocTools.ArgumentIterator import ArgumentIterator
 from FontDocTools.Color import Color
 import ContourPlotter
@@ -229,6 +230,11 @@ class Glyph(object):
 
         self.bounds = PathUtilities.BoundsRectangle((self.minX, self.maxY), (self.maxX, self.minY))
 
+    def referenceCommands(self):
+        pen = svgPathPen.SVGPathPen(None)
+        self.glyph.draw(pen, self.glyfTable)
+        return pen.getCommands()
+
 def _getFontName(ttFont, nameID):
     nameRecord = ttFont["name"].getName(nameID, 3, 1, 0x0409) # PostScriptName, Windows, Unicode BMP, English
     if nameRecord is None:
@@ -383,6 +389,7 @@ def main():
 
                 boundingRect = boundingRect.union(bounds)
 
+        # print(glyph.referenceCommands())
         cp = ContourPlotter.ContourPlotter(boundingRect.points)
 
         for contours, color in shapes:

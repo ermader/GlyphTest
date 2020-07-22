@@ -473,7 +473,7 @@ def test():
 
     fp = Transform(m1, m2, m3)
     print(f"rotation transform = {fp.transform}")
-    print(f"rotation of (8, 6) = {fp.multiplyRowByMatrix([8, 6, 1], fp.transform)}")
+    print(f"rotation of (8, 6) = {fp.applyToPoint((8, 6))}")
 
     # s1 = [(253, 239), (242, 210), (216, 136), (199, 80)]
     # s2 = [(253, 239), (242, 210), (229, 173), (216, 136), (199, 80)]
