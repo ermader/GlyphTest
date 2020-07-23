@@ -102,6 +102,12 @@ class BoundsRectangle(object):
     def points(self):
         return (self.leftTop[0], self.leftTop[1], self.rightBottom[0], self.rightBottom[1])
 
+    def yFromBottom(self, percent):
+        return self.rightBottom[1] + self.height * percent
+
+    def xFromLeft(self, percent):
+        return self.leftTop[0] + self.width * percent
+
     def enclosesPoint(self, point):
         left, top = self.leftTop
         right, bottom = self.rightBottom
@@ -249,6 +255,18 @@ def horizontalLines(contours):
 
 def horizontalLinesCrossing(contours, x):
     return list(filter(lambda s: crossesX(s, x), sortByY((horizontalLines(contours)))))
+
+def lines(contours):
+    l = []
+    for contour in contours:
+        for segment in contour:
+            if len(segment) == 2:
+                l.append(segment)
+
+    return l
+
+def linesCrossingY(contours, y):
+    return list(filter(lambda s: crossesY(s, y), sortByX(lines(contours))))
 
 def sortByX(contour):
     return sorted(contour, key=lambda s: s[0][0])
@@ -422,13 +440,17 @@ def rotateContoursAbout(contours, about, degrees=90):
 
     return rt.applyToContours(contours)
 
+def toMicros(funits, unitsPerEM):
+    return funits * 1000 / unitsPerEM
 
 # Helvetica Neue H
 hContours = [[[(78, 714), (78, 0)], [(78, 0), (173, 0)], [(173, 0), (173, 327)], [(173, 327), (549, 327)], [(549, 327), (549, 0)], [(549, 0), (644, 0)], [(644, 0), (644, 714)], [(644, 714), (549, 714)], [(549, 714), (549, 407)], [(549, 407), (173, 407)], [(173, 407), (173, 714)], [(173, 714), (78, 714)]]]
 xContours = [[[(248, 367), (0, 0)], [(0, 0), (106, 0)], [(106, 0), (304, 295)], [(304, 295), (496, 0)], [(496, 0), (612, 0)], [(612, 0), (361, 367)], [(361, 367), (597, 714)], [(597, 714), (491, 714)], [(491, 714), (305, 435)], [(305, 435), (127, 714)], [(127, 714), (13, 714)], [(13, 714), (248, 367)]]]
+helveticaNeueUPM = 1000
 
 newYorkHContours = [[[(414, 155), (414, 1289)], [(414, 1289), (414, 1331), (424.0, 1354.0)], [(424.0, 1354.0), (434, 1377), (463.5, 1389.0)], [(463.5, 1389.0), (493, 1401), (550, 1409)], [(550, 1409), (550, 1444)], [(550, 1444), (56, 1444)], [(56, 1444), (56, 1410)], [(56, 1410), (118, 1401), (148.0, 1388.5)], [(148.0, 1388.5), (178, 1376), (188.0, 1351.5)], [(188.0, 1351.5), (198, 1327), (198, 1283)], [(198, 1283), (198, 161)], [(198, 161), (198, 117), (188.0, 92.5)], [(188.0, 92.5), (178, 68), (148.0, 55.5)], [(148.0, 55.5), (118, 43), (56, 34)], [(56, 34), (56, 0)], [(56, 0), (550, 0)], [(550, 0), (550, 34)], [(550, 34), (493, 43), (463.5, 55.0)], [(463.5, 55.0), (434, 67), (424.0, 90.0)], [(424.0, 90.0), (414, 113), (414, 155)]], [[(1352, 161), (1352, 1283)], [(1352, 1283), (1352, 1328), (1362.5, 1352.0)], [(1362.5, 1352.0), (1373, 1376), (1403.5, 1388.5)], [(1403.5, 1388.5), (1434, 1401), (1494, 1410)], [(1494, 1410), (1494, 1444)], [(1494, 1444), (1000, 1444)], [(1000, 1444), (1000, 1410)], [(1000, 1410), (1059, 1401), (1088.0, 1389.0)], [(1088.0, 1389.0), (1117, 1377), (1126.5, 1354.5)], [(1126.5, 1354.5), (1136, 1332), (1136, 1289)], [(1136, 1289), (1136, 155)], [(1136, 155), (1136, 113), (1126.5, 90.0)], [(1126.5, 90.0), (1117, 67), (1088.0, 55.0)], [(1088.0, 55.0), (1059, 43), (1000, 34)], [(1000, 34), (1000, 0)], [(1000, 0), (1494, 0)], [(1494, 0), (1494, 34)], [(1494, 34), (1434, 43), (1403.5, 55.5)], [(1403.5, 55.5), (1373, 68), (1362.5, 92.5)], [(1362.5, 92.5), (1352, 117), (1352, 161)]], [[(306, 717), (1244, 717)], [(1244, 717), (1244, 762)], [(1244, 762), (306, 762)], [(306, 762), (306, 717)]]]
 newYorkpContours = [[[(1080, 492), (1080, 649), (1023.5, 759.0)], [(1023.5, 759.0), (967, 869), (875.0, 927.0)], [(875.0, 927.0), (783, 985), (677, 985)], [(677, 985), (571, 985), (483.5, 935.0)], [(483.5, 935.0), (396, 885), (356, 802)], [(356, 802), (356, 978)], [(356, 978), (40, 942)], [(40, 942), (40, 912)], [(40, 912), (99, 894)], [(99, 894), (140, 881), (150.5, 866.5)], [(150.5, 866.5), (161, 852), (161, 812)], [(161, 812), (161, -328)], [(161, -328), (161, -361), (153.0, -379.5)], [(153.0, -379.5), (145, -398), (119.5, -408.0)], [(119.5, -408.0), (94, -418), (40, -426)], [(40, -426), (40, -460)], [(40, -460), (490, -460)], [(490, -460), (490, -426)], [(490, -426), (431, -418), (403.0, -407.0)], [(403.0, -407.0), (375, -396), (366.5, -375.0)], [(366.5, -375.0), (358, -354), (358, -316)], [(358, -316), (358, 105)], [(358, 105), (392, 50), (458.0, 16.0)], [(458.0, 16.0), (524, -18), (613, -18)], [(613, -18), (743, -18), (848.5, 46.0)], [(848.5, 46.0), (954, 110), (1017.0, 224.5)], [(1017.0, 224.5), (1080, 339), (1080, 492)]], [[(875, 468), (875, 276), (790.5, 158.0)], [(790.5, 158.0), (706, 40), (568, 40)], [(568, 40), (498, 40), (440.0, 73.0)], [(440.0, 73.0), (382, 106), (358, 155)], [(358, 155), (358, 771)], [(358, 771), (392, 830), (448.0, 861.0)], [(448.0, 861.0), (504, 892), (582, 892)], [(582, 892), (710, 892), (792.5, 777.0)], [(792.5, 777.0), (875, 662), (875, 468)]]]
+newYorkUPM = 2048
 
 hBounds = BoundsRectangle.fromCoutours(hContours)
 hCenter = hBounds.centerPoint
@@ -458,13 +480,13 @@ def test():
     print(pointOnLine((-300, -400), l2))
     print()
 
-    print(f"vertical stroke width of Helvetica Neue H = {verticalStrokeWidth(hContours, hBounds.height / 4)}")
-    print(f"horizontal stroke width of Helvetica Neue H = {horizontalStrokeWidth(hContours, hBounds.width / 2)}")
+    print(f"vertical stroke width of Helvetica Neue H = {toMicros(verticalStrokeWidth(hContours, hBounds.yFromBottom(0.25)), helveticaNeueUPM)} micro")
+    print(f"horizontal stroke width of Helvetica Neue H = {toMicros(horizontalStrokeWidth(hContours, hBounds.xFromLeft(0.50)), helveticaNeueUPM)} micro")
     print()
 
     diagonals = list(filter(lambda s: not isHorizontalLine(s), xContours[0]))
-    diag_25 = list(filter(lambda s: crossesY(s, hBounds.height / 4), diagonals))
-    diag_75 = list(filter(lambda s: crossesY(s, hBounds.height * .75), diagonals))
+    diag_25 = list(filter(lambda s: crossesY(s, hBounds.yFromBottom(0.25)), diagonals))
+    diag_75 = list(filter(lambda s: crossesY(s, hBounds.yFromBottom(0.75)), diagonals))
 
     #
     # To calculate the stroke width:
@@ -477,20 +499,53 @@ def test():
     perpendicular = rotateSegmentAbout(diagonals[0], midPoint)
     intersection = intersectionPoint(perpendicular, diagonals[1])
     xWidth = length([midPoint, intersection])
-    print(f"stroke width of Helvetica Neue X = {xWidth}")
+    print(f"stroke width of Helvetica Neue X = {toMicros(xWidth, helveticaNeueUPM)} micro")
 
     print(f"diagonal strokes of Helvetica Neue X = {diagonals}")
     print()
 
     nyhBounds =  BoundsRectangle.fromCoutours(newYorkHContours)
-    print(f"vertical stroke width of New York H = {verticalStrokeWidth(newYorkHContours, nyhBounds.height / 4)}")
-    print(f"horizontal stroke width of New York H = {horizontalStrokeWidth(newYorkHContours, nyhBounds.width / 2)}")
+    print(f"vertical stroke width of New York H = {toMicros(verticalStrokeWidth(newYorkHContours, nyhBounds.yFromBottom(0.25)), newYorkUPM)} micro")
+    print(f"horizontal stroke width of New York H = {toMicros(horizontalStrokeWidth(newYorkHContours, nyhBounds.xFromLeft(0.50)), newYorkUPM)} micro")
     # print(f"intersection of vertical and horizontal strokes = {vStroke.intersection(hStroke)}")
     print()
 
     nypBounds = BoundsRectangle.fromCoutours(newYorkpContours)
-    print(f"vertical stroke width of New York p = {verticalStrokeWidth(newYorkpContours, nypBounds.height / 4)}")
+    print(f"vertical stroke width of New York p = {toMicros(verticalStrokeWidth(newYorkpContours, nypBounds.yFromBottom(0.25)), newYorkUPM)} micro")
     print()
+
+    #
+    # Colon method of determining the italic angle.
+    # (Assumes that the colon glyph is two contours)
+    # Draw a line between the center points of the bounding boxes of each contour.
+    # The angle is 90 - the arc-tangent of the slope of the line.
+    #
+    nyItalicColonContours = [[[(249, -17), (283, -17), (311.0, -0.5)], [(311.0, -0.5), (339, 16), (355.5, 44.5)], [(355.5, 44.5), (372, 73), (372, 107)], [(372, 107), (372, 157), (336.0, 193.0)], [(336.0, 193.0), (300, 229), (248, 229)], [(248, 229), (214, 229), (186.0, 212.5)], [(186.0, 212.5), (158, 196), (141.5, 167.5)], [(141.5, 167.5), (125, 139), (125, 104)], [(125, 104), (125, 55), (161.0, 19.0)], [(161.0, 19.0), (197, -17), (249, -17)]], [[(401, 698), (435, 698), (463.0, 714.5)], [(463.0, 714.5), (491, 731), (507.5, 759.5)], [(507.5, 759.5), (524, 788), (524, 822)], [(524, 822), (524, 872), (488.0, 908.0)], [(488.0, 908.0), (452, 944), (400, 944)], [(400, 944), (366, 944), (338.0, 927.5)], [(338.0, 927.5), (310, 911), (293.5, 882.5)], [(293.5, 882.5), (277, 854), (277, 819)], [(277, 819), (277, 770), (313.0, 734.0)], [(313.0, 734.0), (349, 698), (401, 698)]]]
+    lowerDot = nyItalicColonContours[0]
+    upperDot = nyItalicColonContours[1]
+    lowerBounds = BoundsRectangle.fromContour(lowerDot)
+    upperBounds = BoundsRectangle.fromContour(upperDot)
+    lowerCenter = lowerBounds.centerPoint
+    upperCenter = upperBounds.centerPoint
+    italicSlope = slope([lowerCenter, upperCenter])
+    angle = 90.0 - math.degrees(math.atan(italicSlope))
+    print(f"italic angle from colon method = {angle}")
+    print()
+
+    nyItalicpContours = [[[(1069, 635), (1069, 741), (1037.0, 819.5)], [(1037.0, 819.5), (1005, 898), (948.0, 941.5)], [(948.0, 941.5), (891, 985), (816, 985)], [(816, 985), (710, 985), (627.0, 913.0)], [(627.0, 913.0), (544, 841), (498, 704)], [(498, 704), (557, 979)], [(557, 979), (231, 938)], [(231, 938), (224, 905)], [(224, 905), (285, 892)], [(285, 892), (323, 882), (333.0, 865.0)], [(333.0, 865.0), (343, 848), (335, 810)], [(335, 810), (94, -327)], [(94, -327), (87, -358), (74.5, -376.0)], [(74.5, -376.0), (62, -394), (33.0, -404.5)], [(33.0, -404.5), (4, -415), (-53, -425)], [(-53, -425), (-60, -460)], [(-60, -460), (407, -460)], [(407, -460), (414, -425)], [(414, -425), (350, -414), (320.0, -403.5)], [(320.0, -403.5), (290, -393), (284.0, -375.0)], [(284.0, -375.0), (278, -357), (284, -324)], [(284, -324), (369, 78)], [(369, 78), (387, 44), (435.5, 13.0)], [(435.5, 13.0), (484, -18), (572, -18)], [(572, -18), (686, -18), (777.5, 37.0)], [(777.5, 37.0), (869, 92), (934.0, 185.0)], [(934.0, 185.0), (999, 278), (1034.0, 394.5)], [(1034.0, 394.5), (1069, 511), (1069, 635)]], [[(871, 653), (871, 551), (850.0, 443.5)], [(850.0, 443.5), (829, 336), (786.5, 244.0)], [(786.5, 244.0), (744, 152), (680.5, 95.0)], [(680.5, 95.0), (617, 38), (532, 38)], [(532, 38), (471, 38), (431.5, 64.5)], [(431.5, 64.5), (392, 91), (381, 128)], [(381, 128), (482, 605)], [(482, 605), (517, 745), (586.0, 822.0)], [(586.0, 822.0), (655, 899), (728, 899)], [(728, 899), (796, 899), (833.5, 842.0)], [(833.5, 842.0), (871, 785), (871, 653)]]]
+    nyipBounds = BoundsRectangle.fromCoutours(nyItalicpContours)
+    nyipLines = linesCrossingY(nyItalicpContours, nyipBounds.yFromBottom(0.25))
+    italicSlope = slope(nyipLines[0])
+    angle = 90.0 - math.degrees(math.atan(italicSlope))
+    print(f"italic angle from stem method = {angle}")
+    print()
+    midPoint = midpoint(nyipLines[0])
+    perpendicular = rotateSegmentAbout(nyipLines[0], midPoint)
+    intersection = intersectionPoint(perpendicular, nyipLines[1])
+    xWidth = length([midPoint, intersection])
+    print(f"stroke width of New York Italic p = {toMicros(xWidth, newYorkUPM)} micro")
+    print()
+
 
     #
     # Example 2-6 from Mathematical Elements for Computer Graphics
