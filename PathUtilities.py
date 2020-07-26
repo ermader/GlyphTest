@@ -31,7 +31,7 @@ _colors = {
     'blue': (0, 0, 255),
     'teal': (0, 128, 128),
     'aqua': (0, 255, 255),
-    'magenta': (0, 255, 255)
+    'magenta': (255, 0, 255)
 }
 
 def colorFromName(name):
@@ -274,6 +274,9 @@ def sortByX(contour):
 def sortByY(contour):
     return sorted(contour, key=lambda s: s[0][1])
 
+def sortByLength(contour, longestFirst=False):
+    return sorted(contour, key=lambda l: length(l), reverse=longestFirst)
+
 def crossesY(line, y):
     return BoundsRectangle(*line).crossesY(y)
 
@@ -363,11 +366,11 @@ class Transform(object):
         return Transform._matrix(m=tx, n=ty)
 
     @staticmethod
-    def _rotationMatrix(degrees):
+    def _rotationMatrix(degrees, ccw=True):
         st = Transform.sin(degrees)  # sin(theta)
         ct = Transform.cos(degrees)  # cos(theta)
 
-        return Transform._matrix(a=ct, b=st, c=-st, d=ct)
+        return Transform._matrix(a=ct, b=st, c=-st, d=ct) if ccw else Transform._matrix(a=ct, b=-st, c=st, d=ct)
 
     @staticmethod
     def _perspectiveMatrix(p, q, s):
@@ -529,15 +532,16 @@ def test():
     upperCenter = upperBounds.centerPoint
     italicSlope = slope([lowerCenter, upperCenter])
     angle = 90.0 - math.degrees(math.atan(italicSlope))
-    print(f"italic angle from colon method = {angle}")
+    print(f"italic angle for New York Italic from colon method = {angle}")
     print()
 
     nyItalicpContours = [[[(1069, 635), (1069, 741), (1037.0, 819.5)], [(1037.0, 819.5), (1005, 898), (948.0, 941.5)], [(948.0, 941.5), (891, 985), (816, 985)], [(816, 985), (710, 985), (627.0, 913.0)], [(627.0, 913.0), (544, 841), (498, 704)], [(498, 704), (557, 979)], [(557, 979), (231, 938)], [(231, 938), (224, 905)], [(224, 905), (285, 892)], [(285, 892), (323, 882), (333.0, 865.0)], [(333.0, 865.0), (343, 848), (335, 810)], [(335, 810), (94, -327)], [(94, -327), (87, -358), (74.5, -376.0)], [(74.5, -376.0), (62, -394), (33.0, -404.5)], [(33.0, -404.5), (4, -415), (-53, -425)], [(-53, -425), (-60, -460)], [(-60, -460), (407, -460)], [(407, -460), (414, -425)], [(414, -425), (350, -414), (320.0, -403.5)], [(320.0, -403.5), (290, -393), (284.0, -375.0)], [(284.0, -375.0), (278, -357), (284, -324)], [(284, -324), (369, 78)], [(369, 78), (387, 44), (435.5, 13.0)], [(435.5, 13.0), (484, -18), (572, -18)], [(572, -18), (686, -18), (777.5, 37.0)], [(777.5, 37.0), (869, 92), (934.0, 185.0)], [(934.0, 185.0), (999, 278), (1034.0, 394.5)], [(1034.0, 394.5), (1069, 511), (1069, 635)]], [[(871, 653), (871, 551), (850.0, 443.5)], [(850.0, 443.5), (829, 336), (786.5, 244.0)], [(786.5, 244.0), (744, 152), (680.5, 95.0)], [(680.5, 95.0), (617, 38), (532, 38)], [(532, 38), (471, 38), (431.5, 64.5)], [(431.5, 64.5), (392, 91), (381, 128)], [(381, 128), (482, 605)], [(482, 605), (517, 745), (586.0, 822.0)], [(586.0, 822.0), (655, 899), (728, 899)], [(728, 899), (796, 899), (833.5, 842.0)], [(833.5, 842.0), (871, 785), (871, 653)]]]
     nyipBounds = BoundsRectangle.fromCoutours(nyItalicpContours)
     nyipLines = linesCrossingY(nyItalicpContours, nyipBounds.yFromBottom(0.25))
-    italicSlope = slope(nyipLines[0])
+    nyipLinesByLength = sortByLength(nyipLines, longestFirst=True)
+    italicSlope = slope(nyipLinesByLength[0])
     angle = 90.0 - math.degrees(math.atan(italicSlope))
-    print(f"italic angle from stem method = {angle}")
+    print(f"italic angle for New York Italic from stem method = {angle}")
     print()
     midPoint = midpoint(nyipLines[0])
     perpendicular = rotateSegmentAbout(nyipLines[0], midPoint)
@@ -546,6 +550,33 @@ def test():
     print(f"stroke width of New York Italic p = {toMicros(xWidth, newYorkUPM)} micro")
     print()
 
+    helveticaNeueItalicColonContours = [[[(211, 406), (234, 517)], [(234, 517), (122, 517)], [(122, 517), (99, 406)], [(99, 406), (211, 406)]], [[(37, 111), (15, 0)], [(15, 0), (127, 0)], [(127, 0), (150, 111)], [(150, 111), (37, 111)]]]
+    helveticaNeueItalicpContours = [[[(102, 517), (-48, -197)], [(-48, -197), (35, -197)], [(35, -197), (90, 79)], [(90, 79), (92, 79)], [(92, 79), (99, 53), (116.5, 35.5)], [(116.5, 35.5), (134, 18), (156.5, 7.5)], [(156.5, 7.5), (179, -3), (204.5, -7.0)], [(204.5, -7.0), (230, -11), (253, -11)], [(253, -11), (321, -11), (374.5, 18.0)], [(374.5, 18.0), (428, 47), (464.5, 94.0)], [(464.5, 94.0), (501, 141), (520.5, 199.5)], [(520.5, 199.5), (540, 258), (540, 317)], [(540, 317), (540, 364), (527.0, 403.0)], [(527.0, 403.0), (514, 442), (488.0, 470.0)], [(488.0, 470.0), (462, 498), (424.5, 513.5)], [(424.5, 513.5), (387, 529), (337, 529)], [(337, 529), (285, 529), (244.5, 511.0)], [(244.5, 511.0), (204, 493), (166, 443)], [(166, 443), (164, 443)], [(164, 443), (182, 517)], [(182, 517), (102, 517)]], [[(455, 317), (455, 274), (442.0, 229.0)], [(442.0, 229.0), (429, 184), (403.0, 147.0)], [(403.0, 147.0), (377, 110), (339.0, 86.5)], [(339.0, 86.5), (301, 63), (250, 63)], [(250, 63), (187, 63), (153.5, 101.0)], [(153.5, 101.0), (120, 139), (120, 197)], [(120, 197), (120, 238), (133.5, 283.0)], [(133.5, 283.0), (147, 328), (172.5, 366.0)], [(172.5, 366.0), (198, 404), (236.0, 429.0)], [(236.0, 429.0), (274, 454), (322, 454)], [(322, 454), (392, 454), (423.5, 417.0)], [(423.5, 417.0), (455, 380), (455, 317)]]]
+
+    lowerDot = helveticaNeueItalicColonContours[0]
+    upperDot = helveticaNeueItalicColonContours[1]
+    lowerBounds = BoundsRectangle.fromContour(lowerDot)
+    upperBounds = BoundsRectangle.fromContour(upperDot)
+    lowerCenter = lowerBounds.centerPoint
+    upperCenter = upperBounds.centerPoint
+    italicSlope = slope([lowerCenter, upperCenter])
+    angle = 90.0 - math.degrees(math.atan(italicSlope))
+    print(f"italic angle for Helvetica Neue Italic from colon method = {angle}")
+    print()
+
+    hnipBounds = BoundsRectangle.fromCoutours(helveticaNeueItalicpContours)
+    hnipLines = linesCrossingY(helveticaNeueItalicpContours, hnipBounds.yFromBottom(0.25))
+    hnipLinesByLength = sortByLength(hnipLines, longestFirst=True)
+    italicSlope = slope(hnipLinesByLength[0])
+    angle = 90.0 - math.degrees(math.atan(italicSlope))
+    print(f"italic angle for Helvetica Neue Italic from stem method = {angle}")
+    print()
+    midPoint = midpoint(hnipLines[0])
+    perpendicular = rotateSegmentAbout(hnipLines[0], midPoint)
+    intersection = intersectionPoint(perpendicular, hnipLines[1])
+    xWidth = length([midPoint, intersection])
+    print(f"stroke width of Helvetica Neue Italic p = {toMicros(xWidth, helveticaNeueUPM)} micro")
+    print()
 
     #
     # Example 2-6 from Mathematical Elements for Computer Graphics
