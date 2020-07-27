@@ -88,12 +88,13 @@ class GlyphTestArgs:
             raise ValueError(f"GlyphID must be a positive integer; got {arg}")
         return int(arg)
 
+    directions = {"clockwise": False, "cw": False, "counterclockwise": True, "ccw": True}
     @classmethod
     def getDirection(cls, direction):
-        if direction == "clockwise" or direction == "cw":
-            return False
-        elif direction == "counterclockwise" or direction == "ccw" or direction is None:
+        if direction is None:
             return True
+        elif direction in cls.directions:
+            return cls.directions[direction]
         else:
             raise ValueError(f"Unrecognized direction “{direction}”.")
 
