@@ -17,6 +17,28 @@ from FontDocTools.Color import Color
 import ContourPlotter
 import PathUtilities
 
+class GlyphTestArgumentIterator(ArgumentIterator):
+    def __init__(self, arguments):
+        ArgumentIterator.__init__(self, arguments)
+
+    def nextOptional(self):
+        """\
+        Returns an optional next extra argument.
+        Returns None if there’s no more argument, or if the next
+        argument starts with “--”.
+        """
+        try:
+            nextArgument = self._next()
+        except StopIteration:
+            return None
+
+        if nextArgument.startswith("--"):
+            self._nextPos -= 1
+            return None
+
+        return nextArgument
+
+
 class GlyphTestArgs:
     """\
     Interprets and checks the command line options for the GlyphTest tool,
@@ -37,6 +59,7 @@ class GlyphTestArgs:
         self.stretch = None
         self.project = None
         self.pinwheel = None
+        self.ccw = True
 
     def completeInit(self):
         """\
@@ -66,6 +89,15 @@ class GlyphTestArgs:
         return int(arg)
 
     @classmethod
+    def getDirection(cls, direction):
+        if direction == "clockwise" or direction == "cw":
+            return False
+        elif direction == "counterclockwise" or direction == "ccw" or direction is None:
+            return True
+        else:
+            raise ValueError(f"Unrecognized direction “{direction}”.")
+
+    @classmethod
     def forArguments(cls, argumentList):
         """\
         Return a new GlyphShaperSpec object representing the given
@@ -77,7 +109,7 @@ class GlyphTestArgs:
 
         # pylint: disable=too-many-branches
 
-        arguments = ArgumentIterator(argumentList)
+        arguments = GlyphTestArgumentIterator(argumentList)
         args = GlyphTestArgs()
         argumentsSeen = {}
 
@@ -100,6 +132,8 @@ class GlyphTestArgs:
 
                 if transform == "rotate":
                     args.rotate = arguments.nextExtraAsNumber("angle in degrees")
+                    direction = arguments.nextOptional()
+                    args.ccw = cls.getDirection(direction)
                 elif transform == "project":
                     p = arguments.nextExtraAsNumber("p")
                     q = arguments.nextExtraAsNumber("q")
@@ -116,6 +150,8 @@ class GlyphTestArgs:
                     args.stretch = (x, y)
                 elif transform == "pinwheel":
                     args.pinwheel = True
+                    direction = arguments.nextOptional()
+                    args.ccw = cls.getDirection(direction)
                     args.fill = 0.2
                 else:
                     raise ValueError(f"Unrecognized transform “{transform}”.")
@@ -294,7 +330,7 @@ def main():
         shapes = [(contours, args.color)]
         if args.rotate:
             nameSuffix = f"_Rotated_{args.rotate}"
-            contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate)
+            contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate, args.ccw)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.project:
@@ -348,7 +384,7 @@ def main():
             colorIndex = 1
             shapes = [(contours, PathUtilities.colorFromName(colors[0]))]  # the original shape with the first color
             for degrees in range(45, 360, 45):
-                m1 = PathUtilities.Transform._rotationMatrix(degrees)
+                m1 = PathUtilities.Transform._rotationMatrix(degrees, args.ccw)
                 transform = PathUtilities.Transform(m1)
                 rc = transform.applyToContours(contours)
                 bounds = PathUtilities.BoundsRectangle.fromCoutours(rc)

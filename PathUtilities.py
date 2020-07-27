@@ -381,12 +381,12 @@ class Transform(object):
         return self._transform
 
     @classmethod
-    def rotation(cls, about, degrees=90):
-        # Translate about point to origin
+    def rotation(cls, about, degrees=90, ccw=True):
+        # Translate about point of origin
         m1 = Transform._translateMatrix(about, (0, 0))
 
         # rotate
-        m2 = Transform._rotationMatrix(degrees)
+        m2 = Transform._rotationMatrix(degrees, ccw)
 
         # translate back to about point
         m3 = Transform._translateMatrix((0, 0), about)
@@ -423,23 +423,23 @@ class Transform(object):
 
         return rotated
 
-def rotatePointAbout(point, about, degrees=90):
-    rt = Transform.rotation(about, degrees)
+def rotatePointAbout(point, about, degrees=90, ccw=True):
+    rt = Transform.rotation(about, degrees, ccw)
 
     return rt.applyToPoint(point)
 
-def rotateSegmentAbout(segment, about, degrees=90):
-    rt = Transform.rotation(about, degrees)
+def rotateSegmentAbout(segment, about, degrees=90, ccw=True):
+    rt = Transform.rotation(about, degrees, ccw)
 
     return rt.applyToSegment(segment)
 
-def rotateContourAbout(contour, about, degrees=90):
-    rt = Transform.rotation(about, degrees)
+def rotateContourAbout(contour, about, degrees=90, ccw=True):
+    rt = Transform.rotation(about, degrees, ccw)
 
     return rt.applyToContour(contour)
 
-def rotateContoursAbout(contours, about, degrees=90):
-    rt = Transform.rotation(about, degrees)
+def rotateContoursAbout(contours, about, degrees=90, ccw=True):
+    rt = Transform.rotation(about, degrees, ccw)
 
     return rt.applyToContours(contours)
 
