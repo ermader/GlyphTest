@@ -13,6 +13,7 @@ from re import fullmatch
 from fontTools.ttLib import ttFont, TTLibError
 from fontTools.pens import svgPathPen
 from FontDocTools.ArgumentIterator import ArgumentIterator
+from FontDocTools.Font import Font
 from FontDocTools.Color import Color
 import ContourPlotter
 import PathUtilities
@@ -173,6 +174,44 @@ class GlyphTestArgs:
         args.completeInit()
         return args
 
+class GTFont(Font):
+    def __init__(self, fontFile, fontName=None, fontNumber=None):
+        Font.__init__(self, fontFile, fontName, fontNumber)
+
+    def __getitem__(self, item):
+        return self._ttFont[item]
+
+    @classmethod
+    def _getFontName(cls, ttFont, nameID):
+        nameRecord = ttFont["name"].getName(nameID, 3, 1, 0x0409)  # name, Windows, Unicode BMP, English
+        if nameRecord is None:
+            nameRecord = ttFont["name"].getName(nameID, 1, 0)  # name, Mac, Roman
+        if nameRecord is not None:
+            return str(nameRecord)
+        return None
+
+    @classmethod
+    def _getPostScriptName(cls, ttFont):
+        return cls._getFontName(ttFont, 6)
+
+    @classmethod
+    def _getFullName(cls, ttFont):
+        return cls._getFontName(ttFont, 4)
+
+    @property
+    def postScriptName(self):
+        return self._getPostScriptName(self._ttFont)
+
+    @property
+    def fullName(self):
+        return self._getFullName(self._ttFont)
+
+    def getGlyphName(self, glyphID):
+        return self._ttFont.getGlyphName(glyphID)
+
+    def getGlyphNameFromCharCode(self, charCode):
+        return self._ttFont.getBestCmap()[charCode]
+
 class Glyph(object):
     def handleSegment(self, segment):
         for x, y in segment:
@@ -240,64 +279,10 @@ class Glyph(object):
         self.glyph.draw(pen, self.glyfTable)
         return pen.getCommands()
 
-def _getFontName(ttFont, nameID):
-    nameRecord = ttFont["name"].getName(nameID, 3, 1, 0x0409) # PostScriptName, Windows, Unicode BMP, English
-    if nameRecord is None:
-        nameRecord = ttFont["name"].getName(nameID, 1, 0) # PostScriptName, Mac, Roman
-    if nameRecord is not None:
-        return str(nameRecord)
-    return None
-
-def _getPostScriptName(ttFont):
-    return _getFontName(ttFont, 6)
-
-def _getFullName(ttFont):
-    return _getFontName(ttFont, 4)
-
-def openFont(args):
-    # TTFont sometimes logs warnings while opening fonts that we’re
-    # not concerned with. Let’s turn them off.
-    getLogger("fontTools.ttLib").setLevel(ERROR)
-
-    # Now onward with our own business.
-    if args.fontFile.endswith(".ttf") or args.fontFile.endswith(".otf"):
-        font = ttFont.TTFont(args.fontFile)
-    else:
-        assert args.fontFile.endswith(".ttc") or args.fontFile.endswith(".otc")
-        # assert (args.fontName is None) == (args.fontNumber is not None)
-        if args.fontName:
-            fontNumber = 0
-            fontNames = []
-            while True:
-                try:
-                    font = ttFont.TTFont(args.fontFile, fontNumber=fontNumber)
-                except TTLibError:
-                    raise ValueError(
-                        "Could not find font " + args.fontName + " within file " + args.fontFile + ". Available names: " + ", ".join(
-                            fontNames) + ".")
-                postScriptName = _getPostScriptName(font)
-                if postScriptName == args.fontName:
-                    break
-                fontNames.append(postScriptName)
-                font.close()
-                fontNumber += 1
-        # else:
-        #     try:
-        #         font = ttFont.TTFont(args.fontFile, fontNumber=args.fontNumber)
-        #     except TTLibError as error:
-        #         if fontNumber > 0:
-        #             raise StopIteration()
-        #         raise error
-
-    if not "glyf" in font:
-        raise ValueError(f"{_getFullName(font)} does not have a 'glyf' table.")
-
-    return font
-
 def getGlyphName(args, font):
     if args.glyphName: return args.glyphName
     if args.glyphID: return font.getGlyphName(args.glyphID)
-    if args.charCode: return font.getBestCmap()[args.charCode]
+    if args.charCode: return font.getGlyphNameFromCharCode(args.charCode)
 
     return None
 
@@ -314,12 +299,12 @@ def main():
         exit(1)
 
     try:
-        font = openFont(args)
+        font = GTFont(args.fontFile, args.fontName)
         glyphName = getGlyphName(args, font)
         glyph = Glyph(font, glyphName)
 
         fontBasename = basename(args.fontFile)
-        fontPostscriptName = _getPostScriptName(font)
+        fontPostscriptName = font.postScriptName
         print(f"Drawing glyph {glyphName} from font {fontBasename}/{fontPostscriptName}")
 
         contours = glyph.contours
@@ -402,7 +387,7 @@ def main():
 
         image = cp.generateFinalImage()
 
-        fullName = _getFullName(font)
+        fullName = font.fullName
         if fullName.startswith("."): fullName = fullName[1:]
 
         imageFile = open(f"{fullName}_{glyphName}{nameSuffix}.svg", "wt", encoding="UTF-8")
