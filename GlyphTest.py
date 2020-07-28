@@ -178,6 +178,9 @@ class GTFont(Font):
     def __init__(self, fontFile, fontName=None, fontNumber=None):
         Font.__init__(self, fontFile, fontName, fontNumber)
 
+    def __contains__(self, item):
+        return item in self._ttFont
+
     def __getitem__(self, item):
         return self._ttFont[item]
 
@@ -215,6 +218,21 @@ class GTFont(Font):
     @property
     def glyphSet(self):
         return self._ttFont.getGlyphSet()
+
+    @property
+    def hmtxMetrics(self):
+        if not self._hMetrics:
+            self._hMetrics = self["hmtx"].metrics
+        return self._hMetrics
+
+    @property
+    def vmtxMetrics(self):
+        if not self._vMetrics and "vmtx" in self._ttFont:
+            self._vMetrics = self["vmtx"].metrics
+        return self._vMetrics
+
+    def __str__(self):
+        return self.postScriptName
 
 class Glyph(object):
     def handleSegment(self, segment):
@@ -278,6 +296,31 @@ class Glyph(object):
             self.contours.append(self.segments)
 
         self.bounds = PathUtilities.BoundsRectangle((self.minX, self.maxY), (self.maxX, self.minY))
+
+    def __str__(self):
+        return f'"{self.glyphName}" of "{self.font.postScriptName}"'
+
+    @property
+    def advanceWidth(self):
+        """\
+        Returns the advance width of this glyph as given
+        in the hmtx table.
+        """
+        (advanceWidth, _) = self.font.hmtxMetrics[self.glyphName]
+        return advanceWidth
+
+    @property
+    def advanceHeight(self):
+        """\
+        Returns the advance height of this glyph as given
+        in the vmtx table.
+        """
+
+        vmtxMetrics = self.font.vmtxMetrics
+        if vmtxMetrics:
+            (advanceHeight, _) = self.font.vmtxMetrics[self.glyphName]
+            return advanceHeight
+        return None
 
     def referenceCommands(self):
         glyphSet = self.font.glyphSet
