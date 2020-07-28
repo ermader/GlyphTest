@@ -182,12 +182,7 @@ def isHorizontalLine(segment):
     return len(segment) == 2 and dy == 0
 
 def length(segment):
-    dx, dy = getDeltas(segment)
-
-    if dx == 0: return dy
-    if dy == 0: return dx
-
-    return math.sqrt(dx*dx + dy*dy)
+    return math.hypot(*getDeltas(segment))
 
 def slope(segment):
     dx, dy = getDeltas(segment)
