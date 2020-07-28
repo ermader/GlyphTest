@@ -212,6 +212,10 @@ class GTFont(Font):
     def getGlyphNameFromCharCode(self, charCode):
         return self._ttFont.getBestCmap()[charCode]
 
+    @property
+    def glyphSet(self):
+        return self._ttFont.getGlyphSet()
+
 class Glyph(object):
     def handleSegment(self, segment):
         for x, y in segment:
@@ -244,6 +248,7 @@ class Glyph(object):
         self.glyfTable = font["glyf"]
         self.glyph = self.glyfTable[glyphName]
         self.glyphID = self.glyfTable.getGlyphID(glyphName)
+        self.glyphName = glyphName
 
         self.minX = self.minY = 65536
         self.maxX = self.maxY = -65536
@@ -275,8 +280,9 @@ class Glyph(object):
         self.bounds = PathUtilities.BoundsRectangle((self.minX, self.maxY), (self.maxX, self.minY))
 
     def referenceCommands(self):
-        pen = svgPathPen.SVGPathPen(None)
-        self.glyph.draw(pen, self.glyfTable)
+        glyphSet = self.font.glyphSet
+        pen = svgPathPen.SVGPathPen(glyphSet)
+        glyphSet[self.glyphName].draw(pen)
         return pen.getCommands()
 
 def getGlyphName(args, font):
