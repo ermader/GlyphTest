@@ -59,12 +59,8 @@ class BoundsRectangle(object):
         self.bottom = bottom
 
     @staticmethod
-    def empty():
-        return BoundsRectangle()
-
-    @staticmethod
     def fromContour(contour):
-        bounds = BoundsRectangle.empty()
+        bounds = BoundsRectangle()
         for segment in contour:
             bounds = bounds.union(BoundsRectangle(*segment))
 
@@ -72,7 +68,7 @@ class BoundsRectangle(object):
 
     @staticmethod
     def fromCoutours(contours):
-        bounds = BoundsRectangle.empty()
+        bounds = BoundsRectangle()
         for contour in contours:
             bounds = bounds.union(BoundsRectangle.fromContour(contour))
 
