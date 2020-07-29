@@ -90,8 +90,12 @@ class BoundsRectangle(object):
         return self.width * self.height
 
     @property
+    def diagonal(self):
+        return [(self.right, self.bottom), (self.left, self.top)]
+
+    @property
     def centerPoint(self):
-        return midpoint([(self.right, self.bottom), (self.left, self.top)])
+        return midpoint(self.diagonal)
 
     @property
     def points(self):
@@ -132,8 +136,8 @@ class BoundsRectangle(object):
         return BoundsRectangle((newLeft, newBottom), (newRight, newTop))
 
     def rotateAbout(self, about):
-        rotatedLine = rotateSegmentAbout([(self.left, self.bottom), (self.right, self.top)], about)
-        return BoundsRectangle(rotatedLine[0], rotatedLine[1])
+        rotatedLine = rotateSegmentAbout(self.diagonal, about)
+        return BoundsRectangle(*rotatedLine)
 
 
 def minMax(a, b):
