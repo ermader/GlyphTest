@@ -53,15 +53,14 @@ class BoundsRectangle(object):
             bottom = min(bottom, py)
             top = max(top, py)
 
-        self.leftTop = (left, top)
-        self.rightBottom = (right, bottom)
+        self.left = left
+        self.right = right
+        self.top = top
+        self.bottom = bottom
 
     @staticmethod
     def empty():
-        r = BoundsRectangle((0, 0), (0, 0))
-        r.leftTop = (32768, -32768)
-        r.rightBottom = (-32768, 32768)
-        return r
+        return BoundsRectangle()
 
     @staticmethod
     def fromContour(contour):
@@ -80,15 +79,15 @@ class BoundsRectangle(object):
         return bounds
 
     def __str__(self):
-        return f"[{self.leftTop}, {self.rightBottom}]"
+        return f"[({self.left}, {self.bottom}), ({self.right}, {self.top})]"
 
     @property
     def width(self):
-        return self.rightBottom[0] - self.leftTop[0]
+        return self.right - self.left
 
     @property
     def height(self):
-        return self.leftTop[1] - self.rightBottom[1]
+        return self.top - self.bottom
 
     @property
     def area(self):
@@ -96,49 +95,36 @@ class BoundsRectangle(object):
 
     @property
     def centerPoint(self):
-        return midpoint([self.leftTop, self.rightBottom])
+        return midpoint([(self.right, self.bottom), (self.left, self.top)])
 
     @property
     def points(self):
         return (self.leftTop[0], self.leftTop[1], self.rightBottom[0], self.rightBottom[1])
 
     def yFromBottom(self, percent):
-        return self.rightBottom[1] + self.height * percent
+        return self.bottom + self.height * percent
 
     def xFromLeft(self, percent):
-        return self.leftTop[0] + self.width * percent
+        return self.left + self.width * percent
 
     def enclosesPoint(self, point):
-        left, top = self.leftTop
-        right, bottom = self.rightBottom
         px, py = point
 
-        return left <= px <= right and bottom <= py <= top
+        return self.left <= px <= self.right and self.bottom <= py <= self.top
 
     def crossesX(self, x):
-        left, _ = self.leftTop
-        right, _ = self.rightBottom
-
-        return left <= x <= right
+        return self.left <= x <= self.right
 
     def crossesY(self, y):
-        _, top = self.leftTop
-        _, bottom = self.rightBottom
-
-        return bottom <= y <= top
+        return self.bottom <= y <= self.top
 
     def union(self, other):
-        left, top = self.leftTop
-        right, bottom = self.rightBottom
-        oleft, otop = other.leftTop
-        oright, obottom = other.rightBottom
+        newLeft = min(self.left, other.left)
+        newTop = max(self.top, other.top)
+        newRight = max(self.right, other.right)
+        newBottom = min(self.bottom, other.bottom)
 
-        newLeft = min(left, oleft)
-        newTop = max(top, otop)
-        newRight = max(right, oright)
-        newBottom = min(bottom, obottom)
-
-        return BoundsRectangle((newLeft, newTop), (newRight, newBottom))
+        return BoundsRectangle((newLeft, newBottom), (newRight, newTop))
 
     def intersection(self, other):
         left, top = self.leftTop
@@ -146,16 +132,16 @@ class BoundsRectangle(object):
         oleft, otop = other.leftTop
         oright, obottom = other.rightBottom
 
-        newLeft = max(left, oleft)
-        newTop = min(top, otop)
-        newRight = min(right, oright)
-        newBottom = max(bottom, obottom)
+        newLeft = max(self.left, other.left)
+        newTop = min(self.top, other.top)
+        newRight = min(self.right, other.right)
+        newBottom = max(self.bottom, other.bottom)
 
         if newRight < newLeft or newTop < newBottom: return None  # maybe want <=, >=?
-        return BoundsRectangle((newLeft, newTop), (newRight, newBottom))
+        return BoundsRectangle((newLeft, newBottom), (newRight, newTop))
 
     def rotateAbout(self, about):
-        rotatedLine = rotateSegmentAbout([self.leftTop, self.rightBottom], about)
+        rotatedLine = rotateSegmentAbout([(self.left, self.bottom), (self.right, self.top)], about)
         return BoundsRectangle(rotatedLine[0], rotatedLine[1])
 
 

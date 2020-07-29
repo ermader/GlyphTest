@@ -209,10 +209,7 @@ class GTFont(Font):
     def fullName(self):
         return self._getFullName(self._ttFont)
 
-    def getGlyphName(self, glyphID):
-        return self._ttFont.getGlyphName(glyphID)
-
-    def getGlyphNameFromCharCode(self, charCode):
+    def glyphNameForCharacterCode(self, charCode):
         return self._ttFont.getBestCmap()[charCode]
 
     @property
@@ -227,7 +224,7 @@ class GTFont(Font):
 
     @property
     def vmtxMetrics(self):
-        if not self._vMetrics and "vmtx" in self._ttFont:
+        if not self._vMetrics and "vmtx" in self:
             self._vMetrics = self["vmtx"].metrics
         return self._vMetrics
 
@@ -330,8 +327,8 @@ class Glyph(object):
 
 def getGlyphName(args, font):
     if args.glyphName: return args.glyphName
-    if args.glyphID: return font.getGlyphName(args.glyphID)
-    if args.charCode: return font.getGlyphNameFromCharCode(args.charCode)
+    if args.glyphID: return font.glyphName(args.glyphID)
+    if args.charCode: return font.glyphNameForCharacterCode(args.charCode)
 
     return None
 
