@@ -123,11 +123,6 @@ class BoundsRectangle(object):
         return BoundsRectangle((newLeft, newBottom), (newRight, newTop))
 
     def intersection(self, other):
-        left, top = self.leftTop
-        right, bottom = self.rightBottom
-        oleft, otop = other.leftTop
-        oright, obottom = other.rightBottom
-
         newLeft = max(self.left, other.left)
         newTop = min(self.top, other.top)
         newRight = min(self.right, other.right)
