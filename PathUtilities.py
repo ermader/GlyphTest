@@ -95,7 +95,7 @@ class BoundsRectangle(object):
 
     @property
     def points(self):
-        return (self.leftTop[0], self.leftTop[1], self.rightBottom[0], self.rightBottom[1])
+        return (self.left, self.bottom, self.right, self.top)
 
     def yFromBottom(self, percent):
         return self.bottom + self.height * percent
