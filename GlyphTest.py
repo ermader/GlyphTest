@@ -282,13 +282,7 @@ class GTGlyph(object):
             self._segments.append([startPoint, segment[-2], segment[-1]])
 
     def __init__(self, font, glyphName):
-        self.font = font
-        headTable = font['head']
-        hheaTable = font['hhea']
-        self.ascent = hheaTable.ascent
-        self.descent = hheaTable.descent
-        self.maxAdvanceWidth = hheaTable.advanceWidthMax
-        self.unitsPerEm = headTable.unitsPerEm
+        self._font = font
         self._glyfTable = font["glyf"]
         self._glyph = self._glyfTable[glyphName]
         self._index = self._glyfTable.getGlyphID(glyphName)
@@ -324,7 +318,7 @@ class GTGlyph(object):
         self._bounds = PathUtilities.BoundsRectangle((self._minX, self._minY), (self._maxX, self._maxY))
 
     def __str__(self):
-        return f'"{self.name}" of "{self.font.postScriptName}"'
+        return f'"{self.name}" of "{self._font.postScriptName}"'
 
     @property
     def index(self):
@@ -340,7 +334,7 @@ class GTGlyph(object):
         Returns the advance width of this glyph as given
         in the hmtx table.
         """
-        (advanceWidth, _) = self.font.hmtxMetrics[self.name]
+        (advanceWidth, _) = self._font.hmtxMetrics[self.name]
         return advanceWidth
 
     @property
@@ -350,9 +344,9 @@ class GTGlyph(object):
         in the vmtx table.
         """
 
-        vmtxMetrics = self.font.vmtxMetrics
+        vmtxMetrics = self._font.vmtxMetrics
         if vmtxMetrics:
-            (advanceHeight, _) = self.font.vmtxMetrics[self.name]
+            (advanceHeight, _) = self._font.vmtxMetrics[self.name]
             return advanceHeight
         return None
 
@@ -365,7 +359,7 @@ class GTGlyph(object):
         return self._bounds
 
     def referenceCommands(self):
-        glyphSet = self.font.glyphSet
+        glyphSet = self._font.glyphSet
         pen = svgPathPen.SVGPathPen(glyphSet)
         glyphSet[self.name].draw(pen)
         return pen.getCommands()
