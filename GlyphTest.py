@@ -124,7 +124,7 @@ class GlyphTestArgs:
                 (args.fontFile, args.fontName) = arguments.nextExtraAsFont("font")
             elif argument ==  "--color":
                 colorName = arguments.nextExtra("color")
-                args.color = PathUtilities.colorFromName(colorName)
+                args.color = PathUtilities.GTColor.fromName(colorName)
                 if args.color is None: raise ValueError(f"{colorName} is not a valid color name")
             elif argument == "--fill":
                 # opacity = arguments.nextExtraAsNumber("opacity")  # should make sure 0 < opacity <= 1
