@@ -240,7 +240,7 @@ class GTFont(Font):
             return glyphs[glyphName]
         if glyphName not in self._ttGlyphSet:
             raise ValueError(f"Unknown glyph name: “{glyphName}”.")
-        glyph = Glyph(self, glyphName)
+        glyph = GTGlyph(self, glyphName)
         glyphs[glyphName] = glyph
         return glyph
 
@@ -260,16 +260,16 @@ class GTFont(Font):
         charCode = ord(char) if type(char) == type("") else char
         return self.glyphForName(self.glyphNameForCharacterCode(charCode))
 
-class Glyph(object):
+class GTGlyph(object):
     def handleSegment(self, segment):
         for x, y in segment:
-            self.minX = min(self.minX, x)
-            self.minY = min(self.minY, y)
-            self.maxX = max(self.maxX, x)
-            self.maxY = max(self.maxY, y)
+            self._minX = min(self._minX, x)
+            self._minY = min(self._minY, y)
+            self._maxX = max(self._maxX, x)
+            self._maxY = max(self._maxY, y)
 
         if len(segment) <= 3:
-            self.segments.append(segment)
+            self._segments.append(segment)
         else:
             # a starting on-curve point, two or more off-curve points, and a final on-curve point
             startPoint = segment[0]
@@ -277,9 +277,9 @@ class Glyph(object):
                 p1x, p1y = segment[i]
                 p2x, p2y = segment[i + 1]
                 impliedPoint = (0.5 * (p1x + p2x), 0.5 * (p1y + p2y))
-                self.segments.append([startPoint, segment[i], impliedPoint])
+                self._segments.append([startPoint, segment[i], impliedPoint])
                 startPoint = impliedPoint
-            self.segments.append([startPoint, segment[-2], segment[-1]])
+            self._segments.append([startPoint, segment[-2], segment[-1]])
 
     def __init__(self, font, glyphName):
         self.font = font
@@ -289,21 +289,21 @@ class Glyph(object):
         self.descent = hheaTable.descent
         self.maxAdvanceWidth = hheaTable.advanceWidthMax
         self.unitsPerEm = headTable.unitsPerEm
-        self.glyfTable = font["glyf"]
-        self.glyph = self.glyfTable[glyphName]
-        self.glyphID = self.glyfTable.getGlyphID(glyphName)
-        self.glyphName = glyphName
+        self._glyfTable = font["glyf"]
+        self._glyph = self._glyfTable[glyphName]
+        self._index = self._glyfTable.getGlyphID(glyphName)
+        self._name = glyphName
 
-        self.minX = self.minY = 65536
-        self.maxX = self.maxY = -65536
-        self.contours = []
+        self._minX = self._minY = 65536
+        self._maxX = self._maxY = -65536
+        self._contours = []
 
-        coords, endPoints, flags = self.glyph.getCoordinates(self.glyfTable)
+        coords, endPoints, flags = self._glyph.getCoordinates(self._glyfTable)
         coords = coords.copy()
 
         startPoint = 0
         for endPoint in endPoints:
-            self.segments = []
+            self._segments = []
             limitPoint = endPoint + 1
             contour = coords[startPoint:limitPoint]
             contourFlags = [flag & 0x1 for flag in flags[startPoint:limitPoint]]
@@ -319,12 +319,20 @@ class Glyph(object):
                 contour = contour[nextOnCurve:]
                 contourFlags = contourFlags[nextOnCurve:]
 
-            self.contours.append(self.segments)
+            self._contours.append(self._segments)
 
-        self.bounds = PathUtilities.BoundsRectangle((self.minX, self.maxY), (self.maxX, self.minY))
+        self._bounds = PathUtilities.BoundsRectangle((self._minX, self._minY), (self._maxX, self._maxY))
 
     def __str__(self):
-        return f'"{self.glyphName}" of "{self.font.postScriptName}"'
+        return f'"{self.name}" of "{self.font.postScriptName}"'
+
+    @property
+    def index(self):
+        return self._index
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def advanceWidth(self):
@@ -332,7 +340,7 @@ class Glyph(object):
         Returns the advance width of this glyph as given
         in the hmtx table.
         """
-        (advanceWidth, _) = self.font.hmtxMetrics[self.glyphName]
+        (advanceWidth, _) = self.font.hmtxMetrics[self.name]
         return advanceWidth
 
     @property
@@ -344,14 +352,22 @@ class Glyph(object):
 
         vmtxMetrics = self.font.vmtxMetrics
         if vmtxMetrics:
-            (advanceHeight, _) = self.font.vmtxMetrics[self.glyphName]
+            (advanceHeight, _) = self.font.vmtxMetrics[self.name]
             return advanceHeight
         return None
+
+    @property
+    def contours(self):
+        return self._contours
+
+    @property
+    def bounds(self):
+        return self._bounds
 
     def referenceCommands(self):
         glyphSet = self.font.glyphSet
         pen = svgPathPen.SVGPathPen(glyphSet)
-        glyphSet[self.glyphName].draw(pen)
+        glyphSet[self.name].draw(pen)
         return pen.getCommands()
 
 def getGlyphFromArgs(args, font):
@@ -377,7 +393,7 @@ def main():
 
         fontBasename = basename(args.fontFile)
         fontPostscriptName = font.postScriptName
-        print(f"Drawing glyph {glyph.glyphName} from font {fontBasename}/{fontPostscriptName}")
+        print(f"Drawing glyph {glyph.name} from font {fontBasename}/{fontPostscriptName}")
 
         contours = glyph.contours
         boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
@@ -463,7 +479,7 @@ def main():
         fullName = font.fullName
         if fullName.startswith("."): fullName = fullName[1:]
 
-        imageFile = open(f"{fullName}_{glyph.glyphName}{nameSuffix}.svg", "wt", encoding="UTF-8")
+        imageFile = open(f"{fullName}_{glyph.name}{nameSuffix}.svg", "wt", encoding="UTF-8")
         imageFile.write(image)
         imageFile.close()
 
