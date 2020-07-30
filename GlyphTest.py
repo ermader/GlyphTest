@@ -231,6 +231,35 @@ class GTFont(Font):
     def __str__(self):
         return self.postScriptName
 
+    def glyphForName(self, glyphName):
+        """\
+        Returns the glyph with the given name.
+        """
+        glyphs = self._glyphs
+        if glyphName in glyphs:
+            return glyphs[glyphName]
+        if glyphName not in self._ttGlyphSet:
+            raise ValueError(f"Unknown glyph name: “{glyphName}”.")
+        glyph = Glyph(self, glyphName)
+        glyphs[glyphName] = glyph
+        return glyph
+
+
+    def glyphForIndex(self, index):
+        """\
+        Returns the glyph with the given glyph index.
+        """
+        return self.glyphForName(self.glyphName(index))
+
+
+    def glyphForCharacter(self, char):
+        """\
+        Returns the nominal glyph for the given Unicode character.
+        """
+
+        charCode = ord(char) if type(char) == type("") else char
+        return self.glyphForName(self.glyphNameForCharacterCode(charCode))
+
 class Glyph(object):
     def handleSegment(self, segment):
         for x, y in segment:
@@ -325,12 +354,10 @@ class Glyph(object):
         glyphSet[self.glyphName].draw(pen)
         return pen.getCommands()
 
-def getGlyphName(args, font):
-    if args.glyphName: return args.glyphName
-    if args.glyphID: return font.glyphName(args.glyphID)
-    if args.charCode: return font.glyphNameForCharacterCode(args.charCode)
-
-    return None
+def getGlyphFromArgs(args, font):
+    if args.glyphName: return font.glyphForName(args.glyphName)
+    if args.glyphID: return font.glyphForIndex(args.glyphID)
+    if args.charCode: return font.glyphForCharacter(args.charCode)
 
 def main():
     argumentList = argv
@@ -346,12 +373,11 @@ def main():
 
     try:
         font = GTFont(args.fontFile, args.fontName)
-        glyphName = getGlyphName(args, font)
-        glyph = Glyph(font, glyphName)
+        glyph = getGlyphFromArgs(args, font)
 
         fontBasename = basename(args.fontFile)
         fontPostscriptName = font.postScriptName
-        print(f"Drawing glyph {glyphName} from font {fontBasename}/{fontPostscriptName}")
+        print(f"Drawing glyph {glyph.glyphName} from font {fontBasename}/{fontPostscriptName}")
 
         contours = glyph.contours
         boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
@@ -436,7 +462,7 @@ def main():
         fullName = font.fullName
         if fullName.startswith("."): fullName = fullName[1:]
 
-        imageFile = open(f"{fullName}_{glyphName}{nameSuffix}.svg", "wt", encoding="UTF-8")
+        imageFile = open(f"{fullName}_{glyph.glyphName}{nameSuffix}.svg", "wt", encoding="UTF-8")
         imageFile.write(image)
         imageFile.close()
 
