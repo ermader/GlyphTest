@@ -384,10 +384,11 @@ def main():
         centerPoint = boundingRect.centerPoint
 
         nameSuffix = ""
+        directionSuffix = "" if args.ccw else "_CW"
         colors = None
         shapes = [(contours, args.color)]
         if args.rotate:
-            nameSuffix = f"_Rotated_{args.rotate}"
+            nameSuffix = f"_Rotated_{args.rotate}{directionSuffix}"
             contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate, args.ccw)
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
@@ -437,7 +438,7 @@ def main():
             boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.pinwheel:
-            nameSuffix = "_PinWheel"
+            nameSuffix = f"_PinWheel{directionSuffix}"
             colors = ["red", "orange", "gold", "lime", "green", "blue", "indigo", "violet", "purple"]
             colorIndex = 1
             shapes = [(contours, PathUtilities.colorFromName(colors[0]))]  # the original shape with the first color
