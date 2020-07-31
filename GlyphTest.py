@@ -314,7 +314,7 @@ class GTGlyph(object):
 
             self._contours.append(self._segments)
 
-        self._bounds = PathUtilities.BoundsRectangle((self._minX, self._minY), (self._maxX, self._maxY))
+        self._bounds = PathUtilities.GTBoundsRectangle((self._minX, self._minY), (self._maxX, self._maxY))
 
     def __str__(self):
         return f'"{self.name}" of "{self._font.postScriptName}"'
@@ -389,7 +389,7 @@ def main():
         print(f"Drawing glyph {glyph.name} from font {fontBasename}/{fontPostscriptName}")
 
         contours = glyph.contours
-        boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+        boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
         centerPoint = boundingRect.centerPoint
 
         nameSuffix = ""
@@ -399,52 +399,52 @@ def main():
         if args.rotate:
             nameSuffix = f"_Rotated_{args.rotate}{directionSuffix}"
             contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate, args.ccw)
-            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.project:
             nameSuffix = "_Projected"
             p, q = args.project
-            m1 = PathUtilities.Transform._translateMatrix(centerPoint, (0, 0))
-            m2 = PathUtilities.Transform._perspectiveMatrix(p, q, 1)
-            m3 = PathUtilities.Transform._translateMatrix((0, 0), centerPoint)
-            transform = PathUtilities.Transform(m1, m2, m3)
+            m1 = PathUtilities.GTTransform._translateMatrix(centerPoint, (0, 0))
+            m2 = PathUtilities.GTTransform._perspectiveMatrix(p, q)
+            m3 = PathUtilities.GTTransform._translateMatrix((0, 0), centerPoint)
+            transform = PathUtilities.GTTransform(m1, m2, m3)
             contours = transform.applyToContours(contours)
-            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.mirror:
             nameSuffix = "_Mirrored"
             cx, cy = centerPoint
             if args.mirror.startswith("x"):
-                m1 = PathUtilities.Transform._matrix(m=-cx)
-                m2 = PathUtilities.Transform._matrix(a=-1)
-                m3 = PathUtilities.Transform._matrix(m=cx)
-                transform = PathUtilities.Transform(m1, m2, m3)
+                m1 = PathUtilities.GTTransform._matrix(m=-cx)
+                m2 = PathUtilities.GTTransform._matrix(a=-1)
+                m3 = PathUtilities.GTTransform._matrix(m=cx)
+                transform = PathUtilities.GTTransform(m1, m2, m3)
                 contours = transform.applyToContours(contours)
 
             if args.mirror.endswith("y"):
-                m1 = PathUtilities.Transform._matrix(n=-cy)
-                m2 = PathUtilities.Transform._matrix(d=-1)
-                m3 = PathUtilities.Transform._matrix(n=cy)
-                transform = PathUtilities.Transform(m1, m2, m3)
+                m1 = PathUtilities.GTTransform._matrix(n=-cy)
+                m2 = PathUtilities.GTTransform._matrix(d=-1)
+                m3 = PathUtilities.GTTransform._matrix(n=cy)
+                transform = PathUtilities.GTTransform(m1, m2, m3)
                 contours = transform.applyToContours(contours)
 
-            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.shear:
             nameSuffix = "_Sheared"
             x, y = args.shear
-            m1 = PathUtilities.Transform._matrix(b=y, c=x)
-            transform = PathUtilities.Transform(m1)
+            m1 = PathUtilities.GTTransform._matrix(b=y, c=x)
+            transform = PathUtilities.GTTransform(m1)
             contours = transform.applyToContours(contours)
-            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.stretch:
             nameSuffix = "_Stretched"
             x, y = args.stretch
-            m1 = PathUtilities.Transform._matrix(a=x, d=y)
-            transform = PathUtilities.Transform(m1)
+            m1 = PathUtilities.GTTransform._matrix(a=x, d=y)
+            transform = PathUtilities.GTTransform(m1)
             contours = transform.applyToContours(contours)
-            boundingRect = PathUtilities.BoundsRectangle.fromCoutours(contours)
+            boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.pinwheel:
             nameSuffix = f"_PinWheel{directionSuffix}"
@@ -452,10 +452,10 @@ def main():
             colorIndex = 1
             shapes = [(contours, PathUtilities.GTColor.fromName(colors[0]))]  # the original shape with the first color
             for degrees in range(45, 360, 45):
-                m1 = PathUtilities.Transform._rotationMatrix(degrees, args.ccw)
-                transform = PathUtilities.Transform(m1)
+                m1 = PathUtilities.GTTransform._rotationMatrix(degrees, args.ccw)
+                transform = PathUtilities.GTTransform(m1)
                 rc = transform.applyToContours(contours)
-                bounds = PathUtilities.BoundsRectangle.fromCoutours(rc)
+                bounds = PathUtilities.GTBoundsRectangle.fromCoutours(rc)
                 shapes.append([rc, PathUtilities.GTColor.fromName(colors[colorIndex])])
                 colorIndex += 1
 

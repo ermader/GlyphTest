@@ -183,7 +183,7 @@ class GTColor(Color):
     def fromName(cls, name):
         return cls._forKeyword(name)
 
-class BoundsRectangle(object):
+class GTBoundsRectangle(object):
     def __init__(self, *points):
         right = top = -32768
         left = bottom = 32768
@@ -202,17 +202,17 @@ class BoundsRectangle(object):
 
     @staticmethod
     def fromContour(contour):
-        bounds = BoundsRectangle()
+        bounds = GTBoundsRectangle()
         for segment in contour:
-            bounds = bounds.union(BoundsRectangle(*segment))
+            bounds = bounds.union(GTBoundsRectangle(*segment))
 
         return bounds
 
     @staticmethod
     def fromCoutours(contours):
-        bounds = BoundsRectangle()
+        bounds = GTBoundsRectangle()
         for contour in contours:
-            bounds = bounds.union(BoundsRectangle.fromContour(contour))
+            bounds = bounds.union(GTBoundsRectangle.fromContour(contour))
 
         return bounds
 
@@ -266,7 +266,7 @@ class BoundsRectangle(object):
         newRight = max(self.right, other.right)
         newBottom = min(self.bottom, other.bottom)
 
-        return BoundsRectangle((newLeft, newBottom), (newRight, newTop))
+        return GTBoundsRectangle((newLeft, newBottom), (newRight, newTop))
 
     def intersection(self, other):
         newLeft = max(self.left, other.left)
@@ -275,11 +275,11 @@ class BoundsRectangle(object):
         newBottom = max(self.bottom, other.bottom)
 
         if newRight < newLeft or newTop < newBottom: return None  # maybe want <=, >=?
-        return BoundsRectangle((newLeft, newBottom), (newRight, newTop))
+        return GTBoundsRectangle((newLeft, newBottom), (newRight, newTop))
 
     def rotateAbout(self, about):
         rotatedLine = rotateSegmentAbout(self.diagonal, about)
-        return BoundsRectangle(*rotatedLine)
+        return GTBoundsRectangle(*rotatedLine)
 
 
 def minMax(a, b):
@@ -341,8 +341,8 @@ def intersectionPoint(l1, l2):
 
     intersection = (dx / d, dy / d)
 
-    b1 = BoundsRectangle(*l1)
-    b2 = BoundsRectangle(*l2)
+    b1 = GTBoundsRectangle(*l1)
+    b2 = GTBoundsRectangle(*l2)
 
     return intersection if b1.enclosesPoint(intersection) and b2.enclosesPoint(intersection) else None
 
@@ -396,28 +396,28 @@ def sortByLength(contour, longestFirst=False):
     return sorted(contour, key=lambda l: length(l), reverse=longestFirst)
 
 def crossesY(line, y):
-    return BoundsRectangle(*line).crossesY(y)
+    return GTBoundsRectangle(*line).crossesY(y)
 
 def crossesX(line, x):
-    return BoundsRectangle(*line).crossesX(x)
+    return GTBoundsRectangle(*line).crossesX(x)
 
 def verticalStrokeWidth(contours, atHeight):
     verticals = verticalLinesCrossing(contours, atHeight)
-    vStroke = BoundsRectangle(*verticals[0], *verticals[1])
+    vStroke = GTBoundsRectangle(*verticals[0], *verticals[1])
     return vStroke.width
 
 def horizontalStrokeWidth(contours, atWidth):
     horizontals = horizontalLinesCrossing(contours, atWidth)
-    hStroke = BoundsRectangle(*horizontals[0], *horizontals[1])
+    hStroke = GTBoundsRectangle(*horizontals[0], *horizontals[1])
     return hStroke.height
 
 # There must be a better way to do this...
 def pointOnLine(point, line):
-    bounds = BoundsRectangle(*line)
+    bounds = GTBoundsRectangle(*line)
 
     return bounds.enclosesPoint(point) and slope(line) == slope([line[0], point])
 
-class Transform(object):
+class GTTransform(object):
     @staticmethod
     def multiplyRowByMatrix(row, matrix):
         r1, r2, r3 = row
@@ -432,7 +432,7 @@ class Transform(object):
     def multiplyMatrixByMatrix(m1, m2):
         result = []
         for row in m1:
-            result.append(Transform.multiplyRowByMatrix(row, m2))
+            result.append(GTTransform.multiplyRowByMatrix(row, m2))
 
         return result
 
@@ -440,7 +440,7 @@ class Transform(object):
     def concatenateMatrices(*matrices):
         concatenation = matrices[0]
         for matrix in matrices[1:]:
-            concatenation = Transform.multiplyMatrixByMatrix(concatenation, matrix)
+            concatenation = GTTransform.multiplyMatrixByMatrix(concatenation, matrix)
 
         return concatenation
 
@@ -457,7 +457,7 @@ class Transform(object):
         return round(math.cos(math.radians(degrees)), 15)
 
     def __init__(self, *matrices):
-        self._transform = Transform.concatenateMatrices(*matrices)
+        self._transform = GTTransform.concatenateMatrices(*matrices)
 
     @staticmethod
     def _matrix(a=1.0, b=0.0, c=0.0, d=1.0, m=0.0, n=0.0, p=0.0, q=0.0, s=1.0):
@@ -468,11 +468,11 @@ class Transform(object):
 
     @staticmethod
     def _identityMatrix():
-        return Transform._matrix()
+        return GTTransform._matrix()
 
     @staticmethod
     def _scaleMatrix(sx=1.0, sy=1.0):
-        return Transform._matrix(a=sx, c=sy)
+        return GTTransform._matrix(a=sx, c=sy)
 
     @staticmethod
     def _translateMatrix(fromPoint, toPoint):
@@ -481,18 +481,18 @@ class Transform(object):
         tx = tpx - fpx
         ty = tpy - fpy
 
-        return Transform._matrix(m=tx, n=ty)
+        return GTTransform._matrix(m=tx, n=ty)
 
     @staticmethod
     def _rotationMatrix(degrees, ccw=True):
-        st = Transform.sin(degrees)  # sin(theta)
-        ct = Transform.cos(degrees)  # cos(theta)
+        st = GTTransform.sin(degrees)  # sin(theta)
+        ct = GTTransform.cos(degrees)  # cos(theta)
 
-        return Transform._matrix(a=ct, b=st, c=-st, d=ct) if ccw else Transform._matrix(a=ct, b=-st, c=st, d=ct)
+        return GTTransform._matrix(a=ct, b=st, c=-st, d=ct) if ccw else GTTransform._matrix(a=ct, b=-st, c=st, d=ct)
 
     @staticmethod
-    def _perspectiveMatrix(p, q, s):
-        return Transform._matrix(p=p, q=q, s=s)
+    def _perspectiveMatrix(p, q, s=1):
+        return GTTransform._matrix(p=p, q=q, s=s)
 
     @property
     def transform(self):
@@ -501,63 +501,63 @@ class Transform(object):
     @classmethod
     def rotation(cls, about, degrees=90, ccw=True):
         # Translate about point of origin
-        m1 = Transform._translateMatrix(about, (0, 0))
+        m1 = GTTransform._translateMatrix(about, (0, 0))
 
         # rotate
-        m2 = Transform._rotationMatrix(degrees, ccw)
+        m2 = GTTransform._rotationMatrix(degrees, ccw)
 
         # translate back to about point
-        m3 = Transform._translateMatrix((0, 0), about)
+        m3 = GTTransform._translateMatrix((0, 0), about)
 
-        return Transform(m1, m2, m3)
+        return GTTransform(m1, m2, m3)
 
     def applyToPoint(self, point):
         px, py = point
-        rp = Transform.multiplyRowByMatrix([px, py, 1], self.transform)
+        rp = GTTransform.multiplyRowByMatrix([px, py, 1], self.transform)
 
         return (rp[0]/rp[2], rp[1]/rp[2])
 
 
     def applyToSegment(self, segment):
-        rotated = []
+        transformed = []
         for point in segment:
-            rotated.append(self.applyToPoint(point))
+            transformed.append(self.applyToPoint(point))
 
-        return rotated
+        return transformed
 
 
     def applyToContour(self, contour):
-        rotated = []
+        transformed = []
         for segment in contour:
-            rotated.append(self.applyToSegment(segment))
+            transformed.append(self.applyToSegment(segment))
 
-        return rotated
+        return transformed
 
 
     def applyToContours(self, contours):
-        rotated = []
+        transformed = []
         for contour in contours:
-            rotated.append(self.applyToContour(contour))
+            transformed.append(self.applyToContour(contour))
 
-        return rotated
+        return transformed
 
 def rotatePointAbout(point, about, degrees=90, ccw=True):
-    rt = Transform.rotation(about, degrees, ccw)
+    rt = GTTransform.rotation(about, degrees, ccw)
 
     return rt.applyToPoint(point)
 
 def rotateSegmentAbout(segment, about, degrees=90, ccw=True):
-    rt = Transform.rotation(about, degrees, ccw)
+    rt = GTTransform.rotation(about, degrees, ccw)
 
     return rt.applyToSegment(segment)
 
 def rotateContourAbout(contour, about, degrees=90, ccw=True):
-    rt = Transform.rotation(about, degrees, ccw)
+    rt = GTTransform.rotation(about, degrees, ccw)
 
     return rt.applyToContour(contour)
 
 def rotateContoursAbout(contours, about, degrees=90, ccw=True):
-    rt = Transform.rotation(about, degrees, ccw)
+    rt = GTTransform.rotation(about, degrees, ccw)
 
     return rt.applyToContours(contours)
 
@@ -573,7 +573,7 @@ newYorkHContours = [[[(414, 155), (414, 1289)], [(414, 1289), (414, 1331), (424.
 newYorkpContours = [[[(1080, 492), (1080, 649), (1023.5, 759.0)], [(1023.5, 759.0), (967, 869), (875.0, 927.0)], [(875.0, 927.0), (783, 985), (677, 985)], [(677, 985), (571, 985), (483.5, 935.0)], [(483.5, 935.0), (396, 885), (356, 802)], [(356, 802), (356, 978)], [(356, 978), (40, 942)], [(40, 942), (40, 912)], [(40, 912), (99, 894)], [(99, 894), (140, 881), (150.5, 866.5)], [(150.5, 866.5), (161, 852), (161, 812)], [(161, 812), (161, -328)], [(161, -328), (161, -361), (153.0, -379.5)], [(153.0, -379.5), (145, -398), (119.5, -408.0)], [(119.5, -408.0), (94, -418), (40, -426)], [(40, -426), (40, -460)], [(40, -460), (490, -460)], [(490, -460), (490, -426)], [(490, -426), (431, -418), (403.0, -407.0)], [(403.0, -407.0), (375, -396), (366.5, -375.0)], [(366.5, -375.0), (358, -354), (358, -316)], [(358, -316), (358, 105)], [(358, 105), (392, 50), (458.0, 16.0)], [(458.0, 16.0), (524, -18), (613, -18)], [(613, -18), (743, -18), (848.5, 46.0)], [(848.5, 46.0), (954, 110), (1017.0, 224.5)], [(1017.0, 224.5), (1080, 339), (1080, 492)]], [[(875, 468), (875, 276), (790.5, 158.0)], [(790.5, 158.0), (706, 40), (568, 40)], [(568, 40), (498, 40), (440.0, 73.0)], [(440.0, 73.0), (382, 106), (358, 155)], [(358, 155), (358, 771)], [(358, 771), (392, 830), (448.0, 861.0)], [(448.0, 861.0), (504, 892), (582, 892)], [(582, 892), (710, 892), (792.5, 777.0)], [(792.5, 777.0), (875, 662), (875, 468)]]]
 newYorkUPM = 2048
 
-hBounds = BoundsRectangle.fromCoutours(hContours)
+hBounds = GTBoundsRectangle.fromCoutours(hContours)
 hCenter = hBounds.centerPoint
 hHeight = hBounds.height
 
@@ -625,13 +625,13 @@ def test():
     print(f"diagonal strokes of Helvetica Neue X = {diagonals}")
     print()
 
-    nyhBounds =  BoundsRectangle.fromCoutours(newYorkHContours)
+    nyhBounds =  GTBoundsRectangle.fromCoutours(newYorkHContours)
     print(f"vertical stroke width of New York H = {toMicros(verticalStrokeWidth(newYorkHContours, nyhBounds.yFromBottom(0.25)), newYorkUPM)} micro")
     print(f"horizontal stroke width of New York H = {toMicros(horizontalStrokeWidth(newYorkHContours, nyhBounds.xFromLeft(0.50)), newYorkUPM)} micro")
     # print(f"intersection of vertical and horizontal strokes = {vStroke.intersection(hStroke)}")
     print()
 
-    nypBounds = BoundsRectangle.fromCoutours(newYorkpContours)
+    nypBounds = GTBoundsRectangle.fromCoutours(newYorkpContours)
     print(f"vertical stroke width of New York p = {toMicros(verticalStrokeWidth(newYorkpContours, nypBounds.yFromBottom(0.25)), newYorkUPM)} micro")
     print()
 
@@ -644,8 +644,8 @@ def test():
     nyItalicColonContours = [[[(249, -17), (283, -17), (311.0, -0.5)], [(311.0, -0.5), (339, 16), (355.5, 44.5)], [(355.5, 44.5), (372, 73), (372, 107)], [(372, 107), (372, 157), (336.0, 193.0)], [(336.0, 193.0), (300, 229), (248, 229)], [(248, 229), (214, 229), (186.0, 212.5)], [(186.0, 212.5), (158, 196), (141.5, 167.5)], [(141.5, 167.5), (125, 139), (125, 104)], [(125, 104), (125, 55), (161.0, 19.0)], [(161.0, 19.0), (197, -17), (249, -17)]], [[(401, 698), (435, 698), (463.0, 714.5)], [(463.0, 714.5), (491, 731), (507.5, 759.5)], [(507.5, 759.5), (524, 788), (524, 822)], [(524, 822), (524, 872), (488.0, 908.0)], [(488.0, 908.0), (452, 944), (400, 944)], [(400, 944), (366, 944), (338.0, 927.5)], [(338.0, 927.5), (310, 911), (293.5, 882.5)], [(293.5, 882.5), (277, 854), (277, 819)], [(277, 819), (277, 770), (313.0, 734.0)], [(313.0, 734.0), (349, 698), (401, 698)]]]
     lowerDot = nyItalicColonContours[0]
     upperDot = nyItalicColonContours[1]
-    lowerBounds = BoundsRectangle.fromContour(lowerDot)
-    upperBounds = BoundsRectangle.fromContour(upperDot)
+    lowerBounds = GTBoundsRectangle.fromContour(lowerDot)
+    upperBounds = GTBoundsRectangle.fromContour(upperDot)
     lowerCenter = lowerBounds.centerPoint
     upperCenter = upperBounds.centerPoint
     italicSlope = slope([lowerCenter, upperCenter])
@@ -654,7 +654,7 @@ def test():
     print()
 
     nyItalicpContours = [[[(1069, 635), (1069, 741), (1037.0, 819.5)], [(1037.0, 819.5), (1005, 898), (948.0, 941.5)], [(948.0, 941.5), (891, 985), (816, 985)], [(816, 985), (710, 985), (627.0, 913.0)], [(627.0, 913.0), (544, 841), (498, 704)], [(498, 704), (557, 979)], [(557, 979), (231, 938)], [(231, 938), (224, 905)], [(224, 905), (285, 892)], [(285, 892), (323, 882), (333.0, 865.0)], [(333.0, 865.0), (343, 848), (335, 810)], [(335, 810), (94, -327)], [(94, -327), (87, -358), (74.5, -376.0)], [(74.5, -376.0), (62, -394), (33.0, -404.5)], [(33.0, -404.5), (4, -415), (-53, -425)], [(-53, -425), (-60, -460)], [(-60, -460), (407, -460)], [(407, -460), (414, -425)], [(414, -425), (350, -414), (320.0, -403.5)], [(320.0, -403.5), (290, -393), (284.0, -375.0)], [(284.0, -375.0), (278, -357), (284, -324)], [(284, -324), (369, 78)], [(369, 78), (387, 44), (435.5, 13.0)], [(435.5, 13.0), (484, -18), (572, -18)], [(572, -18), (686, -18), (777.5, 37.0)], [(777.5, 37.0), (869, 92), (934.0, 185.0)], [(934.0, 185.0), (999, 278), (1034.0, 394.5)], [(1034.0, 394.5), (1069, 511), (1069, 635)]], [[(871, 653), (871, 551), (850.0, 443.5)], [(850.0, 443.5), (829, 336), (786.5, 244.0)], [(786.5, 244.0), (744, 152), (680.5, 95.0)], [(680.5, 95.0), (617, 38), (532, 38)], [(532, 38), (471, 38), (431.5, 64.5)], [(431.5, 64.5), (392, 91), (381, 128)], [(381, 128), (482, 605)], [(482, 605), (517, 745), (586.0, 822.0)], [(586.0, 822.0), (655, 899), (728, 899)], [(728, 899), (796, 899), (833.5, 842.0)], [(833.5, 842.0), (871, 785), (871, 653)]]]
-    nyipBounds = BoundsRectangle.fromCoutours(nyItalicpContours)
+    nyipBounds = GTBoundsRectangle.fromCoutours(nyItalicpContours)
     nyipLines = linesCrossingY(nyItalicpContours, nyipBounds.yFromBottom(0.25))
     nyipLinesByLength = sortByLength(nyipLines, longestFirst=True)
     italicSlope = slope(nyipLinesByLength[0])
@@ -673,8 +673,8 @@ def test():
 
     lowerDot = helveticaNeueItalicColonContours[0]
     upperDot = helveticaNeueItalicColonContours[1]
-    lowerBounds = BoundsRectangle.fromContour(lowerDot)
-    upperBounds = BoundsRectangle.fromContour(upperDot)
+    lowerBounds = GTBoundsRectangle.fromContour(lowerDot)
+    upperBounds = GTBoundsRectangle.fromContour(upperDot)
     lowerCenter = lowerBounds.centerPoint
     upperCenter = upperBounds.centerPoint
     italicSlope = slope([lowerCenter, upperCenter])
@@ -682,7 +682,7 @@ def test():
     print(f"italic angle for Helvetica Neue Italic from colon method = {angle}")
     print()
 
-    hnipBounds = BoundsRectangle.fromCoutours(helveticaNeueItalicpContours)
+    hnipBounds = GTBoundsRectangle.fromCoutours(helveticaNeueItalicpContours)
     hnipLines = linesCrossingY(helveticaNeueItalicpContours, hnipBounds.yFromBottom(0.25))
     hnipLinesByLength = sortByLength(hnipLines, longestFirst=True)
     italicSlope = slope(hnipLinesByLength[0])
@@ -705,7 +705,7 @@ def test():
     m2 = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
     m3 = [[1, 0, 0], [0, 1, 0], [4, 3, 1]]
 
-    fp = Transform(m1, m2, m3)
+    fp = GTTransform(m1, m2, m3)
     print(f"rotation transform = {fp.transform}")
     print(f"rotation of (8, 6) = {fp.applyToPoint((8, 6))}")
 

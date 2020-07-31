@@ -87,7 +87,7 @@ def test():
     import PathUtilities
 
     testContour = [[(292, 499), (292, 693), (376.5, 810.5)], [(376.5, 810.5), (461, 928), (599, 928)], [(599, 928), (670, 928), (727.5, 895.5)], [(727.5, 895.5), (785, 863), (809, 813)], [(809, 813), (809, 197)], [(809, 197), (775, 139), (719.0, 107.0)], [(719.0, 107.0), (663, 75), (584, 75)], [(584, 75), (457, 75), (374.5, 190.5)], [(374.5, 190.5), (292, 306), (292, 499)]]
-    testBounds = PathUtilities.BoundsRectangle.fromContour(testContour)
+    testBounds = PathUtilities.GTBoundsRectangle.fromContour(testContour)
 
     cp = ContourPlotter(testBounds.points)
 
