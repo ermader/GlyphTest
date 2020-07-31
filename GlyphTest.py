@@ -14,7 +14,6 @@ from fontTools.ttLib import ttFont, TTLibError
 from fontTools.pens import svgPathPen
 from FontDocTools.ArgumentIterator import ArgumentIterator
 from FontDocTools.Font import Font
-from FontDocTools.Color import Color
 import ContourPlotter
 import PathUtilities
 
@@ -451,13 +450,13 @@ def main():
             nameSuffix = f"_PinWheel{directionSuffix}"
             colors = ["red", "orange", "gold", "lime", "green", "blue", "indigo", "violet", "purple"]
             colorIndex = 1
-            shapes = [(contours, PathUtilities.colorFromName(colors[0]))]  # the original shape with the first color
+            shapes = [(contours, PathUtilities.GTColor.fromName(colors[0]))]  # the original shape with the first color
             for degrees in range(45, 360, 45):
                 m1 = PathUtilities.Transform._rotationMatrix(degrees, args.ccw)
                 transform = PathUtilities.Transform(m1)
                 rc = transform.applyToContours(contours)
                 bounds = PathUtilities.BoundsRectangle.fromCoutours(rc)
-                shapes.append([rc, PathUtilities.colorFromName(colors[colorIndex])])
+                shapes.append([rc, PathUtilities.GTColor.fromName(colors[colorIndex])])
                 colorIndex += 1
 
                 boundingRect = boundingRect.union(bounds)
