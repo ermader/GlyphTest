@@ -416,6 +416,7 @@ def main():
             a = d = 1
             m = n = 0
             cx, cy = centerPoint
+
             if args.mirror.startswith("x"):
                 d = -1
                 n = cy
@@ -435,7 +436,7 @@ def main():
         elif args.shear:
             nameSuffix = "_Sheared"
             x, y = args.shear
-            m1 = PathUtilities.GTTransform._matrix(b=y, c=x)
+            m1 = PathUtilities.GTTransform._shearMatrix(x=x, y=y)
             transform = PathUtilities.GTTransform(m1)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
@@ -443,7 +444,7 @@ def main():
         elif args.stretch:
             nameSuffix = "_Stretched"
             x, y = args.stretch
-            m1 = PathUtilities.GTTransform._matrix(a=x, d=y)
+            m1 = PathUtilities.GTTransform._stretchMatrix(x=x, y=y)
             transform = PathUtilities.GTTransform(m1)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)

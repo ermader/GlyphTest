@@ -484,6 +484,14 @@ class GTTransform(object):
         return GTTransform._matrix(m=tx, n=ty)
 
     @staticmethod
+    def _shearMatrix(x=0, y=0):
+        return GTTransform._matrix(b=y, c=x)
+
+    @staticmethod
+    def _stretchMatrix(x=1, y=1):
+        return GTTransform._matrix(a=x, d=y)
+
+    @staticmethod
     def _rotationMatrix(degrees, ccw=True):
         st = GTTransform.sin(degrees)  # sin(theta)
         ct = GTTransform.cos(degrees)  # cos(theta)
