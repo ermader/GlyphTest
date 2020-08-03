@@ -492,6 +492,12 @@ class GTTransform(object):
         return GTTransform._matrix(a=x, d=y)
 
     @staticmethod
+    def _mirrorMatrix(xAxis=False, yAxis=False):
+        a = -1 if yAxis else 1
+        d = -1 if xAxis else 1
+        return GTTransform._matrix(a=a, d=d)
+
+    @staticmethod
     def _rotationMatrix(degrees, ccw=True):
         st = GTTransform.sin(degrees)  # sin(theta)
         ct = GTTransform.cos(degrees)  # cos(theta)

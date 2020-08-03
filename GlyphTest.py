@@ -413,21 +413,22 @@ def main():
             shapes = [(contours, args.color)]
         elif args.mirror:
             nameSuffix = "_Mirrored"
-            a = d = 1
-            m = n = 0
+            xAxis = yAxis = False
+            tx = ty = 0
             cx, cy = centerPoint
 
             if args.mirror.startswith("x"):
-                d = -1
-                n = cy
+                xAxis = True
+                ty = cy
 
             if args.mirror.endswith("y"):
-                a = -1
-                m = cx
+                yAxis = True
+                tx = cx
 
-            m1 = PathUtilities.GTTransform._matrix(n=-n, m=-m)
-            m2 = PathUtilities.GTTransform._matrix(a=a, d=d)
-            m3 = PathUtilities.GTTransform._matrix(m=m, n=n)
+            mirrorPoint = (cx - tx, cy - ty)
+            m1 = PathUtilities.GTTransform._translateMatrix(centerPoint, mirrorPoint)
+            m2 = PathUtilities.GTTransform._mirrorMatrix(xAxis, yAxis)
+            m3 = PathUtilities.GTTransform._translateMatrix(mirrorPoint, centerPoint)
 
             transform = PathUtilities.GTTransform(m1, m2, m3)
             contours = transform.applyToContours(contours)
