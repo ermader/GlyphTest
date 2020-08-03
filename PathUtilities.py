@@ -471,8 +471,8 @@ class GTTransform(object):
         return GTTransform._matrix()
 
     @staticmethod
-    def _scaleMatrix(sx=1.0, sy=1.0):
-        return GTTransform._matrix(a=sx, c=sy)
+    def _scaleMatrix(sx=1, sy=1):
+        return GTTransform._matrix(a=sx, d=sy)
 
     @staticmethod
     def _translateMatrix(fromPoint, toPoint):
@@ -484,12 +484,12 @@ class GTTransform(object):
         return GTTransform._matrix(m=tx, n=ty)
 
     @staticmethod
-    def _shearMatrix(x=0, y=0):
-        return GTTransform._matrix(b=y, c=x)
+    def _shearMatrix(sx=0, sy=0):
+        return GTTransform._matrix(b=sy, c=sx)
 
     @staticmethod
-    def _stretchMatrix(x=1, y=1):
-        return GTTransform._matrix(a=x, d=y)
+    def _stretchMatrix(sx=1, sy=1):
+        return GTTransform._matrix(a=sx, d=sy)
 
     @staticmethod
     def _mirrorMatrix(xAxis=False, yAxis=False):
@@ -513,15 +513,73 @@ class GTTransform(object):
         return self._transform
 
     @classmethod
-    def rotation(cls, about, degrees=90, ccw=True):
-        # Translate about point of origin
-        m1 = GTTransform._translateMatrix(about, (0, 0))
+    def translate(cls, fromPoint, toPoint):
+        m = GTTransform._translateMatrix(fromPoint, toPoint)
+        return GTTransform(m)
+
+    @classmethod
+    def scale(cls,sx=1, sy=1):
+        m = GTTransform._scaleMatrix(sx, sy)
+        return GTTransform(m)
+
+    @classmethod
+    def shear(cls, sx=0, sy=0):
+        m = GTTransform._shearMatrix(sx, sy)
+        return GTTransform(m)
+
+    @classmethod
+    def mirror(cls, xAxis=False, yAxis=False):
+        m = GTTransform._mirrorMatrix(xAxis, yAxis)
+        return GTTransform(m)
+
+    @classmethod
+    def rotation(cls, degrees=90, ccw=True):
+        m = GTTransform._rotationMatrix(degrees, ccw)
+        return GTTransform(m)
+
+    @classmethod
+    def perspective(cls, p=0, q=0, s=1):
+        m = GTTransform._perspectiveMatrix(p, q, s)
+        return GTTransform(m)
+
+    @classmethod
+    def rotationAbout(cls, about, degrees=90, ccw=True):
+        origin = (0, 0)
+        # Translate about point to origin
+        m1 = GTTransform._translateMatrix(about, origin)
 
         # rotate
         m2 = GTTransform._rotationMatrix(degrees, ccw)
 
         # translate back to about point
-        m3 = GTTransform._translateMatrix((0, 0), about)
+        m3 = GTTransform._translateMatrix(origin, about)
+
+        return GTTransform(m1, m2, m3)
+
+    @classmethod
+    def mirrorAround(cls, centerPoint, xAxis=False, yAxis=False):
+        tx = ty = 0
+        cx, cy = centerPoint
+
+        if xAxis:
+            ty = cy
+
+        if yAxis:
+            tx = cx
+
+        mirrorPoint = (cx - tx, cy - ty)
+        m1 = GTTransform._translateMatrix(centerPoint, mirrorPoint)
+        m2 = GTTransform._mirrorMatrix(xAxis, yAxis)
+        m3 = GTTransform._translateMatrix(mirrorPoint, centerPoint)
+
+        return GTTransform(m1, m2, m3)
+
+    @classmethod
+    def perspectiveFrom(cls, centerPoint, p=0, q=0):
+        origin = (0, 0)
+        m1 = GTTransform._translateMatrix(centerPoint, origin)
+        m2 = GTTransform._perspectiveMatrix(p, q)
+        m3 = GTTransform._translateMatrix(origin, centerPoint)
 
         return GTTransform(m1, m2, m3)
 
@@ -556,22 +614,22 @@ class GTTransform(object):
         return transformed
 
 def rotatePointAbout(point, about, degrees=90, ccw=True):
-    rt = GTTransform.rotation(about, degrees, ccw)
+    rt = GTTransform.rotationAbout(about, degrees, ccw)
 
     return rt.applyToPoint(point)
 
 def rotateSegmentAbout(segment, about, degrees=90, ccw=True):
-    rt = GTTransform.rotation(about, degrees, ccw)
+    rt = GTTransform.rotationAbout(about, degrees, ccw)
 
     return rt.applyToSegment(segment)
 
 def rotateContourAbout(contour, about, degrees=90, ccw=True):
-    rt = GTTransform.rotation(about, degrees, ccw)
+    rt = GTTransform.rotationAbout(about, degrees, ccw)
 
     return rt.applyToContour(contour)
 
 def rotateContoursAbout(contours, about, degrees=90, ccw=True):
-    rt = GTTransform.rotation(about, degrees, ccw)
+    rt = GTTransform.rotationAbout(about, degrees, ccw)
 
     return rt.applyToContours(contours)
 

@@ -398,55 +398,36 @@ def main():
         shapes = [(contours, args.color)]
         if args.rotate:
             nameSuffix = f"_Rotated_{args.rotate}{directionSuffix}"
-            contours = PathUtilities.rotateContoursAbout(contours, centerPoint, args.rotate, args.ccw)
+            transform = PathUtilities.GTTransform.rotationAbout(centerPoint, args.rotate, args.ccw)
+            contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.project:
             nameSuffix = "_Projected"
             p, q = args.project
-            m1 = PathUtilities.GTTransform._translateMatrix(centerPoint, (0, 0))
-            m2 = PathUtilities.GTTransform._perspectiveMatrix(p, q)
-            m3 = PathUtilities.GTTransform._translateMatrix((0, 0), centerPoint)
-            transform = PathUtilities.GTTransform(m1, m2, m3)
+            transform = PathUtilities.GTTransform.perspectiveFrom(centerPoint, p, q)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.mirror:
             nameSuffix = "_Mirrored"
-            xAxis = yAxis = False
-            tx = ty = 0
-            cx, cy = centerPoint
-
-            if args.mirror.startswith("x"):
-                xAxis = True
-                ty = cy
-
-            if args.mirror.endswith("y"):
-                yAxis = True
-                tx = cx
-
-            mirrorPoint = (cx - tx, cy - ty)
-            m1 = PathUtilities.GTTransform._translateMatrix(centerPoint, mirrorPoint)
-            m2 = PathUtilities.GTTransform._mirrorMatrix(xAxis, yAxis)
-            m3 = PathUtilities.GTTransform._translateMatrix(mirrorPoint, centerPoint)
-
-            transform = PathUtilities.GTTransform(m1, m2, m3)
+            xAxis = args.mirror.startswith("x")
+            yAxis = args.mirror.endswith("y")
+            transform = PathUtilities.GTTransform.mirrorAround(centerPoint, xAxis, yAxis)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.shear:
             nameSuffix = "_Sheared"
             x, y = args.shear
-            m1 = PathUtilities.GTTransform._shearMatrix(x=x, y=y)
-            transform = PathUtilities.GTTransform(m1)
+            transform = PathUtilities.GTTransform.shear(x, y)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
         elif args.stretch:
             nameSuffix = "_Stretched"
             x, y = args.stretch
-            m1 = PathUtilities.GTTransform._stretchMatrix(x=x, y=y)
-            transform = PathUtilities.GTTransform(m1)
+            transform = PathUtilities.GTTransform.scale(x, y)
             contours = transform.applyToContours(contours)
             boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
             shapes = [(contours, args.color)]
@@ -456,8 +437,7 @@ def main():
             colorIndex = 1
             shapes = [(contours, PathUtilities.GTColor.fromName(colors[0]))]  # the original shape with the first color
             for degrees in range(45, 360, 45):
-                m1 = PathUtilities.GTTransform._rotationMatrix(degrees, args.ccw)
-                transform = PathUtilities.GTTransform(m1)
+                transform = PathUtilities.GTTransform.rotation(degrees, args.ccw)
                 rc = transform.applyToContours(contours)
                 bounds = PathUtilities.GTBoundsRectangle.fromCoutours(rc)
                 shapes.append([rc, PathUtilities.GTColor.fromName(colors[colorIndex])])
