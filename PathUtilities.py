@@ -672,10 +672,6 @@ class GTTransform(object):
         return GTTransform._matrix(b=sy, c=sx)
 
     @staticmethod
-    def _stretchMatrix(sx=1, sy=1):
-        return GTTransform._scaleMatrix(a=sx, d=sy)
-
-    @staticmethod
     def _mirrorMatrix(xAxis=False, yAxis=False):
         """\
         Construct a matrix that mirrors around the x and or y axes.
