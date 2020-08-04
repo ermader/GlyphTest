@@ -10,6 +10,9 @@ import math
 from FontDocTools.Color import Color
 
 class GTColor(Color):
+    """\
+    A subclass of FontDocTools.Color that adds the full set of X11 and SVG 1.0 colors
+    """
     def __init__(self, red, green, blue):
         Color.__init__(self, red, green, blue)
 
@@ -181,10 +184,22 @@ class GTColor(Color):
 
     @classmethod
     def fromName(cls, name):
+        """\
+        Return a color given the name.
+        """
         return cls._forKeyword(name)
 
 class GTBoundsRectangle(object):
+    """\
+    A bounds rectangle for a set of points.
+    """
     def __init__(self, *points):
+        """\
+        Initialize a bounds rectangle that encloses the given
+        list of points.
+
+        Returns an empty retangle if the list is empty.
+        """
         right = top = -32768
         left = bottom = 32768
 
@@ -202,6 +217,9 @@ class GTBoundsRectangle(object):
 
     @staticmethod
     def fromContour(contour):
+        """\
+        Return a BoundsRectangle that encloses the points in contour.
+        """
         bounds = GTBoundsRectangle()
         for segment in contour:
             bounds = bounds.union(GTBoundsRectangle(*segment))
@@ -210,6 +228,9 @@ class GTBoundsRectangle(object):
 
     @staticmethod
     def fromCoutours(contours):
+        """\
+        Return a BoundsRectangle that encloses the points in contours.
+        """
         bounds = GTBoundsRectangle()
         for contour in contours:
             bounds = bounds.union(GTBoundsRectangle.fromContour(contour))
@@ -221,46 +242,82 @@ class GTBoundsRectangle(object):
 
     @property
     def width(self):
+        """\
+        The width of the bounds rectangle.
+        """
         return self.right - self.left
 
     @property
     def height(self):
+        """\
+        The height of the bounds rectangle.
+        """
         return self.top - self.bottom
 
     @property
     def area(self):
+        """\
+        The area of the rectangle.
+        """
         return self.width * self.height
 
     @property
     def diagonal(self):
+        """\
+        A line from the bottom right corner to the top left corner.
+        """
         return [(self.right, self.bottom), (self.left, self.top)]
 
     @property
     def centerPoint(self):
+        """\
+        The center point of the rectangle.
+        """
         return midpoint(self.diagonal)
 
     @property
     def points(self):
+        """\
+        A list of the min, max x, y coordinates of the rectangle.
+        """
         return (self.left, self.bottom, self.right, self.top)
 
     def yFromBottom(self, percent):
+        """\
+        Return the y coordinate value a percentage of the way from the bottom edge of the rectangle.
+        """
         return self.bottom + self.height * percent
 
     def xFromLeft(self, percent):
+        """\
+        Return the x coordinate value a percentage of the way from the left edge of the rectangle.
+        """
         return self.left + self.width * percent
 
     def enclosesPoint(self, point):
+        """\
+        Test if the given point is within the rectangle.
+        """
         px, py = point
 
         return self.left <= px <= self.right and self.bottom <= py <= self.top
 
     def crossesX(self, x):
+        """\
+        Test if the given x coordinate is within the rectangle.
+        """
         return self.left <= x <= self.right
 
     def crossesY(self, y):
+        """\
+        Test if the given y coordinate is within the rectangle.
+        """
         return self.bottom <= y <= self.top
 
     def union(self, other):
+        """\
+        Return a rectangle that is the union of this rectangle and other.
+        """
         newLeft = min(self.left, other.left)
         newTop = max(self.top, other.top)
         newRight = max(self.right, other.right)
@@ -269,6 +326,9 @@ class GTBoundsRectangle(object):
         return GTBoundsRectangle((newLeft, newBottom), (newRight, newTop))
 
     def intersection(self, other):
+        """\
+        Return a rectangle that is the intersection of this rectangle and other.
+        """
         newLeft = max(self.left, other.left)
         newTop = min(self.top, other.top)
         newRight = min(self.right, other.right)
@@ -277,48 +337,72 @@ class GTBoundsRectangle(object):
         if newRight < newLeft or newTop < newBottom: return None  # maybe want <=, >=?
         return GTBoundsRectangle((newLeft, newBottom), (newRight, newTop))
 
-    def rotateAbout(self, about):
-        rotatedLine = rotateSegmentAbout(self.diagonal, about)
-        return GTBoundsRectangle(*rotatedLine)
-
-
 def minMax(a, b):
+    """\
+    Return a tuple with the min value first, then the max value.
+    """
     return (a, b) if a <= b else (b, a)
 
 def endPoints(segment):
+    """\
+    Return the x, y coordinates of the start and end of the segment.
+    """
     p0x, p0y = segment[0]
     p1x, p1y = segment[-1]
 
     return (p0x, p0y, p1x, p1y)
 
 def getDeltas(segment):
+    """\
+    Return the x, y span of the segment.
+    """
     p0x, p0y, p1x, p1y = endPoints(segment)
 
     return (p1x - p0x, p1y - p0y)
 
 def isVerticalLine(segment):
+    """\
+    Test if the segment is a vertical line.
+    """
     dx, _ = getDeltas(segment)
     return len(segment) == 2 and dx == 0
 
 def isHorizontalLine(segment):
+    """\
+    Test if the segment is a horizontal line.
+    """
     _, dy = getDeltas(segment)
     return len(segment) == 2 and dy == 0
 
 def length(segment):
+    """\
+    Return the length of the segment. Only really makes sense for a line...
+    """
     return math.hypot(*getDeltas(segment))
 
 def slope(segment):
+    """\
+    Return the slope of the segment. rise / run. Returns
+    math.inf if the line is vertical.
+    """
     dx, dy = getDeltas(segment)
 
     if dx == 0: return math.inf
     return dy / dx
 
 def midpoint(line):
+    """\
+    Return the midpoint of the line.
+    """
     p0x, p0y, p1x, p1y = endPoints(line)
 
     return ((p0x + p1x) / 2, (p0y + p1y) / 2)
 
-def cooefs(line):
+def _coefs(line):
+    """\
+    Return the coefficients for the linear equation for the line:
+    ax + by = c
+    """
     p0x, p0y, p1x, p1y = endPoints(line)
 
     a = p0y - p1y
@@ -328,12 +412,16 @@ def cooefs(line):
     return (a, b, -c)
 
 def intersectionPoint(l1, l2):
-    a1, b1, c1 = cooefs(l1)
-    a2, b2, c2 = cooefs(l2)
+    """\
+    Find the intersection point of the two lines.
+    See: https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
+    """
+    a1, b1, c1 = _coefs(l1)
+    a2, b2, c2 = _coefs(l2)
 
     d = a1 * b2 - b1 * a2
 
-    # d == 0 means lines are parallel
+    # if d is 0 the lines are parallel
     if d == 0: return None
 
     dx = c1 * b2 - b1 * c2
@@ -344,13 +432,22 @@ def intersectionPoint(l1, l2):
     b1 = GTBoundsRectangle(*l1)
     b2 = GTBoundsRectangle(*l2)
 
+    # The point calculated above assumes that the two lines have
+    # infinite length, so it may not be on both, or either line.
+    # Make sure it's within the bounds rectangle for both lines.
     return intersection if b1.enclosesPoint(intersection) and b2.enclosesPoint(intersection) else None
 
 # The result of this function cannot be used to create an SVG path...
 def flatten(contours):
+    """\
+    Return a single contour that contains all the points in the given contours.
+    """
     return [segment for contour in contours for segment in contour]
 
 def verticalLines(contours):
+    """\
+    Return a list of all the vertical lines in the given contours.
+    """
     v = []
     for contour in contours:
         for segment in contour:
@@ -360,9 +457,16 @@ def verticalLines(contours):
     return v
 
 def verticalLinesCrossing(contours, y):
+    """\
+    Return a list of all the vertical lines in the given contours that
+    span the given y coordinate.
+    """
     return list(filter(lambda s: crossesY(s, y), sortByX(verticalLines(contours))))
 
 def horizontalLines(contours):
+    """\
+    Return a list of all the horizontal lines in the given contours.
+    """
     h = []
     for contour in contours:
         for segment in contour:
@@ -372,9 +476,16 @@ def horizontalLines(contours):
     return h
 
 def horizontalLinesCrossing(contours, x):
+    """\
+    Return a list of all the horizontal lines in the given contours that
+    span the given x coordinate.
+    """
     return list(filter(lambda s: crossesX(s, x), sortByY((horizontalLines(contours)))))
 
 def lines(contours):
+    """\
+    Return a list of all the lines in the given contours.
+    """
     l = []
     for contour in contours:
         for segment in contour:
@@ -384,42 +495,85 @@ def lines(contours):
     return l
 
 def linesCrossingY(contours, y):
+    """\
+    Return a list of all the lines in the given contours that
+    cross a given y coordinate.
+    """
     return list(filter(lambda s: crossesY(s, y), sortByX(lines(contours))))
 
 def sortByX(contour):
+    """\
+    Return a list of all the segments in contour sorted by their x coordinate.
+    """
     return sorted(contour, key=lambda s: s[0][0])
 
 def sortByY(contour):
+    """\
+    Return a list of all the segments in contour sorted by their y coordinate.
+    """
     return sorted(contour, key=lambda s: s[0][1])
 
 def sortByLength(contour, longestFirst=False):
+    """\
+    Return a list of all the segments in contour sorted by their length.
+    """
     return sorted(contour, key=lambda l: length(l), reverse=longestFirst)
 
 def crossesY(line, y):
+    """\
+    Test if the line crosses the given y coordinate.
+    """
     return GTBoundsRectangle(*line).crossesY(y)
 
 def crossesX(line, x):
+    """\
+    Test if the line crosses the given x coordinate.
+    """
     return GTBoundsRectangle(*line).crossesX(x)
 
 def verticalStrokeWidth(contours, atHeight):
+    """\
+    Calculate the vertical stroke width of the given contours
+    by finding all vertical lines that span a given height,
+    and returning the width of a bounds rectangle that encloses
+    the first two lines.
+    """
     verticals = verticalLinesCrossing(contours, atHeight)
     vStroke = GTBoundsRectangle(*verticals[0], *verticals[1])
     return vStroke.width
 
 def horizontalStrokeWidth(contours, atWidth):
+    """\
+    Calculate the horizontal stroke width of the given contours
+    by finding all horizontal lines that span a given width,
+    and returning the height of a bounds rectangle that encloses
+    the first two lines.
+    """
     horizontals = horizontalLinesCrossing(contours, atWidth)
     hStroke = GTBoundsRectangle(*horizontals[0], *horizontals[1])
     return hStroke.height
 
 # There must be a better way to do this...
 def pointOnLine(point, line):
+    """\
+    Test if a given point is on the given line.
+    """
     bounds = GTBoundsRectangle(*line)
 
+    # If the bounds rectangle of the line encloses the point and
+    # a line from the start of the given line to the point has the
+    # same slope as the line, it is on the line.
     return bounds.enclosesPoint(point) and slope(line) == slope([line[0], point])
 
 class GTTransform(object):
+    """\
+    A 3x3 transform.
+    """
     @staticmethod
     def multiplyRowByMatrix(row, matrix):
+        """\
+        Multiply the given row by the given matrix. Returns a new row.
+        """
         r1, r2, r3 = row
         m1, m2, m3 = matrix
         m11, m12, m13 = m1
@@ -430,6 +584,9 @@ class GTTransform(object):
 
     @staticmethod
     def multiplyMatrixByMatrix(m1, m2):
+        """\
+        Multiply the two matricies.
+        """
         result = []
         for row in m1:
             result.append(GTTransform.multiplyRowByMatrix(row, m2))
@@ -438,6 +595,9 @@ class GTTransform(object):
 
     @staticmethod
     def concatenateMatrices(*matrices):
+        """\
+        Multiply the given matrices together.
+        """
         concatenation = matrices[0]
         for matrix in matrices[1:]:
             concatenation = GTTransform.multiplyMatrixByMatrix(concatenation, matrix)
@@ -446,21 +606,33 @@ class GTTransform(object):
 
     @staticmethod
     def sin(degrees):
+        """\
+        Return the sin of the angle.
+        """
         # We use round() because sin values that should be zero
         # are actually around 1e-16
         return round(math.sin(math.radians(degrees)), 15)
 
     @staticmethod
     def cos(degrees):
+        """\
+        Return the cos of the angle.
+        """
         # We use round() because cos values that should be zero
         # are actually around 1e-16
         return round(math.cos(math.radians(degrees)), 15)
 
     def __init__(self, *matrices):
+        """\
+        Construct a GTTransform by concateniing the given matrices.
+        """
         self._transform = GTTransform.concatenateMatrices(*matrices)
 
     @staticmethod
     def _matrix(a=1.0, b=0.0, c=0.0, d=1.0, m=0.0, n=0.0, p=0.0, q=0.0, s=1.0):
+        """\
+        Construct a 3x3 matrix from the given values.
+        """
         return [
             [a, b, p],
             [c, d, q],
@@ -468,14 +640,23 @@ class GTTransform(object):
 
     @staticmethod
     def _identityMatrix():
+        """\
+        Construct the identity matrix. This is the default for _matrix().
+        """
         return GTTransform._matrix()
 
     @staticmethod
     def _scaleMatrix(sx=1, sy=1):
+        """\
+        Construct a matrix that scales in the x, y directions by the given factor.
+        """
         return GTTransform._matrix(a=sx, d=sy)
 
     @staticmethod
     def _translateMatrix(fromPoint, toPoint):
+        """\
+        Construct a matrix that translates from fromPoint to toPoint.
+        """
         fpx, fpy = fromPoint
         tpx, tpy = toPoint
         tx = tpx - fpx
@@ -485,20 +666,30 @@ class GTTransform(object):
 
     @staticmethod
     def _shearMatrix(sx=0, sy=0):
+        """\
+        Construct a matrix that shears in the x, y directions by the given amounts
+        """
         return GTTransform._matrix(b=sy, c=sx)
 
     @staticmethod
     def _stretchMatrix(sx=1, sy=1):
-        return GTTransform._matrix(a=sx, d=sy)
+        return GTTransform._scaleMatrix(a=sx, d=sy)
 
     @staticmethod
     def _mirrorMatrix(xAxis=False, yAxis=False):
+        """\
+        Construct a matrix that mirrors around the x and or y axes.
+        """
         a = -1 if yAxis else 1
         d = -1 if xAxis else 1
         return GTTransform._matrix(a=a, d=d)
 
     @staticmethod
     def _rotationMatrix(degrees, ccw=True):
+        """\
+        Construct a matrix that rotates by the specified number of degrees
+        in a clockwise or counter-clockwise direction.
+        """
         st = GTTransform.sin(degrees)  # sin(theta)
         ct = GTTransform.cos(degrees)  # cos(theta)
 
@@ -506,44 +697,73 @@ class GTTransform(object):
 
     @staticmethod
     def _perspectiveMatrix(p, q, s=1):
+        """\
+        Construct a matrix that does a perspective transformation.
+        """
         return GTTransform._matrix(p=p, q=q, s=s)
 
     @property
     def transform(self):
+        """\
+        Return the transform's matrix.
+        """
         return self._transform
 
     @classmethod
     def translate(cls, fromPoint, toPoint):
+        """\
+        Construct a GTTransform object that translates from fromPoint to toPoint.
+        """
         m = GTTransform._translateMatrix(fromPoint, toPoint)
         return GTTransform(m)
 
     @classmethod
     def scale(cls,sx=1, sy=1):
+        """\
+        Construct a GTTransform object that scales in the x, y directions by the given factor.
+        """
         m = GTTransform._scaleMatrix(sx, sy)
         return GTTransform(m)
 
     @classmethod
     def shear(cls, sx=0, sy=0):
+        """\
+        Construct a GTTransform object that shears in the x, y directions by the given amounts
+        """
         m = GTTransform._shearMatrix(sx, sy)
         return GTTransform(m)
 
     @classmethod
     def mirror(cls, xAxis=False, yAxis=False):
+        """\
+        Construct a GTTransform object that mirrors around the x and or y axes.
+        """
         m = GTTransform._mirrorMatrix(xAxis, yAxis)
         return GTTransform(m)
 
     @classmethod
     def rotation(cls, degrees=90, ccw=True):
+        """\
+        Construct a GTTransform object that rotates by the specified number of degrees
+        in a clockwise or counter-clockwise direction.
+        """
         m = GTTransform._rotationMatrix(degrees, ccw)
         return GTTransform(m)
 
     @classmethod
     def perspective(cls, p=0, q=0, s=1):
+        """\
+        Construct a GTTransform object that does a perspective transformation.
+        """
         m = GTTransform._perspectiveMatrix(p, q, s)
         return GTTransform(m)
 
     @classmethod
     def rotationAbout(cls, about, degrees=90, ccw=True):
+        """\
+        Construct a GTTransform object that rotates around the point about by the specified number of degrees
+        in a clockwise or counter-clockwise direction.
+        """
         origin = (0, 0)
         # Translate about point to origin
         m1 = GTTransform._translateMatrix(about, origin)
@@ -558,6 +778,10 @@ class GTTransform(object):
 
     @classmethod
     def mirrorAround(cls, centerPoint, xAxis=False, yAxis=False):
+        """\
+        Construct a GTTransform object that mirrors around the given center point
+        in the x and or y directions.
+        """
         tx = ty = 0
         cx, cy = centerPoint
 
@@ -576,21 +800,39 @@ class GTTransform(object):
 
     @classmethod
     def perspectiveFrom(cls, centerPoint, p=0, q=0):
+        """\
+        Construct a GTTransform object that does a perspective transformation
+        around the given center point.
+        """
         origin = (0, 0)
+
+        # translate centerPoint to the origin
         m1 = GTTransform._translateMatrix(centerPoint, origin)
+
+        # the perspective transformation
         m2 = GTTransform._perspectiveMatrix(p, q)
+
+        # translate back to centerPoint
         m3 = GTTransform._translateMatrix(origin, centerPoint)
 
         return GTTransform(m1, m2, m3)
 
     def applyToPoint(self, point):
+        """\
+        Apply the transformation to the given point.
+        """
         px, py = point
         rp = GTTransform.multiplyRowByMatrix([px, py, 1], self.transform)
 
+        # in the general case, rp[2] may not be 1, so
+        # normalize to 1.
         return (rp[0]/rp[2], rp[1]/rp[2])
 
 
     def applyToSegment(self, segment):
+        """\
+        Apply the transform to all points in the given segment.
+        """
         transformed = []
         for point in segment:
             transformed.append(self.applyToPoint(point))
@@ -599,6 +841,9 @@ class GTTransform(object):
 
 
     def applyToContour(self, contour):
+        """\
+        Apply the transform to all segments in the given contour.
+        """
         transformed = []
         for segment in contour:
             transformed.append(self.applyToSegment(segment))
@@ -607,6 +852,9 @@ class GTTransform(object):
 
 
     def applyToContours(self, contours):
+        """\
+        Apply the transform to each contour in contours.
+        """
         transformed = []
         for contour in contours:
             transformed.append(self.applyToContour(contour))
@@ -614,26 +862,45 @@ class GTTransform(object):
         return transformed
 
 def rotatePointAbout(point, about, degrees=90, ccw=True):
+    """\
+    Rotate the given point the given number of degrees about the point about
+    in a clockwise or counter-clockwise direction.
+    """
     rt = GTTransform.rotationAbout(about, degrees, ccw)
 
     return rt.applyToPoint(point)
 
 def rotateSegmentAbout(segment, about, degrees=90, ccw=True):
+    """\
+    Rotate the given segment the given number of degrees about the point about
+    in a clockwise or counter-clockwise direction.
+    """
     rt = GTTransform.rotationAbout(about, degrees, ccw)
 
     return rt.applyToSegment(segment)
 
 def rotateContourAbout(contour, about, degrees=90, ccw=True):
+    """\
+    Rotate the given contour the given number of degrees about the point about
+    in a clockwise or counter-clockwise direction.
+    """
     rt = GTTransform.rotationAbout(about, degrees, ccw)
 
     return rt.applyToContour(contour)
 
 def rotateContoursAbout(contours, about, degrees=90, ccw=True):
+    """\
+    Rotate the given contours the given number of degrees about the point about
+    in a clockwise or counter-clockwise direction.
+    """
     rt = GTTransform.rotationAbout(about, degrees, ccw)
 
     return rt.applyToContours(contours)
 
 def toMicros(funits, unitsPerEM):
+    """\
+    Convert funits into micros.
+    """
     return funits * 1000 / unitsPerEM
 
 # Helvetica Neue H
