@@ -1,5 +1,5 @@
 """\
-Utilities for manupulating outline paths and segments
+Utilities for manipulating outline paths and segments
 
 Created on July 7, 2020
 

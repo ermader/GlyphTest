@@ -13,9 +13,10 @@ from re import fullmatch
 from fontTools.ttLib import ttFont, TTLibError
 from fontTools.pens import svgPathPen
 from FontDocTools.ArgumentIterator import ArgumentIterator
-from FontDocTools.Font import Font
+from FontDocTools.Font import Font, Glyph
 import ContourPlotter
 import PathUtilities
+import GlyphContours
 
 class GlyphTestArgumentIterator(ArgumentIterator):
     def __init__(self, arguments):
@@ -201,7 +202,7 @@ class GTFont(Font):
         return cls._getFontName(ttFont, 4)
 
     @property
-    def postScriptName(self):
+    def postscriptName(self):
         return self._getPostScriptName(self._ttFont)
 
     @property
@@ -228,7 +229,7 @@ class GTFont(Font):
         return self._vMetrics
 
     def __str__(self):
-        return self.postScriptName
+        return self.postscriptName
 
     def glyphForName(self, glyphName):
         """\
@@ -239,7 +240,8 @@ class GTFont(Font):
             return glyphs[glyphName]
         if glyphName not in self._ttGlyphSet:
             raise ValueError(f"Unknown glyph name: “{glyphName}”.")
-        glyph = GTGlyph(self, glyphName)
+        # glyph = GTGlyph(self, glyphName)
+        glyph = Glyph(glyphName, self)
         glyphs[glyphName] = glyph
         return glyph
 
@@ -259,110 +261,6 @@ class GTFont(Font):
         charCode = ord(char) if type(char) == type("") else char
         return self.glyphForName(self.glyphNameForCharacterCode(charCode))
 
-class GTGlyph(object):
-    def handleSegment(self, segment):
-        for x, y in segment:
-            self._minX = min(self._minX, x)
-            self._minY = min(self._minY, y)
-            self._maxX = max(self._maxX, x)
-            self._maxY = max(self._maxY, y)
-
-        if len(segment) <= 3:
-            self._segments.append(segment)
-        else:
-            # a starting on-curve point, two or more off-curve points, and a final on-curve point
-            startPoint = segment[0]
-            for i in range(1, len(segment) - 2):
-                p1x, p1y = segment[i]
-                p2x, p2y = segment[i + 1]
-                impliedPoint = (0.5 * (p1x + p2x), 0.5 * (p1y + p2y))
-                self._segments.append([startPoint, segment[i], impliedPoint])
-                startPoint = impliedPoint
-            self._segments.append([startPoint, segment[-2], segment[-1]])
-
-    def __init__(self, font, glyphName):
-        self._font = font
-        self._glyfTable = font["glyf"]
-        self._glyph = self._glyfTable[glyphName]
-        self._index = self._glyfTable.getGlyphID(glyphName)
-        self._name = glyphName
-
-        self._minX = self._minY = 65536
-        self._maxX = self._maxY = -65536
-        self._contours = []
-
-        coords, endPoints, flags = self._glyph.getCoordinates(self._glyfTable)
-        coords = coords.copy()
-
-        startPoint = 0
-        for endPoint in endPoints:
-            self._segments = []
-            limitPoint = endPoint + 1
-            contour = coords[startPoint:limitPoint]
-            contourFlags = [flag & 0x1 for flag in flags[startPoint:limitPoint]]
-
-            contour.append(contour[0])
-            contourFlags.append(contourFlags[0])
-            startPoint = limitPoint
-
-            while len(contour) > 1:
-                firstOnCurve = contourFlags.index(1)
-                nextOnCurve = contourFlags.index(1, firstOnCurve + 1)
-                self.handleSegment(contour[firstOnCurve:nextOnCurve + 1])
-                contour = contour[nextOnCurve:]
-                contourFlags = contourFlags[nextOnCurve:]
-
-            self._contours.append(self._segments)
-
-        self._bounds = PathUtilities.GTBoundsRectangle((self._minX, self._minY), (self._maxX, self._maxY))
-
-    def __str__(self):
-        return f'"{self.name}" of "{self._font.postScriptName}"'
-
-    @property
-    def index(self):
-        return self._index
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def advanceWidth(self):
-        """\
-        Returns the advance width of this glyph as given
-        in the hmtx table.
-        """
-        (advanceWidth, _) = self._font.hmtxMetrics[self.name]
-        return advanceWidth
-
-    @property
-    def advanceHeight(self):
-        """\
-        Returns the advance height of this glyph as given
-        in the vmtx table.
-        """
-
-        vmtxMetrics = self._font.vmtxMetrics
-        if vmtxMetrics:
-            (advanceHeight, _) = self._font.vmtxMetrics[self.name]
-            return advanceHeight
-        return None
-
-    @property
-    def contours(self):
-        return self._contours
-
-    @property
-    def bounds(self):
-        return self._bounds
-
-    def referenceCommands(self):
-        glyphSet = self._font.glyphSet
-        pen = svgPathPen.SVGPathPen(glyphSet)
-        glyphSet[self.name].draw(pen)
-        return pen.getCommands()
-
 def getGlyphFromArgs(args, font):
     if args.glyphName: return font.glyphForName(args.glyphName)
     if args.glyphID: return font.glyphForIndex(args.glyphID)
@@ -370,6 +268,7 @@ def getGlyphFromArgs(args, font):
 
 def main():
     argumentList = argv
+    args = None
     programName = basename(argumentList.pop(0))
     if len(argumentList) == 0:
         print(__doc__, file=stderr)
@@ -385,10 +284,11 @@ def main():
         glyph = getGlyphFromArgs(args, font)
 
         fontBasename = basename(args.fontFile)
-        fontPostscriptName = font.postScriptName
-        print(f"Drawing glyph {glyph.name} from font {fontBasename}/{fontPostscriptName}")
+        fontPostscriptName = font.postscriptName
+        print(f"Drawing glyph {glyph.name()} from font {fontBasename}/{fontPostscriptName}")
 
-        contours = glyph.contours
+        glyphContours = GlyphContours.GTGlyphCoutours(glyph)
+        contours = glyphContours.contours
         boundingRect = PathUtilities.GTBoundsRectangle.fromCoutours(contours)
         centerPoint = boundingRect.centerPoint
 
@@ -456,12 +356,22 @@ def main():
         fullName = font.fullName
         if fullName.startswith("."): fullName = fullName[1:]
 
-        imageFile = open(f"{fullName}_{glyph.name}{nameSuffix}.svg", "wt", encoding="UTF-8")
+        imageFile = open(f"{fullName}_{glyph.name()}{nameSuffix}.svg", "wt", encoding="UTF-8")
         imageFile.write(image)
         imageFile.close()
 
-        print(f"Number of contours = {len(glyph.contours)}")
-        print(f"Number of segments = {[len(contour) for contour in glyph.contours]}")
+        print(f"Number of contours = {len(contours)}")
+        print(f"Number of segments = {[len(contour) for contour in contours]}")
+        print()
+
+        boundsRect = glyphContours.boundsRectangle
+        upm = font.unitsPerEm()
+        vsw = glyphContours.verticalStrokeWidth(boundsRect.yFromBottom(0.25))
+        hsw = glyphContours.horizontalStrokeWidth(boundsRect.xFromLeft(0.50))
+
+        print(f"vertical stroke width = {PathUtilities.toMicros(vsw, upm)} micro")
+        print(f"horizontal stroke width = {PathUtilities.toMicros(hsw, upm)} micro")
+
 
     except ValueError as error:
         print(programName + ": " + str(error), file=stderr)
