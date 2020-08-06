@@ -214,6 +214,13 @@ class GTGlyphCoutours(object):
             italicSlope = PathUtilities.slope(linesByLength[0])
             return 90.0 - math.degrees(math.atan(italicSlope))
 
+    def italicStrokeWidth(self):
+        lines = self.linesCrossingY(self._boundsRectangle.yFromBottom(0.25))
+        midPoint = PathUtilities.midpoint(lines[0])
+        perpendicular = PathUtilities.rotateSegmentAbout(lines[0], midPoint)
+        intersection = PathUtilities.intersectionPoint(perpendicular, lines[1])
+        return PathUtilities.length([midPoint, intersection])
+
 
 def test():
     from GlyphTest import GTFont
@@ -286,6 +293,12 @@ def test():
         print(f"italic angle of HelveticaNeueItalic {char} from stroke method = {glyphContours.italicAngle()}")
     print()
 
+    hnipGlyph = hniFont.glyphForCharacter("p")
+    hnipGlyphContours = GTGlyphCoutours(hnipGlyph)
+    isw = hnipGlyphContours.italicStrokeWidth()
+    print(f"stroke width of HelveticaNeueItalic p = {PathUtilities.toMicros(isw, hniFont.unitsPerEm())} micro")
+    print()
+
     nyiFont = GTFont(newYorkItalicPath)
     nyiColonGlyph = nyiFont.glyphForCharacter(":")
     nyiColonGlyphContours = GTGlyphCoutours(nyiColonGlyph)
@@ -297,6 +310,13 @@ def test():
         glyphContours = GTGlyphCoutours(glyph)
         print(f"italic angle of NewYorkItalic {char} from stroke method = {glyphContours.italicAngle()}")
     print()
+
+    nyipGlyph = nyiFont.glyphForCharacter("p")
+    nyipGlyphContours = GTGlyphCoutours(nyipGlyph)
+    isw = nyipGlyphContours.italicStrokeWidth()
+    print(f"stroke width of NewYorkItalic p = {PathUtilities.toMicros(isw, nyiFont.unitsPerEm())} micro")
+    print()
+
 
 if __name__ == "__main__":
     test()
