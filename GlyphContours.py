@@ -6,6 +6,7 @@ Created on August 5, 2020
 @author Eric Mader
 """
 
+import math
 import PathUtilities
 
 class GTGlyphCoutours(object):
@@ -194,4 +195,110 @@ class GTGlyphCoutours(object):
             return hStroke.height
 
         return 0  # or maybe None?
+
+    def italicAngle(self):
+        if self._glyph.name() == "colon":  # is it safe to assume the colon glyph will always have this name?
+            # use colon method:
+            # assumes that the colon glyph has two contours, one for each dot
+            lowerDot = self._contours[0]
+            upperDot = self._contours[1]
+            lowerBounds = PathUtilities.GTBoundsRectangle.fromContour(lowerDot)
+            upperBounds = PathUtilities.GTBoundsRectangle.fromContour(upperDot)
+            lowerCenter = lowerBounds.centerPoint
+            upperCenter = upperBounds.centerPoint
+            italicSlope = PathUtilities.slope([lowerCenter, upperCenter])
+            return 90.0 - math.degrees(math.atan(italicSlope))
+        else:
+            lines = self.linesCrossingY(self._boundsRectangle.yFromBottom(0.40))
+            linesByLength = PathUtilities.sortByLength(lines, longestFirst=True)
+            italicSlope = PathUtilities.slope(linesByLength[0])
+            return 90.0 - math.degrees(math.atan(italicSlope))
+
+
+def test():
+    from GlyphTest import GTFont
+
+    helveticaNeuePath = "/System/Library/Fonts/HelveticaNeue.ttc"
+    helveticaNeueRegularName = "HelveticaNeue"
+    helveticaNeueItalicName = "HelveticaNeue-Italic"
+
+    newYorkPath = "/System/Library/Fonts/NewYork.ttf"
+    newYorkItalicPath = "/System/Library/Fonts/NewYorkItalic.ttf"
+
+    # removed M, N because the heuristic doesn't find the right stroke:
+    # the middle strokes are longer than the side strokes...
+    strokeMethodChars = "BDHIJKLPRTbdhijklmnpqrt"
+
+    hnrFont = GTFont(helveticaNeuePath, fontName=helveticaNeueRegularName)
+    hnrHGlyph = hnrFont.glyphForCharacter("H")
+    hnrpGlyph = hnrFont.glyphForCharacter("p")
+
+    hnrHGlyphContours = GTGlyphCoutours(hnrHGlyph)
+    hnrpGlyphContours = GTGlyphCoutours(hnrpGlyph)
+
+    boundsRect = hnrHGlyphContours.boundsRectangle
+    upm = hnrFont.unitsPerEm()
+    vsw = hnrHGlyphContours.verticalStrokeWidth(boundsRect.yFromBottom(0.25))
+    hsw = hnrHGlyphContours.horizontalStrokeWidth(boundsRect.xFromLeft(0.50))
+
+    print(f"vertical stroke width of HelveticaNeue H = {PathUtilities.toMicros(vsw, upm)} micro")
+    print(f"horizontal stroke width of HelveticaNeue H = {PathUtilities.toMicros(hsw, upm)} micro")
+    print()
+
+    boundsRect = hnrpGlyphContours.boundsRectangle
+    vsw = hnrpGlyphContours.verticalStrokeWidth(boundsRect.yFromBottom(0.25))
+
+    print(f"vertical stroke width of HelveticaNeue p = {PathUtilities.toMicros(vsw, upm)} micro")
+    print()
+
+    nyFont = GTFont(newYorkPath)
+    nyHGlyph = nyFont.glyphForCharacter("H")
+    nypGlyph = nyFont.glyphForCharacter("p")
+
+    nyHGlyphContours = GTGlyphCoutours(nyHGlyph)
+    nypGlyphContours = GTGlyphCoutours(nypGlyph)
+
+    boundsRect = nyHGlyphContours.boundsRectangle
+    upm = nyFont.unitsPerEm()
+    vsw = nyHGlyphContours.verticalStrokeWidth(boundsRect.yFromBottom(0.25))
+    hsw = nyHGlyphContours.horizontalStrokeWidth(boundsRect.xFromLeft(0.50))
+
+    print(f"vertical stroke width of NewYork H = {PathUtilities.toMicros(vsw, upm)} micro")
+    print(f"horizontal stroke width of NewYork H = {PathUtilities.toMicros(hsw, upm)} micro")
+    print()
+
+
+    boundsRect = nypGlyphContours.boundsRectangle
+    vsw = nypGlyphContours.verticalStrokeWidth(boundsRect.yFromBottom(0.25))
+
+    print(f"vertical stroke width of NewYork p = {PathUtilities.toMicros(vsw, upm)} micro")
+    print()
+
+    hniFont = GTFont(helveticaNeuePath, fontName=helveticaNeueItalicName)
+    hniColonGlyph = hniFont.glyphForCharacter(":")
+    hniColonGlyphContours = GTGlyphCoutours(hniColonGlyph)
+    print(f"italic angle of HelveticaNeueItalic from colon method = {hniColonGlyphContours.italicAngle()}")
+    print()
+
+    for char in strokeMethodChars:
+        glyph = hniFont.glyphForCharacter(char)
+        glyphContours = GTGlyphCoutours(glyph)
+        print(f"italic angle of HelveticaNeueItalic {char} from stroke method = {glyphContours.italicAngle()}")
+    print()
+
+    nyiFont = GTFont(newYorkItalicPath)
+    nyiColonGlyph = nyiFont.glyphForCharacter(":")
+    nyiColonGlyphContours = GTGlyphCoutours(nyiColonGlyph)
+    print(f"italic angle of NewYorkItalic from colon method = {nyiColonGlyphContours.italicAngle()}")
+    print()
+
+    for char in strokeMethodChars:
+        glyph = nyiFont.glyphForCharacter(char)
+        glyphContours = GTGlyphCoutours(glyph)
+        print(f"italic angle of NewYorkItalic {char} from stroke method = {glyphContours.italicAngle()}")
+    print()
+
+if __name__ == "__main__":
+    test()
+
 
