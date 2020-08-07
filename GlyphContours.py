@@ -78,7 +78,7 @@ class GTGlyphCoutours(object):
 
     def verticalLines(self):
         """\
-        Return a list of all the vertical lines in the given contours.
+        Return a list of all the vertical lines in the contours.
         """
         v = []
         for contour in self._contours:
@@ -90,14 +90,14 @@ class GTGlyphCoutours(object):
 
     def verticalLinesCrossing(self, y):
         """\
-        Return a list of all the vertical lines in the given contours that
+        Return a list of all the vertical lines in the contours that
         span the given y coordinate.
         """
         return list(filter(lambda s: self.crossesY(s, y), self.sortByX(self.verticalLines())))
 
     def horizontalLines(self):
         """\
-        Return a list of all the horizontal lines in the given contours.
+        Return a list of all the horizontal lines in the contours.
         """
         h = []
         for contour in self._contours:
@@ -109,14 +109,40 @@ class GTGlyphCoutours(object):
 
     def horizontalLinesCrossing(self, x):
         """\
-        Return a list of all the horizontal lines in the given contours that
+        Return a list of all the horizontal lines in the contours that
         span the given x coordinate.
         """
         return list(filter(lambda s: self.crossesX(s, x), self.sortByY((self.horizontalLines()))))
 
+    def diagonalLines(self):
+        """\
+        Return a list of all the horizontal lines in the contours.
+        """
+        d = []
+        for contour in self._contours:
+            for segment in contour:
+                if PathUtilities.isDiagonalLine(segment):
+                    d.append(segment)
+
+        return d
+
+    def diagonalLinesCrossingX(self, x):
+        """\
+        Return a list of all the diagonal lines in the contours that
+        span the given x coordinate.
+        """
+        return list(filter(lambda s: self.crossesX(s, x), self.sortByY((self.diagonalLines()))))
+
+    def diagonalLinesCrossingY(self, y):
+        """\
+        Return a list of all the vertical lines in the contours that
+        span the given y coordinate.
+        """
+        return list(filter(lambda s: self.crossesY(s, y), self.sortByY((self.diagonalLines()))))
+
     def lines(self):
         """\
-        Return a list of all the lines in the given contours.
+        Return a list of all the lines in the contours.
         """
         l = []
         for contour in self._contours:
@@ -128,7 +154,7 @@ class GTGlyphCoutours(object):
 
     def linesCrossingY(self, y):
         """\
-        Return a list of all the lines in the given contours that
+        Return a list of all the lines in the contours that
         cross a given y coordinate.
         """
         return list(filter(lambda s: self.crossesY(s, y), self.sortByX(self.lines())))
@@ -170,7 +196,7 @@ class GTGlyphCoutours(object):
 
     def verticalStrokeWidth(self, atHeight):
         """\
-        Calculate the vertical stroke width of the given contours
+        Calculate the vertical stroke width of the contours
         by finding all vertical lines that span a given height,
         and returning the width of a bounds rectangle that encloses
         the first two lines.
@@ -184,7 +210,7 @@ class GTGlyphCoutours(object):
 
     def horizontalStrokeWidth(self, atWidth):
         """\
-        Calculate the horizontal stroke width of the given contours
+        Calculate the horizontal stroke width of the contours
         by finding all horizontal lines that span a given width,
         and returning the height of a bounds rectangle that encloses
         the first two lines.
@@ -319,11 +345,11 @@ def test():
 
     hnrXGlyph = hnrFont.glyphForCharacter("X")
     hnrXGlyphContours = GTGlyphCoutours(hnrXGlyph)
-    hnrXLines = hnrXGlyphContours.lines()
+    hnrXBounds = hnrXGlyphContours.boundsRectangle
 
-    diagonals = list(filter(lambda s: not (PathUtilities.isHorizontalLine(s) or PathUtilities.isVerticalLine(s)), hnrXLines))
-    # diag_25 = list(filter(lambda s: crossesY(s, hBounds.yFromBottom(0.25)), diagonals))
-    # diag_75 = list(filter(lambda s: crossesY(s, hBounds.yFromBottom(0.75)), diagonals))
+    diagonals = hnrXGlyphContours.diagonalLines()
+    # diag_25 = hnrXGlyphContours.diagonalLinesCrossingY(hnrXBounds.yFromBottom(0.25))
+    # diag_75 = hnrXGlyphContours.diagonalLinesCrossingY(hnrXBounds.yFromBottom(0.75))
 
     #
     # To calculate the stroke width:

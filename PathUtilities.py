@@ -374,6 +374,10 @@ def isHorizontalLine(segment):
     _, dy = getDeltas(segment)
     return len(segment) == 2 and dy == 0
 
+def isDiagonalLine(segment):
+    dx, dy = getDeltas(segment)
+    return len(segment) == 2 and dx !=0 and dy != 0
+
 def length(segment):
     """\
     Return the length of the segment. Only really makes sense for a line...
