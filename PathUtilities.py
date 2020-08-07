@@ -818,26 +818,6 @@ def test():
     print(pointOnLine((-300, -400), l2))
     print()
 
-    diagonals = list(filter(lambda s: not isHorizontalLine(s), xContours[0]))
-    # diag_25 = list(filter(lambda s: crossesY(s, hBounds.yFromBottom(0.25)), diagonals))
-    # diag_75 = list(filter(lambda s: crossesY(s, hBounds.yFromBottom(0.75)), diagonals))
-
-    #
-    # To calculate the stroke width:
-    # 1) find the midpoint of the leftmost line
-    # 2) rotate the line 90 degrees around the midpoint
-    # 3) intersect the rotation with the 2nd line
-    # 4) width is the length of the line from the midpoint to the intersection
-    #
-    midPoint = midpoint(diagonals[0])
-    perpendicular = rotateSegmentAbout(diagonals[0], midPoint)
-    intersection = intersectionPoint(perpendicular, diagonals[1])
-    xWidth = length([midPoint, intersection])
-    print(f"stroke width of Helvetica Neue X = {toMicros(xWidth, helveticaNeueUPM)} micro")
-
-    print(f"diagonal strokes of Helvetica Neue X = {diagonals}")
-    print()
-
     #
     # Example 2-6 from Mathematical Elements for Computer Graphics
     # Second Edition

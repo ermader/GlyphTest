@@ -210,7 +210,7 @@ class GTGlyphCoutours(object):
             return 90.0 - math.degrees(math.atan(italicSlope))
         else:
             lines = self.linesCrossingY(self._boundsRectangle.yFromBottom(0.40))
-            linesByLength = PathUtilities.sortByLength(lines, longestFirst=True)
+            linesByLength = self.sortByLength(lines, longestFirst=True)
             italicSlope = PathUtilities.slope(linesByLength[0])
             return 90.0 - math.degrees(math.atan(italicSlope))
 
@@ -316,6 +316,30 @@ def test():
     isw = nyipGlyphContours.italicStrokeWidth()
     print(f"stroke width of NewYorkItalic p = {PathUtilities.toMicros(isw, nyiFont.unitsPerEm())} micro")
     print()
+
+    hnrXGlyph = hnrFont.glyphForCharacter("X")
+    hnrXGlyphContours = GTGlyphCoutours(hnrXGlyph)
+    hnrXLines = hnrXGlyphContours.lines()
+
+    diagonals = list(filter(lambda s: not (PathUtilities.isHorizontalLine(s) or PathUtilities.isVerticalLine(s)), hnrXLines))
+    # diag_25 = list(filter(lambda s: crossesY(s, hBounds.yFromBottom(0.25)), diagonals))
+    # diag_75 = list(filter(lambda s: crossesY(s, hBounds.yFromBottom(0.75)), diagonals))
+
+    #
+    # To calculate the stroke width:
+    # 1) find the midpoint of the leftmost line
+    # 2) rotate the line 90 degrees around the midpoint
+    # 3) intersect the rotation with the 2nd line
+    # 4) width is the length of the line from the midpoint to the intersection
+    #
+    midPoint = PathUtilities.midpoint(diagonals[0])
+    perpendicular = PathUtilities.rotateSegmentAbout(diagonals[0], midPoint)
+    intersection = PathUtilities.intersectionPoint(perpendicular, diagonals[1])
+    xWidth = PathUtilities.length([midPoint, intersection])
+    print(f"stroke width of Helvetica Neue X = {PathUtilities.toMicros(xWidth, hnrFont.unitsPerEm())} micro")
+
+    # print(f"diagonal strokes of Helvetica Neue X = {diagonals}")
+    # print()
 
 
 if __name__ == "__main__":
