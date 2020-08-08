@@ -367,6 +367,29 @@ def test():
     # print(f"diagonal strokes of Helvetica Neue X = {diagonals}")
     # print()
 
+    bitmap = [[' ' for x in range(260)] for y in range(260)]
+
+    def drawPoints(points, t):
+        if len(points) == 1:
+            x, y = points[0]
+            bitmap[y][x] = '*'
+        else:
+            newpoints = []
+            for i in range(len(points) - 1):
+                x = int((1 - t) * points[i][0] + t * points[i + 1][0])
+                y = int((1 - t) * points[i][1] + t * points[i + 1][1])
+                newpoints.append((x, y))
+            drawPoints(newpoints, t)
+
+    # curve = [(90, 110), (25, 40), (230, 40), (150, 240)]
+    curve = [(70, 250), (20, 110), (250, 60)]
+    curve = [(0, 50), (100, 200)]
+    for t in range(101):
+        drawPoints(curve, t/100)
+
+    for row in range(260):
+        print("".join(bitmap[row]))
+
 
 if __name__ == "__main__":
     test()
