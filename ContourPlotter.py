@@ -83,6 +83,35 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
             path += f"' fill='none' {self._strokeAttributes()}/>"
         self._content.append(path)
 
+    def drawPoints(self, points, color=None):
+        if color:
+            self._strokeColor = color
+            # self._strokeWidth = 2
+
+        path = "<path d='"
+        commands = []
+        firstPoint = points[0]
+        self.moveToXY(*firstPoint)
+        commands.append(f"M{self.pointToString(firstPoint)}")
+        command = "L"
+
+        for point in points[1:]:
+            x, y = point
+            penX, penY = self._pen
+
+            if penX == x and penY == y:
+                continue
+
+            commands.append(f"{command}{self.pointToString(point)}")
+            self._pen = (x, y)
+            command = " "
+
+        path += "".join(commands)
+
+        path += f"' fill='none' {self._strokeAttributes()}/>"
+        self._content.append(path)
+
+
 def test():
     import PathUtilities
 
