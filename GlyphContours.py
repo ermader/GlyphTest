@@ -233,12 +233,14 @@ class GTGlyphCoutours(object):
             lowerCenter = lowerBounds.centerPoint
             upperCenter = upperBounds.centerPoint
             italicSlope = PathUtilities.slope([lowerCenter, upperCenter])
-            return 90.0 - math.degrees(math.atan(italicSlope))
+            # return 90.0 - math.degrees(math.atan(italicSlope))
         else:
             lines = self.linesCrossingY(self._boundsRectangle.yFromBottom(0.40))
             linesByLength = self.sortByLength(lines, longestFirst=True)
             italicSlope = PathUtilities.slope(linesByLength[0])
-            return 90.0 - math.degrees(math.atan(italicSlope))
+            # return 90.0 - math.degrees(math.atan(italicSlope))
+
+        return round(90.0 - math.degrees(math.atan(italicSlope)), 1)
 
     def italicStrokeWidth(self):
         lines = self.linesCrossingY(self._boundsRectangle.yFromBottom(0.25))
@@ -366,46 +368,6 @@ def test():
 
     # print(f"diagonal strokes of Helvetica Neue X = {diagonals}")
     # print()
-
-    # bitmap = [[' ' for x in range(260)] for y in range(260)]
-    outPoints = []
-
-    def drawPoints(points, t):
-        if len(points) == 1:
-            # x, y = points[0]
-            # bitmap[y][x] = '*'
-           outPoints.append(points[0])
-        else:
-            newpoints = []
-            for i in range(len(points) - 1):
-                x = int((1 - t) * points[i][0] + t * points[i + 1][0])
-                y = int((1 - t) * points[i][1] + t * points[i + 1][1])
-                newpoints.append((x, y))
-            drawPoints(newpoints, t)
-
-    interval = 35
-    curve = [(90, 140), (25, 210), (230, 210), (150, 10)]
-    # curve = [(70, 250), (20, 110), (250, 60)]
-    # curve = [(0, 50), (100, 200)]
-    for t in range(interval + 1):
-        drawPoints(curve, t/interval)
-
-    # for row in range(260):
-    #     print("".join(bitmap[row]))
-
-    from ContourPlotter import ContourPlotter
-    bounds = PathUtilities.GTBoundsRectangle(*outPoints)
-    cp = ContourPlotter(bounds.points)
-
-    cp.drawPoints(outPoints, PathUtilities.GTColor.fromName("blue"))
-
-    image = cp.generateFinalImage()
-
-    imageFile = open(f"DrawPoints Test.svg", "wt", encoding="UTF-8")
-    imageFile.write(image)
-    imageFile.close()
-
-
 
 if __name__ == "__main__":
     test()
