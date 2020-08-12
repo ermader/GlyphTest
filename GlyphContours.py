@@ -232,15 +232,13 @@ class GTGlyphCoutours(object):
             upperBounds = PathUtilities.GTBoundsRectangle.fromContour(upperDot)
             lowerCenter = lowerBounds.centerPoint
             upperCenter = upperBounds.centerPoint
-            italicSlope = PathUtilities.slope([lowerCenter, upperCenter])
-            # return 90.0 - math.degrees(math.atan(italicSlope))
+            segment = [lowerCenter, upperCenter]
         else:
             lines = self.linesCrossingY(self._boundsRectangle.yFromBottom(0.40))
             linesByLength = self.sortByLength(lines, longestFirst=True)
-            italicSlope = PathUtilities.slope(linesByLength[0])
-            # return 90.0 - math.degrees(math.atan(italicSlope))
+            segment = linesByLength[0]
 
-        return round(90.0 - math.degrees(math.atan(italicSlope)), 1)
+        return round(PathUtilities.slopeAngle(segment), 1)
 
     def italicStrokeWidth(self):
         lines = self.linesCrossingY(self._boundsRectangle.yFromBottom(0.25))

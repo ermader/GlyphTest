@@ -394,6 +394,13 @@ def slope(segment):
     if dx == 0: return math.inf
     return dy / dx
 
+def slopeAngle(segment):
+    """\
+    Return the angle of the segment from vertical, in degrees.
+    """
+    dx, dy = getDeltas(segment)
+    return math.degrees(math.atan2(abs(dx), abs(dy)))
+
 def midpoint(line):
     """\
     Return the midpoint of the line.
