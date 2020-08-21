@@ -294,11 +294,12 @@ def test():
 
     translate = PathUtilities.GTTransform.rotateAndMove((0, 0), curve1.controlPoints[0], angle)
     tbContour = translate.applyToContour(tBounds.contour)
-    cp1.drawContours([tbContour], PathUtilities.GTColor.fromName("magenta"))
+    cp1.setStrokeOpacity(0.5)
 
     cp1.drawContours([bounds1.contour], PathUtilities.GTColor.fromName("gold"))
 
-    cp1.setStrokeOpacity(0.5)
+    cp1.drawContours([tbContour], PathUtilities.GTColor.fromName("magenta"))
+
     # for tangentPoint in range(0, 36, 2):
     #     x, y = curve1.points[tangentPoint]
     #     tangent = curve1.tangentLineAt(tangentPoint, 20)

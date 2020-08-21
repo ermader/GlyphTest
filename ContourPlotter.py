@@ -30,7 +30,7 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
 
         return command
 
-    def drawContours(self, contours, color=None, fill=False):
+    def drawContours(self, contours, color=None, fill=False, close=True):
         if fill:
             self._fillColor = color
             self._fillOpacity = fill
@@ -72,8 +72,15 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
                             command = self.getCommand("Q")
                             commands.append(f"{command}{p1} {p2}")
                             self._pen = segment[2]
+                    elif len(segment) == 4:
+                        p1 = self.pointToString(segment[1])
+                        p2 = self.pointToString(segment[2])
+                        p3 = self.pointToString(segment[3])
+                        command = self.getCommand("C");
+                        commands.append(f"{command}{p1} {p2} {p3}")
+                        self._pen = segment[3]
 
-                commands.append("Z")
+                if close: commands.append("Z")
 
         path += "".join(commands)
 
@@ -120,31 +127,7 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
             self.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, x, y, 0.5, GlyphPlotterEngine.PaintMode.fill)
 
     def drawCurve(self, segment, color=None):
-        if color:
-            self._strokeColor = color
-            self._strokeWidth = 2
-
-        path = "<path d='"
-        commands = []
-
-        commands.append(f"M{self.pointToString(segment[0])}")
-
-        # quadratic
-        if len(segment) == 3:
-            p1 = self.pointToString(segment[1])
-            p2 = self.pointToString(segment[2])
-            commands.append(f"Q{p1} {p2}")
-            self._pen = segment[2]
-        elif len(segment) == 4:
-            p1 = self.pointToString(segment[1])
-            p2 = self.pointToString(segment[2])
-            p3 = self.pointToString(segment[3])
-            commands.append(f"C{p1} {p2} {p3}")
-            self._pen = segment[3]
-
-        path += "".join(commands)
-        path += f"' fill='none' {self._strokeAttributes()}/>"
-        self._content.append(path)
+        self.drawContours([[segment]], color=color, fill=False, close=False)
 
 def test():
     import PathUtilities
