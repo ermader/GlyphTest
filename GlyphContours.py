@@ -239,6 +239,7 @@ class GTGlyphCoutours(object):
             segment = linesByLength[0]
 
         return round(PathUtilities.slopeAngle(segment), 1)
+        # return PathUtilities.slopeAngle(segment)
 
     def italicStrokeWidth(self):
         lines = self.linesCrossingY(self._boundsRectangle.yFromBottom(0.25))
@@ -313,10 +314,14 @@ def test():
     print(f"italic angle of HelveticaNeueItalic from colon method = {hniColonGlyphContours.italicAngle()}")
     print()
 
+    averageItalicAngle = 0
     for char in strokeMethodChars:
         glyph = hniFont.glyphForCharacter(char)
         glyphContours = GTGlyphCoutours(glyph)
-        print(f"italic angle of HelveticaNeueItalic {char} from stroke method = {glyphContours.italicAngle()}")
+        italicAngle = glyphContours.italicAngle()
+        averageItalicAngle += italicAngle
+        print(f"italic angle of HelveticaNeueItalic {char} from stroke method = {italicAngle}")
+    print(f"average italic angle = {round(averageItalicAngle / len(strokeMethodChars), 1)}")
     print()
 
     hnipGlyph = hniFont.glyphForCharacter("p")
@@ -331,10 +336,14 @@ def test():
     print(f"italic angle of NewYorkItalic from colon method = {nyiColonGlyphContours.italicAngle()}")
     print()
 
+    averageItalicAngle = 0
     for char in strokeMethodChars:
         glyph = nyiFont.glyphForCharacter(char)
         glyphContours = GTGlyphCoutours(glyph)
-        print(f"italic angle of NewYorkItalic {char} from stroke method = {glyphContours.italicAngle()}")
+        italicAngle = glyphContours.italicAngle()
+        averageItalicAngle += italicAngle
+        print(f"italic angle of NewYorkItalic {char} from stroke method = {italicAngle}")
+    print(f"average italic angle = {round(averageItalicAngle / len(strokeMethodChars), 1)}")
     print()
 
     nyipGlyph = nyiFont.glyphForCharacter("p")

@@ -264,9 +264,17 @@ class GTBoundsRectangle(object):
     @property
     def diagonal(self):
         """\
-        A line from the bottom right corner to the top left corner.
+        A line from the bottom left corner to the top right corner.
         """
-        return [(self.right, self.bottom), (self.left, self.top)]
+        return [(self.left, self.bottom), (self.right, self.top)]
+
+    @property
+    def contour(self):
+        p0 = (self.left, self.bottom)
+        p1 = (self.left, self.top)
+        p2 = (self.right, self.top)
+        p3 = (self.right, self.bottom)
+        return [[p0, p1], [p1, p2], [p2, p3], [p3, p0]]
 
     @property
     def centerPoint(self):
@@ -400,6 +408,10 @@ def slopeAngle(segment):
     """
     dx, dy = getDeltas(segment)
     return math.degrees(math.atan2(abs(dx), abs(dy)))
+
+def rawSlopeAngle(segment):
+    dx, dy = getDeltas(segment)
+    return math.degrees(math.atan2(dy, dx))
 
 def midpoint(line):
     """\
@@ -655,6 +667,18 @@ class GTTransform(object):
         """
         m = GTTransform._perspectiveMatrix(p, q, s)
         return GTTransform(m)
+
+    @classmethod
+    def moveAndRotate(cls, fromPoint, toPoint, degrees):
+        m1 = GTTransform._translateMatrix(fromPoint, toPoint)
+        m2 = GTTransform._rotationMatrix(degrees)
+        return GTTransform(m1, m2)
+
+    @classmethod
+    def rotateAndMove(cls, fromPoint, toPoint, degrees):
+        m1 = GTTransform._rotationMatrix(degrees)
+        m2 = GTTransform._translateMatrix(fromPoint, toPoint)
+        return GTTransform(m1, m2)
 
     @classmethod
     def rotationAbout(cls, about, degrees=90, ccw=True):
