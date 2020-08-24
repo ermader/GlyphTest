@@ -65,8 +65,20 @@ class Curve(object):
             return (rx, ry)
         else:
             # higher order curves: use de Casteljau's computation
-            # (but not now ;-)
-            return None
+            #   JavaScript code does this:
+            #     const dCpts = JSON.parse(JSON.stringify(points));
+            #   don't know why...
+            dcPoints = p
+            while len(dcPoints) > 1:
+                newPoints = []
+                for i in range(len(dcPoints) - 1):
+                    x0, y0 = dcPoints[i]
+                    x1, y1 = dcPoints[i + 1]
+                    nx = x0 + (x1 - x0) * t
+                    ny = y0 + (y1 - y0) * t
+                    newPoints.append((nx, ny))
+                dcPoints = newPoints
+            return dcPoints[0]
 
     def _derivative(self, t):
         order = len(self._controlPoints) - 1
@@ -313,6 +325,58 @@ def test():
     imageFile1 = open(f"Curve as Points Test.svg", "wt", encoding="UTF-8")
     imageFile1.write(image1)
     imageFile1.close()
+
+    curve5Points = [(0, 5), (40, 5), (40, 40), (80, 40), (80, -50), (120, -50)]
+
+    curve5 = Curve(curve5Points)
+    bbox = curve5.bbox
+    minX, maxX = bbox[0]
+    minY, maxY = bbox[1]
+    bounds5 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
+
+    cp5 = ContourPlotter(bounds5.points)
+    cp5.setFillColor(PathUtilities.GTColor.fromName("blue"))
+    steps = 100
+    step = 1 / steps
+    p = curve5.controlPoints[0]
+    t = step
+    while t < 1 + step:
+        cp = curve5.get(min(t, 1))
+        cp5.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, p[0], p[1], 0.5, GlyphPlotterEngine.PaintMode.fill)
+        p = cp
+        t += step
+
+    image5 = cp5.generateFinalImage()
+
+    imageFile5 = open(f"Fifth Order Curve Test.svg", "wt", encoding="UTF-8")
+    imageFile5.write(image5)
+    imageFile5.close()
+
+    curve11Points = [(175, 178), (220, 250), (114, 285), (27, 267), (33, 159), (146, 143), (205, 33), (84, 117), (43, 59), (58, 24)]
+    curve11 = Curve(curve11Points)
+    bbox = curve11.bbox
+    minX, maxX = bbox[0]
+    minY, maxY = bbox[1]
+    bounds11 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
+
+    cp11 = ContourPlotter(bounds11.points)
+    cp11.setFillColor(PathUtilities.GTColor.fromName("blue"))
+    steps = 100
+    step = 1 / steps
+    p = curve11.controlPoints[0]
+    t = step
+    while t < 1 + step:
+        cp = curve11.get(min(t, 1))
+        cp11.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, p[0], p[1], 0.5, GlyphPlotterEngine.PaintMode.fill)
+        p = cp
+        t += step
+
+    image11 = cp11.generateFinalImage()
+
+    imageFile11 = open(f"Eleventh Order Curve Test.svg", "wt", encoding="UTF-8")
+    imageFile11.write(image11)
+    imageFile11.close()
+
 
 if __name__ == "__main__":
     test()
