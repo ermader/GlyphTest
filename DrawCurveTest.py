@@ -260,27 +260,15 @@ def test():
     # curvePoints = [(0, 50), (100, 200)]
 
     curve1 = Curve(curvePoints, 35)
-    # bounds1 = PathUtilities.GTBoundsRectangle(*curve1.points)
-
-    # dCurve = curve1.derivativeCurve
-    #
-    # ddCurve = dCurve.derivativeCurve
 
     bbox = curve1.bbox
     minX, maxX = bbox[0]
     minY, maxY = bbox[1]
     bounds1 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
 
-    # dbounds = PathUtilities.GTBoundsRectangle(*dCurve.points)
-    # ddbounds = PathUtilities.GTBoundsRectangle(*ddCurve.points)
-    # bounds1 = bounds1.union(dbounds)
-    # bounds1 = bounds1.union(ddbounds)
     cp1 = ContourPlotter(bounds1.points)
 
-    # cp1.drawPointsAsSegments(curve1.points, PathUtilities.GTColor.fromName("blue"))
     cp1.drawCurve(curve1.controlPoints, PathUtilities.GTColor.fromName("blue"))
-    # cp1.drawPointsAsSegments(dCurve.points, PathUtilities.GTColor.fromName("green"))
-    # cp1.drawPointsAsSegments(ddCurve.points, PathUtilities.GTColor.fromName("red"))
 
     angle = PathUtilities.rawSlopeAngle(curve1.controlPoints)
     align = PathUtilities.GTTransform.moveAndRotate(curve1.controlPoints[0], (0, 0), -angle)
@@ -300,22 +288,16 @@ def test():
 
     cp1.drawContours([tbContour], PathUtilities.GTColor.fromName("magenta"))
 
-    # for tangentPoint in range(0, 36, 2):
-    #     x, y = curve1.points[tangentPoint]
-    #     tangent = curve1.tangentLineAt(tangentPoint, 20)
-    #
-    #     startx, starty = tangent[0]
-    #     endx, endy = tangent[1]
-    #     cp1.setStrokeColor(PathUtilities.GTColor.fromName("red"))
-    #     cp1.drawLine(GlyphPlotterEngine.CoordinateSystem.content, startx, starty, endx, endy)
-    #
-    #     rotateTransform = PathUtilities.GTTransform.rotationAbout((x, y))
-    #     normal = rotateTransform.applyToSegment(tangent)
-    #     startx, starty = normal[0]
-    #     endx, endy = normal[1]
-    #
-    #     cp1.setStrokeColor(PathUtilities.GTColor.fromName("green"))
-    #     cp1.drawLine(GlyphPlotterEngine.CoordinateSystem.content, startx, starty, endx, endy)
+    image1 = cp1.generateFinalImage()
+
+    imageFile1 = open(f"Curve Bounding Boxes Test.svg", "wt", encoding="UTF-8")
+    imageFile1.write(image1)
+    imageFile1.close()
+
+    cp1 = ContourPlotter(bounds1.points)
+
+    cp1.drawCurve(curve1.controlPoints, PathUtilities.GTColor.fromName("blue"))
+    cp1.setStrokeOpacity(0.5)
 
     nPoints = 10
     lLength = 20
@@ -337,20 +319,38 @@ def test():
 
     image1 = cp1.generateFinalImage()
 
-    curve2 = Curve(curvePoints, 350)
-    bounds2 = PathUtilities.GTBoundsRectangle(*curve2.points)
-    cp2 = ContourPlotter(bounds2.points)
+    # curve2 = Curve(curvePoints, 350)
+    # bounds2 = PathUtilities.GTBoundsRectangle(*curve2.points)
+    # cp2 = ContourPlotter(bounds2.points)
+    #
+    # cp2.drawPointsAsCircles(curve2.points, PathUtilities.GTColor.fromName("blue"))
+    # image2 = cp2.generateFinalImage()
 
-    cp2.drawPointsAsCircles(curve2.points, PathUtilities.GTColor.fromName("blue"))
-    image2 = cp2.generateFinalImage()
-
-    imageFile1 = open(f"Curve as Segments Test.svg", "wt", encoding="UTF-8")
+    imageFile1 = open(f"Curve Tangents and Normals Test.svg", "wt", encoding="UTF-8")
     imageFile1.write(image1)
     imageFile1.close()
 
-    imageFile2 = open(f"Curve as Points Test.svg", "wt", encoding="UTF-8")
-    imageFile2.write(image2)
-    imageFile2.close()
+    cp1 = ContourPlotter(bounds1.points)
+    cp1.setStrokeColor(PathUtilities.GTColor.fromName("blue"))
+    steps = 30
+    step = 1 / steps
+    p = curve1.controlPoints[0]
+    t = step
+    while t < 1 + step:
+        cp = curve1.get(min(t, 1))
+        cp1.drawLine(GlyphPlotterEngine.CoordinateSystem.content, p[0], p[1], cp[0], cp[1])
+        p = cp
+        t += step
+
+    image1 = cp1.generateFinalImage()
+
+    imageFile1 = open(f"Curve Flattening Test.svg", "wt", encoding="UTF-8")
+    imageFile1.write(image1)
+    imageFile1.close()
+
+    # imageFile2 = open(f"Curve as Points Test.svg", "wt", encoding="UTF-8")
+    # imageFile2.write(image2)
+    # imageFile2.close()
 
 if __name__ == "__main__":
     test()
