@@ -220,6 +220,18 @@ class Curve(object):
 
         return self._extrema
 
+    def stepPoints(self, steps):
+        step = 1 / steps
+        points = []
+        points.append(self.controlPoints[0])
+
+        t = step
+        while t < 1 + step:
+            points.append(self.get(min(t, 1)))
+            t += step
+
+        return points
+
 def test():
     from FontDocTools import GlyphPlotterEngine
 
@@ -292,15 +304,8 @@ def test():
 
     cp1 = ContourPlotter(bounds1.points)
     cp1.setStrokeColor(PathUtilities.GTColor.fromName("blue"))
-    steps = 30
-    step = 1 / steps
-    p = curve1.controlPoints[0]
-    t = step
-    while t < 1 + step:
-        cp = curve1.get(min(t, 1))
-        cp1.drawLine(GlyphPlotterEngine.CoordinateSystem.content, p[0], p[1], cp[0], cp[1])
-        p = cp
-        t += step
+    points = curve1.stepPoints(30)
+    cp1.drawPointsAsSegments(points)
 
     image1 = cp1.generateFinalImage()
 
@@ -310,15 +315,8 @@ def test():
 
     cp1 = ContourPlotter(bounds1.points)
     cp1.setFillColor(PathUtilities.GTColor.fromName("blue"))
-    steps = 100
-    step = 1 / steps
-    p = curve1.controlPoints[0]
-    t = step
-    while t < 1 + step:
-        cp = curve1.get(min(t, 1))
-        cp1.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, p[0], p[1], 0.5, GlyphPlotterEngine.PaintMode.fill)
-        p = cp
-        t += step
+    points = curve1.stepPoints(100)
+    cp1.drawPointsAsCircles(points)
 
     image1 = cp1.generateFinalImage()
 
@@ -336,15 +334,8 @@ def test():
 
     cp5 = ContourPlotter(bounds5.points)
     cp5.setFillColor(PathUtilities.GTColor.fromName("blue"))
-    steps = 100
-    step = 1 / steps
-    p = curve5.controlPoints[0]
-    t = step
-    while t < 1 + step:
-        cp = curve5.get(min(t, 1))
-        cp5.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, p[0], p[1], 0.5, GlyphPlotterEngine.PaintMode.fill)
-        p = cp
-        t += step
+    points = curve5.stepPoints(100)
+    cp5.drawPointsAsCircles(points)
 
     image5 = cp5.generateFinalImage()
 
@@ -361,15 +352,8 @@ def test():
 
     cp11 = ContourPlotter(bounds11.points)
     cp11.setFillColor(PathUtilities.GTColor.fromName("blue"))
-    steps = 100
-    step = 1 / steps
-    p = curve11.controlPoints[0]
-    t = step
-    while t < 1 + step:
-        cp = curve11.get(min(t, 1))
-        cp11.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, p[0], p[1], 0.5, GlyphPlotterEngine.PaintMode.fill)
-        p = cp
-        t += step
+    points = curve11.stepPoints(200)
+    cp11.drawPointsAsCircles(points)
 
     image11 = cp11.generateFinalImage()
 
