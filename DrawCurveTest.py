@@ -3,6 +3,9 @@ Tests of drawing a curve
 
 Created on August 10, 2020
 
+Much of this code translated from bezier.js, utils.js and others
+from https://github.com/Pomax/BezierInfo-2
+
 @author Eric Mader
 """
 
@@ -11,36 +14,10 @@ import PathUtilities
 from ContourPlotter import ContourPlotter
 
 class Curve(object):
-    def __init__(self, controlPoints, interval):
+    def __init__(self, controlPoints):
         self._controlPoints = controlPoints
-        self._interval = interval
-        self._derivativeCurve = None
         self._dcPoints = None
         self._extrema = None
-        self._curvePoints = []
-
-        for t in range(interval + 1):
-            self._computePoints(controlPoints, t / interval)
-
-    def _computePoints(self, points, t):
-        if len(points) == 1:
-            self._curvePoints.append(points[0])
-        else:
-            newpoints = []
-            for i in range(len(points) - 1):
-                x = int((1 - t) * points[i][0] + t * points[i + 1][0])
-                y = int((1 - t) * points[i][1] + t * points[i + 1][1])
-                newpoints.append((x, y))
-            self._computePoints(newpoints, t)
-
-    def _derivativeControlPoints(self):
-        dcPoints = []
-        degree = len(self._controlPoints) - 1
-        for i in range(degree):
-            x0, y0 = self._controlPoints[i]
-            x1, y1 = self._controlPoints[i+1]
-            dcPoints.append((degree*(x1-x0), (degree*(y1-y0))))
-        return dcPoints
 
     def _compute(self, t):
         order = len(self._controlPoints) - 1
@@ -113,6 +90,11 @@ class Curve(object):
         ry = a * p0y + b * p1y + c * p2y
         return (rx, ry)
 
+    def _tangent(self, t):
+        d = self._derivative(t)
+        q = math.hypot(d[0], d[1])
+        return (d[0] / q, d[1] / q)
+
     def _normal(self, t):
         d = self._derivative(t)
         q = math.hypot(d[0], d[1])
@@ -177,11 +159,6 @@ class Curve(object):
 
         return []
 
-
-    @property
-    def points(self):
-        return self._curvePoints
-
     @property
     def controlPoints(self):
         return self._controlPoints
@@ -231,27 +208,6 @@ class Curve(object):
 
         return self._extrema
 
-
-    @property
-    def derivativeCurve(self):
-        if self._derivativeCurve is None:
-            dcp = self._derivativeControlPoints()
-            self._derivativeCurve = Curve(dcp, self._interval)
-        return self._derivativeCurve
-
-    # def pointAt(self, t):
-    #     return self._curvePoints[t]
-
-    def tangentLineAt(self, t, length):
-        derivative = self._derivativeCurve
-        x, y = self._curvePoints[t]
-        tx, ty = derivative._curvePoints[t]
-        m = math.hypot(tx, ty)
-        tx = (tx / m) * (length / 2)
-        ty = (ty / m) * (length / 2)
-        return [(x - tx, y - ty), (x + tx, y + ty)]
-
-
 def test():
     from FontDocTools import GlyphPlotterEngine
 
@@ -259,7 +215,7 @@ def test():
     # curvePoints = [(70, 0), (20, 140), (250, 190)]
     # curvePoints = [(0, 50), (100, 200)]
 
-    curve1 = Curve(curvePoints, 35)
+    curve1 = Curve(curvePoints)
 
     bbox = curve1.bbox
     minX, maxX = bbox[0]
@@ -273,7 +229,7 @@ def test():
     angle = PathUtilities.rawSlopeAngle(curve1.controlPoints)
     align = PathUtilities.GTTransform.moveAndRotate(curve1.controlPoints[0], (0, 0), -angle)
 
-    aligned = Curve(align.applyToSegment(curve1.controlPoints), 35)
+    aligned = Curve(align.applyToSegment(curve1.controlPoints))
 
     tbbox = aligned.bbox
     minX, maxX = tbbox[0]
@@ -282,6 +238,7 @@ def test():
 
     translate = PathUtilities.GTTransform.rotateAndMove((0, 0), curve1.controlPoints[0], angle)
     tbContour = translate.applyToContour(tBounds.contour)
+    cp1._boundsAggregator.addBounds(PathUtilities.GTBoundsRectangle.fromContour(tbContour).points)
     cp1.setStrokeOpacity(0.5)
 
     cp1.drawContours([bounds1.contour], PathUtilities.GTColor.fromName("gold"))
@@ -304,27 +261,18 @@ def test():
     for i in range(nPoints + 1):
         t = i / nPoints
         p = curve1.get(t)
-        tg = curve1._derivative(t)
-        m = math.hypot(tg[0], tg[1])
-        tx = tg[0]/m * lLength/2
-        ty = tg[1]/m * lLength/2
-        cp1.setStrokeColor(PathUtilities.GTColor.fromName("red"))
-        cp1.drawLine(GlyphPlotterEngine.CoordinateSystem.content, p[0] - tx, p[1] - ty, p[0] + tx, p[1] + ty)
 
-        n = curve1._normal(t)
-        nx = n[0] * lLength/2
-        ny = n[1] * lLength/2
-        cp1.setStrokeColor(PathUtilities.GTColor.fromName("green"))
-        cp1.drawLine(GlyphPlotterEngine.CoordinateSystem.content, p[0] - nx, p[1] - ny, p[0] + nx, p[1] + ny)
+        tp = curve1._tangent(t)
+        tx = tp[0] * lLength/2
+        ty = tp[1] * lLength/2
+        cp1.drawContours([[[(p[0] - tx, p[1] - ty), (p[0] + tx, p[1] + ty)]]], PathUtilities.GTColor.fromName("red"))
+
+        np = curve1._normal(t)
+        nx = np[0] * lLength/2
+        ny = np[1] * lLength/2
+        cp1.drawContours([[[(p[0] - nx, p[1] - ny), (p[0] + nx, p[1] + ny)]]], PathUtilities.GTColor.fromName("green"))
 
     image1 = cp1.generateFinalImage()
-
-    # curve2 = Curve(curvePoints, 350)
-    # bounds2 = PathUtilities.GTBoundsRectangle(*curve2.points)
-    # cp2 = ContourPlotter(bounds2.points)
-    #
-    # cp2.drawPointsAsCircles(curve2.points, PathUtilities.GTColor.fromName("blue"))
-    # image2 = cp2.generateFinalImage()
 
     imageFile1 = open(f"Curve Tangents and Normals Test.svg", "wt", encoding="UTF-8")
     imageFile1.write(image1)
@@ -348,9 +296,23 @@ def test():
     imageFile1.write(image1)
     imageFile1.close()
 
-    # imageFile2 = open(f"Curve as Points Test.svg", "wt", encoding="UTF-8")
-    # imageFile2.write(image2)
-    # imageFile2.close()
+    cp1 = ContourPlotter(bounds1.points)
+    cp1.setFillColor(PathUtilities.GTColor.fromName("blue"))
+    steps = 100
+    step = 1 / steps
+    p = curve1.controlPoints[0]
+    t = step
+    while t < 1 + step:
+        cp = curve1.get(min(t, 1))
+        cp1.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, p[0], p[1], 0.5, GlyphPlotterEngine.PaintMode.fill)
+        p = cp
+        t += step
+
+    image1 = cp1.generateFinalImage()
+
+    imageFile1 = open(f"Curve as Points Test.svg", "wt", encoding="UTF-8")
+    imageFile1.write(image1)
+    imageFile1.close()
 
 if __name__ == "__main__":
     test()
