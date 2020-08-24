@@ -235,6 +235,12 @@ class Curve(object):
 def test():
     from FontDocTools import GlyphPlotterEngine
 
+    colorRed = PathUtilities.GTColor.fromName("red")
+    colorGreen = PathUtilities.GTColor.fromName("green")
+    colorBlue = PathUtilities.GTColor.fromName("blue")
+    colorGold = PathUtilities.GTColor.fromName("gold")
+    colorMagenta = PathUtilities.GTColor.fromName("magenta")
+
     curvePoints = [(90, 140), (25, 210), (230, 210), (150, 10)]
     # curvePoints = [(70, 0), (20, 140), (250, 190)]
     # curvePoints = [(0, 50), (100, 200)]
@@ -248,7 +254,7 @@ def test():
 
     cp1 = ContourPlotter(bounds1.points)
 
-    cp1.drawCurve(curve1.controlPoints, PathUtilities.GTColor.fromName("blue"))
+    cp1.drawCurve(curve1.controlPoints, colorBlue)
 
     angle = PathUtilities.rawSlopeAngle(curve1.controlPoints)
     align = PathUtilities.GTTransform.moveAndRotate(curve1.controlPoints[0], (0, 0), -angle)
@@ -265,9 +271,9 @@ def test():
     cp1._boundsAggregator.addBounds(PathUtilities.GTBoundsRectangle.fromContour(tbContour).points)
     cp1.setStrokeOpacity(0.5)
 
-    cp1.drawContours([bounds1.contour], PathUtilities.GTColor.fromName("gold"))
+    cp1.drawContours([bounds1.contour], colorGold)
 
-    cp1.drawContours([tbContour], PathUtilities.GTColor.fromName("magenta"))
+    cp1.drawContours([tbContour], colorMagenta)
 
     image1 = cp1.generateFinalImage()
 
@@ -277,7 +283,7 @@ def test():
 
     cp1 = ContourPlotter(bounds1.points)
 
-    cp1.drawCurve(curve1.controlPoints, PathUtilities.GTColor.fromName("blue"))
+    cp1.drawCurve(curve1.controlPoints, colorBlue)
     cp1.setStrokeOpacity(0.5)
 
     nPoints = 10
@@ -289,12 +295,12 @@ def test():
         tp = curve1._tangent(t)
         tx = tp[0] * lLength/2
         ty = tp[1] * lLength/2
-        cp1.drawContours([[[(p[0] - tx, p[1] - ty), (p[0] + tx, p[1] + ty)]]], PathUtilities.GTColor.fromName("red"))
+        cp1.drawContours([[[(p[0] - tx, p[1] - ty), (p[0] + tx, p[1] + ty)]]], colorRed)
 
         np = curve1._normal(t)
         nx = np[0] * lLength/2
         ny = np[1] * lLength/2
-        cp1.drawContours([[[(p[0] - nx, p[1] - ny), (p[0] + nx, p[1] + ny)]]], PathUtilities.GTColor.fromName("green"))
+        cp1.drawContours([[[(p[0] - nx, p[1] - ny), (p[0] + nx, p[1] + ny)]]], colorGreen)
 
     image1 = cp1.generateFinalImage()
 
@@ -303,9 +309,8 @@ def test():
     imageFile1.close()
 
     cp1 = ContourPlotter(bounds1.points)
-    cp1.setStrokeColor(PathUtilities.GTColor.fromName("blue"))
     points = curve1.stepPoints(30)
-    cp1.drawPointsAsSegments(points)
+    cp1.drawPointsAsSegments(points, colorBlue)
 
     image1 = cp1.generateFinalImage()
 
@@ -314,9 +319,8 @@ def test():
     imageFile1.close()
 
     cp1 = ContourPlotter(bounds1.points)
-    cp1.setFillColor(PathUtilities.GTColor.fromName("blue"))
     points = curve1.stepPoints(100)
-    cp1.drawPointsAsCircles(points)
+    cp1.drawPointsAsCircles(points, colorBlue)
 
     image1 = cp1.generateFinalImage()
 
@@ -333,9 +337,8 @@ def test():
     bounds5 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
 
     cp5 = ContourPlotter(bounds5.points)
-    cp5.setFillColor(PathUtilities.GTColor.fromName("blue"))
     points = curve5.stepPoints(100)
-    cp5.drawPointsAsCircles(points)
+    cp5.drawPointsAsCircles(points, colorBlue)
 
     image5 = cp5.generateFinalImage()
 
@@ -351,9 +354,8 @@ def test():
     bounds11 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
 
     cp11 = ContourPlotter(bounds11.points)
-    cp11.setFillColor(PathUtilities.GTColor.fromName("blue"))
     points = curve11.stepPoints(200)
-    cp11.drawPointsAsCircles(points)
+    cp11.drawPointsAsCircles(points, colorBlue)
 
     image11 = cp11.generateFinalImage()
 
