@@ -10,14 +10,72 @@ from https://github.com/Pomax/BezierInfo-2
 """
 
 import math
+from decimal import Decimal, getcontext
 import PathUtilities
 from ContourPlotter import ContourPlotter
+
+# Legendre-Gauss abscissae with n=24 (x_i values, defined at i=n as the roots of the nth order Legendre polynomial Pn(x))
+tValues = [
+    Decimal("-0.0640568928626056260850430826247450385909"),
+    Decimal("0.0640568928626056260850430826247450385909"),
+    Decimal("-0.1911188674736163091586398207570696318404"),
+    Decimal("0.1911188674736163091586398207570696318404"),
+    Decimal("-0.3150426796961633743867932913198102407864"),
+    Decimal("0.3150426796961633743867932913198102407864"),
+    Decimal("-0.4337935076260451384870842319133497124524"),
+    Decimal("0.4337935076260451384870842319133497124524"),
+    Decimal("-0.5454214713888395356583756172183723700107"),
+    Decimal("0.5454214713888395356583756172183723700107"),
+    Decimal("-0.6480936519369755692524957869107476266696"),
+    Decimal("0.6480936519369755692524957869107476266696"),
+    Decimal("-0.7401241915785543642438281030999784255232"),
+    Decimal("0.7401241915785543642438281030999784255232"),
+    Decimal("-0.8200019859739029219539498726697452080761"),
+    Decimal("0.8200019859739029219539498726697452080761"),
+    Decimal("-0.8864155270044010342131543419821967550873"),
+    Decimal("0.8864155270044010342131543419821967550873"),
+    Decimal("-0.9382745520027327585236490017087214496548"),
+    Decimal("0.9382745520027327585236490017087214496548"),
+    Decimal("-0.9747285559713094981983919930081690617411"),
+    Decimal("0.9747285559713094981983919930081690617411"),
+    Decimal("-0.9951872199970213601799974097007368118745"),
+    Decimal("0.9951872199970213601799974097007368118745"),
+]
+
+# Legendre-Gauss weights with n=24 (w_i values, defined by a function linked to in the Bezier primer article)
+cValues = [
+    Decimal("0.1279381953467521569740561652246953718517"),
+    Decimal("0.1279381953467521569740561652246953718517"),
+    Decimal("0.1258374563468282961213753825111836887264"),
+    Decimal("0.1258374563468282961213753825111836887264"),
+    Decimal("0.121670472927803391204463153476262425607"),
+    Decimal("0.121670472927803391204463153476262425607"),
+    Decimal("0.1155056680537256013533444839067835598622"),
+    Decimal("0.1155056680537256013533444839067835598622"),
+    Decimal("0.1074442701159656347825773424466062227946"),
+    Decimal("0.1074442701159656347825773424466062227946"),
+    Decimal("0.0976186521041138882698806644642471544279"),
+    Decimal("0.0976186521041138882698806644642471544279"),
+    Decimal("0.086190161531953275917185202983742667185"),
+    Decimal("0.086190161531953275917185202983742667185"),
+    Decimal("0.0733464814110803057340336152531165181193"),
+    Decimal("0.0733464814110803057340336152531165181193"),
+    Decimal("0.0592985849154367807463677585001085845412"),
+    Decimal("0.0592985849154367807463677585001085845412"),
+    Decimal("0.0442774388174198061686027482113382288593"),
+    Decimal("0.0442774388174198061686027482113382288593"),
+    Decimal("0.0285313886289336631813078159518782864491"),
+    Decimal("0.0285313886289336631813078159518782864491"),
+    Decimal("0.0123412297999871995468056670700372915759"),
+    Decimal("0.0123412297999871995468056670700372915759"),
+]
 
 class Curve(object):
     def __init__(self, controlPoints):
         self._controlPoints = controlPoints
         self._dcPoints = None
         self._extrema = None
+        self._lut = []
 
     def _compute(self, t):
         order = len(self._controlPoints) - 1
@@ -220,17 +278,40 @@ class Curve(object):
 
         return self._extrema
 
-    def stepPoints(self, steps):
-        step = 1 / steps
-        points = []
-        points.append(self.controlPoints[0])
+    def getLUT(self, steps=100):
+        if len(self._lut) == steps: return self._lut
 
-        t = step
-        while t < 1 + step:
-            points.append(self.get(min(t, 1)))
-            t += step
+        self._lut = []
+        # We want a range from 0 to 1 inclusive, so
+        # we decrement steps and use range(steps+1)
+        steps -= 1
+        for t in range(steps+1):
+            self._lut.append(self.get(t / steps))
 
-        return points
+        return self._lut
+
+    def _arcfun(self, t):
+        dx, dy = self._derivative(t)
+        ddx = Decimal(dx)
+        ddy = Decimal(dy)
+
+        getcontext().prec += 2
+        result = (ddx * ddx + ddy * ddy).sqrt()
+        getcontext().prec -= 2
+        return +result
+
+    def length(self):
+        z = Decimal(0.5)
+        sum = Decimal(0)
+
+        getcontext().prec += 2
+        for i in range(len(tValues)):
+            t = tValues[i].fma(z, z)
+            sum = cValues[i].fma(self._arcfun(t), sum)
+
+        length = z * sum
+        getcontext().prec -= 2
+        return +length
 
 def test():
     from FontDocTools import GlyphPlotterEngine
@@ -309,7 +390,7 @@ def test():
     imageFile1.close()
 
     cp1 = ContourPlotter(bounds1.points)
-    points = curve1.stepPoints(30)
+    points = curve1.getLUT(30)
     cp1.drawPointsAsSegments(points, colorBlue)
 
     image1 = cp1.generateFinalImage()
@@ -319,7 +400,7 @@ def test():
     imageFile1.close()
 
     cp1 = ContourPlotter(bounds1.points)
-    points = curve1.stepPoints(100)
+    points = curve1.getLUT(100)
     cp1.drawPointsAsCircles(points, colorBlue)
 
     image1 = cp1.generateFinalImage()
@@ -337,7 +418,7 @@ def test():
     bounds5 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
 
     cp5 = ContourPlotter(bounds5.points)
-    points = curve5.stepPoints(100)
+    points = curve5.getLUT(100)
     cp5.drawPointsAsCircles(points, colorBlue)
 
     image5 = cp5.generateFinalImage()
@@ -354,7 +435,7 @@ def test():
     bounds11 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
 
     cp11 = ContourPlotter(bounds11.points)
-    points = curve11.stepPoints(200)
+    points = curve11.getLUT(200)
     cp11.drawPointsAsCircles(points, colorBlue)
 
     image11 = cp11.generateFinalImage()
@@ -362,6 +443,29 @@ def test():
     imageFile11 = open(f"Eleventh Order Curve Test.svg", "wt", encoding="UTF-8")
     imageFile11.write(image11)
     imageFile11.close()
+
+    curve2Points = [(120, 140), (35, 100), (220, 40), (220, 260)]
+    curve2 = Curve(curve2Points)
+    bbox = curve2.bbox
+    minX, maxX = bbox[0]
+    minY, maxY = bbox[1]
+    bounds2 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
+
+    points = curve2.getLUT(16)
+    aLen = 0
+    for i in range(len(points) - 1):
+        aLen += PathUtilities.length([points[i], points[i+1]])
+    print(f"Approximate length of curve2 = {aLen}")
+    print(f"Actual length of curve2 = {curve2.length()}")
+
+    cp2 = ContourPlotter(bounds2.points)
+    cp2._labelFontSize = 4
+    cp2.drawCurve(curve2.controlPoints, colorBlue)
+    cp2.drawLabel(GlyphPlotterEngine.CoordinateSystem.contentMargins, (maxX - minX) / 2, -6, 0, "center", f"Curve length: {curve2.length()}")
+    image2 = cp2.generateFinalImage()
+    imageFile2 = open("Curve 2 Test.svg", "wt", encoding="UTF-8")
+    imageFile2.write(image2)
+    imageFile2.close()
 
 
 if __name__ == "__main__":
