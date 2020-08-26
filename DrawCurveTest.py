@@ -245,9 +245,29 @@ class Curve(object):
 
         return []
 
+    @staticmethod
+    def lerp(r, v1, v2):
+        """"Linear intrpolation between v1, v2"""
+        v1x, v1y = v1
+        v2x, v2y = v2
+        return (v1x + r * (v2x - v1x), v1y + r * (v2y - v1y))
+
+    @staticmethod
+    def map(v, ds, de, ts, te):
+        d1 = de - ds
+        d2 = te - ts
+        v2 = v - ds
+        r = v2 / d1
+
+        return ts + d2 * r
+
     @property
     def controlPoints(self):
         return self._controlPoints
+
+    @property
+    def order(self):
+        return len(self._controlPoints) - 1
 
     @property
     def dcPoints(self):
@@ -294,6 +314,25 @@ class Curve(object):
 
         return self._extrema
 
+    def hull(self, t):
+        p = self.controlPoints
+        q = [p[0], p[1], p[2]]
+
+        if self.order == 3:
+            q.append(p[3])
+
+        # we lerp between all points at each iteration, until we have 1 point left.
+        while len(p) > 1:
+            _p = []
+            for i in range(len(p) - 1):
+                pt = Curve.lerp(t, p[i], p[i+1])
+                q.append(pt)
+                _p.append(pt)
+            p = _p
+
+        return q
+
+    # LUT == LookUp Table
     def getLUT(self, steps=100):
         if len(self._lut) == steps: return self._lut
 
@@ -332,6 +371,34 @@ class Curve(object):
             self._length = +length
 
         return self._length
+
+    def split(self, t1, t2=None):
+        # shortcuts...
+        if t1 == 0 and t2: return self.split(t2)[0]
+        if t2 == 1: return self.split(t1)[1]
+
+        # no shortcut: use "de Casteljau" iteration.
+        q = self.hull(t1)
+        if self.order == 2:
+            left = Curve([q[0], q[3], q[5]])
+            right = Curve([q[5], q[4], q[2]])
+        else:
+            left = Curve([q[0], q[4], q[7], q[9]])
+            right = Curve([q[9], q[8], q[6], q[3]])
+
+        result = (left, right, q)
+
+        # make sure we bind _t1/_t2 information!
+        # result.left._t1 = utils.map(0, 0, 1, this._t1, this._t2);
+        # result.left._t2 = utils.map(t1, 0, 1, this._t1, this._t2);
+        # result.right._t1 = utils.map(t1, 0, 1, this._t1, this._t2);
+        # result.right._t2 = utils.map(1, 0, 1, this._t1, this._t2);
+
+        # f we have no t2, we're done
+        if not t2: return result
+        t2 = Curve.map(t2, t1, 1, 0, 1)
+        return result[1].split(t2)[0]
+
 
 def test():
     from FontDocTools import GlyphPlotterEngine
@@ -485,6 +552,17 @@ def test():
 
     image2 = cp2.generateFinalImage()
     imageFile2 = open("Approximate curve Length Test.svg", "wt", encoding="UTF-8")
+    imageFile2.write(image2)
+    imageFile2.close()
+
+    cp2 = ContourPlotter(bounds2.points)
+    left, right, _ = curve2.split(0.50)
+    cp2.drawCurve(left.controlPoints, colorBlue)
+    cp2.drawCurve(right.controlPoints, colorMagenta)
+
+
+    image2 = cp2.generateFinalImage()
+    imageFile2 = open("Split Curve Test.svg", "wt", encoding="UTF-8")
     imageFile2.write(image2)
     imageFile2.close()
 
