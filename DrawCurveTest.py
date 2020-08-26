@@ -75,6 +75,9 @@ class Curve(object):
         self._controlPoints = controlPoints
         self._dcPoints = None
         self._extrema = None
+        self._length = None
+        self._bbox = None
+        self._boundsRectangle = None
         self._lut = []
 
     def _compute(self, t):
@@ -187,13 +190,26 @@ class Curve(object):
 
     @property
     def bbox(self):
-        extrema = self.extrema
-        result = {}
+        if not self._bbox:
+            extrema = self.extrema
+            result = {}
 
-        for dim in range(2):
-            result[dim] = self._getminmax(dim, extrema[dim])
+            for dim in range(2):
+                result[dim] = self._getminmax(dim, extrema[dim])
 
-        return result
+            self._bbox = result
+
+        return self._bbox
+
+    @property
+    def boundsRectangle(self):
+        if not self._boundsRectangle:
+            bbox = self.bbox
+            minX, maxX = bbox[0]
+            minY, maxY = bbox[1]
+            self._boundsRectangle = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
+
+        return self._boundsRectangle
 
     def get(self, t):
         return self._compute(t)
@@ -295,23 +311,27 @@ class Curve(object):
         ddx = Decimal(dx)
         ddy = Decimal(dy)
 
-        getcontext().prec += 2
+        # getcontext().prec += 2
         result = (ddx * ddx + ddy * ddy).sqrt()
-        getcontext().prec -= 2
-        return +result
+        # getcontext().prec -= 2
+        return result
 
+    @property
     def length(self):
-        z = Decimal(0.5)
-        sum = Decimal(0)
+        if not self._length:
+            z = Decimal(0.5)
+            sum = Decimal(0)
 
-        getcontext().prec += 2
-        for i in range(len(tValues)):
-            t = tValues[i].fma(z, z)
-            sum = cValues[i].fma(self._arcfun(t), sum)
+            getcontext().prec += 2
+            for i in range(len(tValues)):
+                t = tValues[i].fma(z, z)
+                sum = cValues[i].fma(self._arcfun(t), sum)
 
-        length = z * sum
-        getcontext().prec -= 2
-        return +length
+            length = z * sum
+            getcontext().prec -= 2
+            self._length = +length
+
+        return self._length
 
 def test():
     from FontDocTools import GlyphPlotterEngine
@@ -328,10 +348,7 @@ def test():
 
     curve1 = Curve(curvePoints)
 
-    bbox = curve1.bbox
-    minX, maxX = bbox[0]
-    minY, maxY = bbox[1]
-    bounds1 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
+    bounds1 = curve1.boundsRectangle
 
     cp1 = ContourPlotter(bounds1.points)
 
@@ -342,10 +359,7 @@ def test():
 
     aligned = Curve(align.applyToSegment(curve1.controlPoints))
 
-    tbbox = aligned.bbox
-    minX, maxX = tbbox[0]
-    minY, maxY = tbbox[1]
-    tBounds = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
+    tBounds = aligned.boundsRectangle
 
     translate = PathUtilities.GTTransform.rotateAndMove((0, 0), curve1.controlPoints[0], angle)
     tbContour = translate.applyToContour(tBounds.contour)
@@ -412,10 +426,7 @@ def test():
     curve5Points = [(0, 5), (40, 5), (40, 40), (80, 40), (80, -50), (120, -50)]
 
     curve5 = Curve(curve5Points)
-    bbox = curve5.bbox
-    minX, maxX = bbox[0]
-    minY, maxY = bbox[1]
-    bounds5 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
+    bounds5 = curve5.boundsRectangle
 
     cp5 = ContourPlotter(bounds5.points)
     points = curve5.getLUT(100)
@@ -429,10 +440,7 @@ def test():
 
     curve11Points = [(175, 178), (220, 250), (114, 285), (27, 267), (33, 159), (146, 143), (205, 33), (84, 117), (43, 59), (58, 24)]
     curve11 = Curve(curve11Points)
-    bbox = curve11.bbox
-    minX, maxX = bbox[0]
-    minY, maxY = bbox[1]
-    bounds11 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
+    bounds11 = curve11.boundsRectangle
 
     cp11 = ContourPlotter(bounds11.points)
     points = curve11.getLUT(200)
@@ -446,27 +454,39 @@ def test():
 
     curve2Points = [(120, 140), (35, 100), (220, 40), (220, 260)]
     curve2 = Curve(curve2Points)
-    bbox = curve2.bbox
-    minX, maxX = bbox[0]
-    minY, maxY = bbox[1]
-    bounds2 = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
+    bounds2 = curve2.boundsRectangle
 
     points = curve2.getLUT(16)
     aLen = 0
     for i in range(len(points) - 1):
         aLen += PathUtilities.length([points[i], points[i+1]])
-    print(f"Approximate length of curve2 = {aLen}")
-    print(f"Actual length of curve2 = {curve2.length()}")
 
     cp2 = ContourPlotter(bounds2.points)
-    cp2._labelFontSize = 4
+    margin = cp2._contentMargins.left
+    cp2.setLabelFontSize(4, 4)  # Not sure what the "scaled" parameter is for...
     cp2.drawCurve(curve2.controlPoints, colorBlue)
-    cp2.drawLabel(GlyphPlotterEngine.CoordinateSystem.contentMargins, (maxX - minX) / 2, -6, 0, "center", f"Curve length: {curve2.length()}")
+    cp2.drawLabel(GlyphPlotterEngine.CoordinateSystem.contentMargins, bounds2.width / 2 + margin, -6, 0, "center", f"Curve length: {curve2.length}")
     image2 = cp2.generateFinalImage()
-    imageFile2 = open("Curve 2 Test.svg", "wt", encoding="UTF-8")
+    imageFile2 = open("Curve Length Test.svg", "wt", encoding="UTF-8")
     imageFile2.write(image2)
     imageFile2.close()
 
+    cp2 = ContourPlotter(bounds2.points)
+    cp2.setLabelFontSize(4, 4)  # Not sure what the "scaled" parameter is for...
+
+
+    points = curve2.getLUT(16)
+    aLen = 0
+    for i in range(len(points) - 1):
+        aLen += PathUtilities.length([points[i], points[i + 1]])
+
+    cp2.drawPointsAsSegments(points, colorBlue)
+    cp2.drawLabel(GlyphPlotterEngine.CoordinateSystem.contentMargins, bounds2.width / 2 + margin, -6, 0, "center", f"Approximate curve length, 16 steps: {aLen}")
+
+    image2 = cp2.generateFinalImage()
+    imageFile2 = open("Approximate curve Length Test.svg", "wt", encoding="UTF-8")
+    imageFile2.write(image2)
+    imageFile2.close()
 
 if __name__ == "__main__":
     test()
