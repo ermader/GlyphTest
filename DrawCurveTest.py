@@ -73,6 +73,8 @@ cValues = [
 class Curve(object):
     def __init__(self, controlPoints):
         self._controlPoints = controlPoints
+        self._t1 = 0
+        self._t2 = 1
         self._dcPoints = None
         self._extrema = None
         self._length = None
@@ -81,37 +83,35 @@ class Curve(object):
         self._lut = []
 
     def _compute(self, t):
-        order = len(self._controlPoints) - 1
-
         # shortcuts...
         if t == 0: return self._controlPoints[0]
 
-        if t == 1: return self._controlPoints[order]
+        if t == 1: return self._controlPoints[self.order]
 
         mt = 1 - t
         p = self._controlPoints
 
         # constant?
-        if order == 0: return self._controlPoints[0]
+        if self.order == 0: return self._controlPoints[0]
 
         # linear?
-        if order == 1:
+        if self.order == 1:
             p0x, p0y = p[0]
             p1x, p1y = p[1]
             return (mt * p0x + t * p1x, mt * p0y + t * p1y)
 
         # quadratic / cubic?
-        if order < 4:
+        if self.order < 4:
             mt2 = mt * mt
             t2 = t * t
 
-            if order == 2:
+            if self.order == 2:
                 p = [p[0], p[1], p[2], (0, 0)]
                 a = mt2
                 b = mt * t * 2
                 c = t2
                 d = 0
-            elif order == 3:
+            elif self.order == 3:
                 a = mt2 * mt
                 b = mt2 * t * 3
                 c = mt * t2 * 3
@@ -142,16 +142,15 @@ class Curve(object):
             return dcPoints[0]
 
     def _derivative(self, t):
-        order = len(self._controlPoints) - 1
-        p = self._dcPoints[0]
+        p = self.dcPoints[0]
         mt = 1 - t
 
-        if order == 2:
+        if self.order == 2:
             p = [p[0], p[1], (0, 0)]
             a = mt
             b = t
             c = 0
-        elif order == 3:
+        elif self.order == 3:
             a = mt * mt
             b = mt * t * 2
             c = t * t
@@ -254,6 +253,10 @@ class Curve(object):
 
     @staticmethod
     def map(v, ds, de, ts, te):
+        """\
+        Map the value v, in range [ds, de] to
+        the corresponding value in range [ts, te]
+        """
         d1 = de - ds
         d2 = te - ts
         v2 = v - ds
@@ -300,7 +303,7 @@ class Curve(object):
             for dim in range(2):
                 p = list(map(lambda p: p[dim], self.dcPoints[0]))
                 result[dim] = Curve.droots(p)
-                if len(self._controlPoints) == 4:
+                if self.order == 3:
                     p = list(map(lambda p: p[dim], self.dcPoints[1]))
                     result[dim].extend(Curve.droots(p))
                 result[dim] = list(filter(lambda t: t >= 0 and t <= 1, result[dim]))
@@ -346,7 +349,7 @@ class Curve(object):
         return self._lut
 
     def _arcfun(self, t):
-        dx, dy = self._derivative(t)
+        dx, dy = self._derivative(float(t))  # not sure the cast is a good idea...
         ddx = Decimal(dx)
         ddy = Decimal(dy)
 
@@ -386,18 +389,17 @@ class Curve(object):
             left = Curve([q[0], q[4], q[7], q[9]])
             right = Curve([q[9], q[8], q[6], q[3]])
 
-        result = (left, right, q)
-
         # make sure we bind _t1/_t2 information!
-        # result.left._t1 = utils.map(0, 0, 1, this._t1, this._t2);
-        # result.left._t2 = utils.map(t1, 0, 1, this._t1, this._t2);
-        # result.right._t1 = utils.map(t1, 0, 1, this._t1, this._t2);
-        # result.right._t2 = utils.map(1, 0, 1, this._t1, this._t2);
+        left._t1 = Curve.map(0, 0, 1, self._t1, self._t2)
+        left._t2 = Curve.map(t1, 0, 1, self._t1, self._t2)
+        right._t1 = Curve.map(t1, 0, 1, self._t1, self._t2)
+        right._t2 = Curve.map(1, 0, 1, self._t1, self._t2)
 
-        # f we have no t2, we're done
-        if not t2: return result
+        # if we have no t2, we're done
+        if not t2: return (left, right, q)
+
         t2 = Curve.map(t2, t1, 1, 0, 1)
-        return result[1].split(t2)[0]
+        return right.split(t2)[0]
 
 
 def test():
@@ -408,6 +410,8 @@ def test():
     colorBlue = PathUtilities.GTColor.fromName("blue")
     colorGold = PathUtilities.GTColor.fromName("gold")
     colorMagenta = PathUtilities.GTColor.fromName("magenta")
+    colorCyan = PathUtilities.GTColor.fromName("cyan")
+    colorYellow = PathUtilities.GTColor.fromName("yellow")
 
     curvePoints = [(90, 140), (25, 210), (230, 210), (150, 10)]
     # curvePoints = [(70, 0), (20, 140), (250, 190)]
@@ -563,6 +567,57 @@ def test():
 
     image2 = cp2.generateFinalImage()
     imageFile2 = open("Split Curve Test.svg", "wt", encoding="UTF-8")
+    imageFile2.write(image2)
+    imageFile2.close()
+
+    def generate(curve):
+        pts = [(0, 0)]
+
+        for v in range(1, 101):
+            t = v / 100
+            d = curve.split(t)[0].length
+            pts.append((d, t))
+
+        return pts
+
+    pts = generate(curve2)
+    c2len = curve2.length
+    ts = []
+    s = 8
+    for i in range(s+1):
+        target = (i * c2len) / s
+        for p in range(len(pts)):
+            if pts[p][0] > target:
+                p -= 1
+                break
+
+        if p < 0: p = 0
+        if p == len(pts): p = len(pts) - 1
+        ts.append(pts[p])
+
+    colors = [colorMagenta, colorCyan]
+    idx = 0
+
+    cp2 = ContourPlotter(bounds2.points)
+
+    cp2.setStrokeColor(colors[0])
+    p0 = curve2.get(pts[0][1])
+    x, y = curve2.get(0)
+    cp2.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, x, y, 4, GlyphPlotterEngine.PaintMode.stroke)
+
+    for i in range(1, len(pts)):
+        p1 = curve2.get(pts[i][1])
+        p0x, p0y = p0
+        p1x, p1y = p1
+        cp2.drawLine(GlyphPlotterEngine.CoordinateSystem.content, p0x, p0y, p1x, p1y)
+        if pts[i] in ts:
+            idx += 1
+            cp2.setStrokeColor(colors[idx % len(colors)])
+            cp2.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, p1x, p1y, 4, GlyphPlotterEngine.PaintMode.stroke)
+        p0 = p1
+
+    image2 = cp2.generateFinalImage()
+    imageFile2 = open("Curve Fixed Interval Test.svg", "wt", encoding="UTF-8")
     imageFile2.write(image2)
     imageFile2.close()
 
