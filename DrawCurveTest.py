@@ -158,6 +158,14 @@ class Curve(object):
         p0x, p0y = p[0]
         p1x, p1y = p[1]
         p2x, p2y = p[2]
+
+        # if t is Decimal, convert the x, y coordinates to Decimal
+        if type(t) == type(Decimal(0)):
+            p0x = Decimal(p0x)
+            p0y = Decimal(p0y)
+            p1x = Decimal(p1x)
+            p1y = Decimal(p1y)
+
         rx = a * p0x + b * p1x + c * p2x
         ry = a * p0y + b * p1y + c * p2y
         return (rx, ry)
@@ -349,12 +357,10 @@ class Curve(object):
         return self._lut
 
     def _arcfun(self, t):
-        dx, dy = self._derivative(float(t))  # not sure the cast is a good idea...
-        ddx = Decimal(dx)
-        ddy = Decimal(dy)
+        dx, dy = self._derivative(t)
 
         # getcontext().prec += 2
-        result = (ddx * ddx + ddy * ddy).sqrt()
+        result = (dx * dx + dy * dy).sqrt()
         # getcontext().prec -= 2
         return result
 
@@ -573,9 +579,11 @@ def test():
     def generate(curve):
         pts = [(0, 0)]
 
-        for v in range(1, 101):
-            t = v / 100
-            d = curve.split(t)[0].length
+        steps = 100
+        for v in range(1, steps + 1):
+            t = Decimal(v) / steps
+            left, _, _ = curve.split(t)
+            d = left.length
             pts.append((d, t))
 
         return pts
