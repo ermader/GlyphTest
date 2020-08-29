@@ -70,6 +70,14 @@ cValues = [
     Decimal("0.0123412297999871995468056670700372915759"),
 ]
 
+# float precision significant decimal
+epsilon = 0.000001
+
+# trig constants
+pi = math.pi
+tau = 2 * pi
+quart = pi / 4
+
 class Curve(object):
     def __init__(self, controlPoints):
         self._controlPoints = controlPoints
@@ -220,6 +228,127 @@ class Curve(object):
 
     def get(self, t):
         return self._compute(t)
+
+    @staticmethod
+    def approximately(a, b, precision=epsilon):
+        return abs(a - b) <= precision
+
+    @staticmethod
+    def crt(v):
+        return -math.pow(-v, 1 / 3) if v < 0 else math.pow(v, 1 / 3)
+
+    @staticmethod
+    def lli8(x1, y1, x2, y2, x3, y3, x4, y4):
+        nx = (x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)
+        ny = (x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)
+        d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+
+        # d == 0 means that the lines are parallel
+        if d == 0: return None
+
+        return (nx/d, ny/d)
+
+    @staticmethod
+    def lli4(p1, p2, p3, p4):
+        x1, y1 = p1
+        x2, y2 = p2
+        x3, y3 = p3
+        x4, y4 = p4
+        return Curve.lli8(x1, y1, x2, y2, x3, y3, x4, y4)
+
+    @staticmethod
+    def lli(l1, l2):
+        return Curve.lli4(l1[0], l1[1], l2[0], l2[1])
+
+    @staticmethod
+    def roots(p):
+        # The JavaScript code also take a line argument and
+        # aligns the points to that line...
+        # Since we're only using this for align(), we
+        # don't need to do that. (right?)
+
+        def reduce(t):
+            return 0 <= t <= 1
+
+        order = len(p) - 1
+        if order == 2:
+            a = p[0][1]
+            b = p[1][1]
+            c = p[2][1]
+            d = a - 2 * b + c
+            if d != 0:
+                m1 = -math.sqrt(b * b - a * c)
+                m2 = -a + b
+                v1 = -(m1 + m2) / d
+                v2 = -(-m1 + m2) / d
+                return list(filter(reduce, [v1, v2]))
+            elif b != c and d == 0:
+                return list(filter(reduce, [(2 * b - c) / (2 * b - 2 * c)]))
+
+            return []
+
+        # see http://www.trans4mind.com/personal_development/mathematics/polynomials/cubicAlgebra.htm
+        pa = p[0][1]
+        pb = p[1][1]
+        pc = p[2][1]
+        pd = p[3][1]
+
+        d = -pa + 3 * pb - 3 * pc + pd
+        a = 3 * pa - 6 * pb + 3 * pc
+        b = -3 * pa + 3 * pb
+        c = pa
+
+        if Curve.approximately(d, 0):
+            # this is not a cubic curve.
+            if Curve.approximately(a, 0):
+                # in fact, this is not a quadratic curve either.
+                if Curve.approximately(b, 0):
+                    # in fact, there are no solutions
+                    return []
+
+                # linear solution:
+                return list(filter(reduce, [-c / b]))
+
+            # quadratic solution:
+            q = math.sqrt(b * b - 4 * a * c)
+            a2 = 2 * a
+            return list(filter(reduce, [(q - b) / a2, (-b - q) / a2]))
+
+        # at this point, we know we need a cubic solution:
+        a /= d
+        b /= d
+        c /= d
+
+        p = (3 * b - a * a) / 3
+        p3 = p / 3
+        q = (2 * a * a * a - 9 * a * b + 27 * c) / 27
+        q2 = q / 2
+        discriminant = q2 * q2 + p3 * p3 * p3
+
+        if discriminant < 0:
+            mp3 = -p / 3
+            mp33 = mp3 * mp3 * mp3
+            r = math.sqrt(mp33)
+            t = -q / (2 * r)
+            # cosphi = t < -1 ? -1: t > 1 ? 1: t
+            cosphi = -1 if t < -1 else 1 if t > 1 else t
+            phi = math.acos(cosphi)
+            crtr = Curve.crt(r)
+            t1 = 2 * crtr
+            x1 = t1 * math.cos(phi / 3) - a / 3
+            x2 = t1 * math.cos((phi + tau) / 3) - a / 3
+            x3 = t1 * math.cos((phi + 2 * tau) / 3) - a / 3
+            return list(filter(reduce, [x1, x2, x3]))
+        elif discriminant == 0:
+            u1 = Curve.crt(-q2) if q2 < 0 else -Curve.crt(q2)
+            x1 = 2 * u1 - a / 3
+            x2 = -u1 - a / 3
+            return list(filter(reduce, [x1, x2]))
+        else:
+            sd = math.sqrt(discriminant)
+            u1 = Curve.crt(-q2 + sd)
+            v1 = Curve.crt(q2 + sd)
+            return list(filter(reduce, [u1 - v1 - a / 3]))
 
     @staticmethod
     def droots(p):
@@ -407,6 +536,13 @@ class Curve(object):
         t2 = Curve.map(t2, t1, 1, 0, 1)
         return right.split(t2)[0]
 
+    def align(self, segment=None):
+        if not segment:
+            segment = self.controlPoints
+
+        angle = PathUtilities.rawSlopeAngle(segment)
+        transform = PathUtilities.GTTransform.moveAndRotate(segment[0], (0, 0), -angle)
+        return Curve(transform.applyToSegment(self.controlPoints))
 
 def test():
     from FontDocTools import GlyphPlotterEngine
@@ -628,6 +764,48 @@ def test():
     imageFile2 = open("Curve Fixed Interval Test.svg", "wt", encoding="UTF-8")
     imageFile2.write(image2)
     imageFile2.close()
+
+    l1 = [(50, 250), (150, 190)]
+    l2 = [(50, 50), (170, 130)]
+
+    ip = Curve.lli(l1, l2)
+
+    bounds2 = PathUtilities.GTBoundsRectangle(l1[0], l1[1], l2[0], l2[1], ip)
+    cp2 = ContourPlotter(bounds2.points)
+    cp2.setStrokeWidth(1)
+    cp2.drawContours([[l1]])
+    cp2.drawContours([[l2]])
+    cp2.setStrokeColor(colorRed)
+
+
+    cp2.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, ip[0], ip[1], 3, GlyphPlotterEngine.PaintMode.stroke)
+
+    image2 = cp2.generateFinalImage()
+    imageFile2 = open("Line Intersect Test.svg", "wt", encoding="UTF-8")
+    imageFile2.write(image2)
+    imageFile2.close()
+
+    l3 = [(25, 40), (230, 280)]
+    curve3Points = [(100, 60), (30, 240), (210, 70), (160, 270)]
+    curve3 = Curve(curve3Points)
+    boundsc3 = PathUtilities.GTBoundsRectangle()  # curve3.boundsRectangle  -- this call fails w/ sqrt of a negative number in droots()
+    boundsl3 = PathUtilities.GTBoundsRectangle.fromContour([l3])
+    bounds3 = boundsc3.union(boundsl3)
+    cp3 = ContourPlotter(bounds3.points)
+    cp3.drawCurve(curve3.controlPoints, colorBlue)
+    cp3.drawContours([[l3]], colorGreen)
+
+    aligned = curve3.align(l3)
+    roots = Curve.roots(aligned.controlPoints)
+    cp3.setStrokeColor(colorCyan)
+    for t in roots:
+        ip = curve3.get(t)
+        cp3.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, ip[0], ip[1], 3, GlyphPlotterEngine.PaintMode.stroke)
+
+    image3 = cp3.generateFinalImage()
+    image3File = open("Line and Curve Intersect Test.svg", "wt", encoding="UTF-8")
+    image3File.write(image3)
+    image3File.close()
 
 if __name__ == "__main__":
     test()
