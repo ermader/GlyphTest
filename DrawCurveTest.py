@@ -136,7 +136,7 @@ class Curve(object):
             # higher order curves: use de Casteljau's computation
             #   JavaScript code does this:
             #     const dCpts = JSON.parse(JSON.stringify(points));
-            #   don't know why...
+            #   This is a copy operation...
             dcPoints = p
             while len(dcPoints) > 1:
                 newPoints = []
@@ -229,7 +229,7 @@ class Curve(object):
     def get(self, t):
         return self._compute(t)
 
-    # Some (or most?) of these static methods shoud probably be in
+    # Some (or most?) of these static methods should probably be in
     # a utility package or class...
     @staticmethod
     def approximately(a, b, precision=epsilon):
@@ -364,7 +364,13 @@ class Curve(object):
             d = a - 2 * b + c
 
             if d != 0:
-                m1 = - math.sqrt(b * b - a * c)
+                # it's possible that b*b - a*c is negative in which
+                # case there are no roots.
+                try:
+                    m1 = - math.sqrt(b * b - a * c)
+                except:
+                    return []
+
                 m2 = -a + b
                 v1 = -(m1 + m2) / d
                 v2 = -(-m1 + m2) / d
@@ -792,7 +798,7 @@ def test():
     l3 = [(25, 40), (230, 280)]
     curve3Points = [(100, 60), (30, 240), (210, 70), (160, 270)]
     curve3 = Curve(curve3Points)
-    boundsc3 = PathUtilities.GTBoundsRectangle()  # curve3.boundsRectangle  -- this call fails w/ sqrt of a negative number in droots()
+    boundsc3 = curve3.boundsRectangle
     boundsl3 = PathUtilities.GTBoundsRectangle.fromContour([l3])
     bounds3 = boundsc3.union(boundsl3)
     cp3 = ContourPlotter(bounds3.points)
