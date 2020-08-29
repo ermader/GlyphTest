@@ -8,6 +8,7 @@ Created June 23, 2020
 
 from FontDocTools import GlyphPlotterEngine
 
+# Add methods for drawing lines, circles, titles w/o needing to know about contexts?
 class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
     lastCommand = ""
 

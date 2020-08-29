@@ -229,6 +229,8 @@ class Curve(object):
     def get(self, t):
         return self._compute(t)
 
+    # Some (or most?) of these static methods shoud probably be in
+    # a utility package or class...
     @staticmethod
     def approximately(a, b, precision=epsilon):
         return abs(a - b) <= precision
@@ -260,6 +262,8 @@ class Curve(object):
     def lli(l1, l2):
         return Curve.lli4(l1[0], l1[1], l2[0], l2[1])
 
+    # This should probably be a class method with the line
+    # parameter added back in
     @staticmethod
     def roots(p):
         # The JavaScript code also take a line argument and
@@ -795,8 +799,10 @@ def test():
     cp3.drawCurve(curve3.controlPoints, colorBlue)
     cp3.drawContours([[l3]], colorGreen)
 
+    # this could call curve3.roots(l3)...
     aligned = curve3.align(l3)
     roots = Curve.roots(aligned.controlPoints)
+
     cp3.setStrokeColor(colorCyan)
     for t in roots:
         ip = curve3.get(t)
