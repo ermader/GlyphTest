@@ -245,6 +245,15 @@ class Curve(object):
         return abs(a - b) <= precision
 
     @staticmethod
+    def sqrt(x):
+        try:
+            r = math.sqrt(x)
+        except:
+            r = math.nan
+
+        return r
+
+    @staticmethod
     def crt(v):
         return -math.pow(-v, 1 / 3) if v < 0 else math.pow(v, 1 / 3)
 
@@ -281,12 +290,7 @@ class Curve(object):
             d = a - 2 * b + c
 
             if d != 0:
-                # it's possible that b*b - a*c is negative in which
-                # case there are no roots.
-                try:
-                    m1 = - math.sqrt(b * b - a * c)
-                except:
-                    return []
+                m1 = - Curve.sqrt(b * b - a * c)
 
                 m2 = -a + b
                 v1 = -(m1 + m2) / d
@@ -486,7 +490,7 @@ class Curve(object):
             c = p[2][1]
             d = a - 2 * b + c
             if d != 0:
-                m1 = -math.sqrt(b * b - a * c)
+                m1 = -Curve.sqrt(b * b - a * c)
                 m2 = -a + b
                 v1 = -(m1 + m2) / d
                 v2 = -(-m1 + m2) / d
@@ -519,7 +523,7 @@ class Curve(object):
                 return list(filter(reduce, [-c / b]))
 
             # quadratic solution:
-            q = math.sqrt(b * b - 4 * a * c)
+            q = Curve.sqrt(b * b - 4 * a * c)
             a2 = 2 * a
             return list(filter(reduce, [(q - b) / a2, (-b - q) / a2]))
 
@@ -537,7 +541,7 @@ class Curve(object):
         if discriminant < 0:
             mp3 = -p / 3
             mp33 = mp3 * mp3 * mp3
-            r = math.sqrt(mp33)
+            r = Curve.sqrt(mp33)
             t = -q / (2 * r)
             # cosphi = t < -1 ? -1: t > 1 ? 1: t
             cosphi = -1 if t < -1 else 1 if t > 1 else t
@@ -554,7 +558,7 @@ class Curve(object):
             x2 = -u1 - a / 3
             return list(filter(reduce, [x1, x2]))
         else:
-            sd = math.sqrt(discriminant)
+            sd = Curve.sqrt(discriminant)
             u1 = Curve.crt(-q2 + sd)
             v1 = Curve.crt(q2 + sd)
             return list(filter(reduce, [u1 - v1 - a / 3]))
