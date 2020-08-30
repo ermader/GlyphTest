@@ -217,6 +217,15 @@ class Curve(object):
         return self._bbox
 
     @property
+    def tightbbox(self):
+        aligned = self.align()
+        tBounds = aligned.boundsRectangle
+        angle = PathUtilities.rawSlopeAngle(self.controlPoints)
+        translate = PathUtilities.GTTransform.rotateAndMove((0, 0), self.controlPoints[0], angle)
+        tbContour = translate.applyToContour(tBounds.contour)
+        return tbContour
+
+    @property
     def boundsRectangle(self):
         if not self._boundsRectangle:
             bbox = self.bbox
@@ -579,13 +588,8 @@ def test():
 
     cp1.drawCurve(curve1.controlPoints, colorBlue)
 
-    aligned = curve1.align()
 
-    tBounds = aligned.boundsRectangle
-
-    angle = PathUtilities.rawSlopeAngle(curve1.controlPoints)
-    translate = PathUtilities.GTTransform.rotateAndMove((0, 0), curve1.controlPoints[0], angle)
-    tbContour = translate.applyToContour(tBounds.contour)
+    tbContour = curve1.tightbbox
     cp1._boundsAggregator.addBounds(PathUtilities.GTBoundsRectangle.fromContour(tbContour).points)
     cp1.setStrokeOpacity(0.5)
 
