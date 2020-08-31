@@ -291,7 +291,6 @@ class Curve(object):
 
             if d != 0:
                 m1 = - Curve.sqrt(b * b - a * c)
-
                 m2 = -a + b
                 v1 = -(m1 + m2) / d
                 v2 = -(-m1 + m2) / d
