@@ -8,6 +8,7 @@ Created on July 7, 2020
 
 import math
 from FontDocTools.Color import Color
+from BezierUtilities import lli
 
 class GTColor(Color):
     """\
@@ -421,36 +422,11 @@ def midpoint(line):
 
     return ((p0x + p1x) / 2, (p0y + p1y) / 2)
 
-def _coefs(line):
-    """\
-    Return the coefficients for the linear equation for the line:
-    ax + by = c
-    """
-    p0x, p0y, p1x, p1y = endPoints(line)
-
-    a = p0y - p1y
-    b = p1x - p0x
-    c = (p0x * p1y) - (p1x * p0y)
-
-    return (a, b, -c)
-
 def intersectionPoint(l1, l2):
     """\
     Find the intersection point of the two lines.
-    See: https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
     """
-    a1, b1, c1 = _coefs(l1)
-    a2, b2, c2 = _coefs(l2)
-
-    d = a1 * b2 - b1 * a2
-
-    # if d is 0 the lines are parallel
-    if d == 0: return None
-
-    dx = c1 * b2 - b1 * c2
-    dy = a1 * c2 - c1 * a2
-
-    intersection = (dx / d, dy / d)
+    intersection = lli(l1, l2)
 
     b1 = GTBoundsRectangle(*l1)
     b2 = GTBoundsRectangle(*l2)
