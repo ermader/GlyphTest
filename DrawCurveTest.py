@@ -75,7 +75,7 @@ epsilon = 0.000001
 
 # trig constants
 pi = math.pi
-tau = 2 * pi
+tau = math.tau
 quart = pi / 4
 
 class Curve(object):
