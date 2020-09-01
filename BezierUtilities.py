@@ -78,6 +78,7 @@ quart = pi / 4
 
 
 def approximately(a, b, precision=epsilon):
+    """Return True if a is approximately equal to b (within the given precision)"""
     return abs(a - b) <= precision
 
 
@@ -85,12 +86,16 @@ def sqrt(x):
     try:
         r = math.sqrt(x)
     except:
+        # JavaScript sqrt() returns NaN for negative x.
+        # If we do the same, then the rest of the code
+        # will behave as the JavaScript code does...
         r = math.nan
 
     return r
 
 
 def crt(v):
+    """Return the cube root of v"""
     return -math.pow(-v, 1 / 3) if v < 0 else math.pow(v, 1 / 3)
 
 

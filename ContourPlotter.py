@@ -119,16 +119,22 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         path += f"' fill='none' {self._strokeAttributes()}/>"
         self._content.append(path)
 
-    def drawPointsAsCircles(self, points, color=None):
+    def drawPointsAsCircles(self, points, radius, color=None, fill=True):
         if color:
             self._fillColor = color
 
+        paintMode = GlyphPlotterEngine.PaintMode.fill if fill else GlyphPlotterEngine.PaintMode.stroke
+
         for point in points:
             x, y = point
-            self.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, x, y, 0.5, GlyphPlotterEngine.PaintMode.fill)
+            self.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, x, y, radius, paintMode)
 
     def drawCurve(self, segment, color=None):
         self.drawContours([[segment]], color=color, fill=False, close=False)
+
+    def drawText(self, x, y, alignment, text, margin=True):
+        coordinates = GlyphPlotterEngine.CoordinateSystem.contentMargins if margin else GlyphPlotterEngine.CoordinateSystem.content
+        self.drawLabel(coordinates, x, y, 0, alignment, text)
 
 def test():
     import PathUtilities

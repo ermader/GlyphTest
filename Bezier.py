@@ -410,7 +410,7 @@ class Bezier(object):
         if not segment:
             segment = self.controlPoints
 
-        return Bezier(butils._align(self.controlPoints, segment))
+        return Bezier(Bezier._align(self.controlPoints, segment))
 
 def test():
     from FontDocTools import GlyphPlotterEngine
@@ -489,7 +489,7 @@ def test():
 
     cp1 = ContourPlotter(bounds1.points)
     points = curve1.getLUT(100)
-    cp1.drawPointsAsCircles(points, colorBlue)
+    cp1.drawPointsAsCircles(points, 0.5, colorBlue)
 
     image1 = cp1.generateFinalImage()
 
@@ -504,7 +504,7 @@ def test():
 
     cp5 = ContourPlotter(bounds5.points)
     points = curve5.getLUT(100)
-    cp5.drawPointsAsCircles(points, colorBlue)
+    cp5.drawPointsAsCircles(points, 0.5, colorBlue)
 
     image5 = cp5.generateFinalImage()
 
@@ -518,7 +518,7 @@ def test():
 
     cp11 = ContourPlotter(bounds11.points)
     points = curve11.getLUT(200)
-    cp11.drawPointsAsCircles(points, colorBlue)
+    cp11.drawPointsAsCircles(points, 0.5, colorBlue)
 
     image11 = cp11.generateFinalImage()
 
@@ -539,7 +539,7 @@ def test():
     margin = cp2._contentMargins.left
     cp2.setLabelFontSize(4, 4)  # Not sure what the "scaled" parameter is for...
     cp2.drawCurve(curve2.controlPoints, colorBlue)
-    cp2.drawLabel(GlyphPlotterEngine.CoordinateSystem.contentMargins, bounds2.width / 2 + margin, -6, 0, "center", f"Curve length: {curve2.length}")
+    cp2.drawText(bounds2.width / 2 + margin, -6, "center", f"Curve length: {curve2.length}")
     image2 = cp2.generateFinalImage()
     imageFile2 = open("Curve Length Test.svg", "wt", encoding="UTF-8")
     imageFile2.write(image2)
@@ -555,7 +555,7 @@ def test():
         aLen += PathUtilities.length([points[i], points[i + 1]])
 
     cp2.drawPointsAsSegments(points, colorBlue)
-    cp2.drawLabel(GlyphPlotterEngine.CoordinateSystem.contentMargins, bounds2.width / 2 + margin, -6, 0, "center", f"Approximate curve length, 16 steps: {aLen}")
+    cp2.drawText(bounds2.width / 2 + margin, -6, "center", f"Approximate curve length, 16 steps: {aLen}")
 
     image2 = cp2.generateFinalImage()
     imageFile2 = open("Approximate curve Length Test.svg", "wt", encoding="UTF-8")
@@ -608,17 +608,15 @@ def test():
     cp2.setStrokeColor(colors[0])
     p0 = curve2.get(pts[0][1])
     x, y = curve2.get(0)
-    cp2.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, x, y, 4, GlyphPlotterEngine.PaintMode.stroke)
+    cp2.drawPointsAsCircles([(x, y)], 4, fill=False)
 
     for i in range(1, len(pts)):
         p1 = curve2.get(pts[i][1])
-        p0x, p0y = p0
-        p1x, p1y = p1
-        cp2.drawLine(GlyphPlotterEngine.CoordinateSystem.content, p0x, p0y, p1x, p1y)
+        cp2.drawContours([[[p0, p1]]])
         if pts[i] in ts:
             idx += 1
             cp2.setStrokeColor(colors[idx % len(colors)])
-            cp2.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, p1x, p1y, 4, GlyphPlotterEngine.PaintMode.stroke)
+            cp2.drawPointsAsCircles([p1], 4, fill=False)
         p0 = p1
 
     image2 = cp2.generateFinalImage()
@@ -639,7 +637,7 @@ def test():
     cp2.setStrokeColor(colorRed)
 
 
-    cp2.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, ip[0], ip[1], 3, GlyphPlotterEngine.PaintMode.stroke)
+    cp2.drawPointsAsCircles([ip], 3, fill=False)
 
     image2 = cp2.generateFinalImage()
     imageFile2 = open("Line Intersect Test.svg", "wt", encoding="UTF-8")
@@ -659,9 +657,12 @@ def test():
     roots = curve3.roots(l3)
 
     cp3.setStrokeColor(colorCyan)
+    cp3.setLabelFontSize(6, 6)
     for t in roots:
         ip = curve3.get(t)
-        cp3.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, ip[0], ip[1], 3, GlyphPlotterEngine.PaintMode.stroke)
+        ipx, ipy = ip
+        cp3.drawPointsAsCircles([ip], 3, fill=False)
+        cp3.drawText(ipx + 6, ipy - 6, "left", f"t = {t}", margin=False)
 
     image3 = cp3.generateFinalImage()
     image3File = open("Line and Curve Intersect Test.svg", "wt", encoding="UTF-8")
