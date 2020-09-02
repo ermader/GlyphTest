@@ -226,13 +226,20 @@ class Bezier(object):
                 result[dim] = list(filter(lambda t: t >= 0 and t <= 1, result[dim]))
                 roots.extend(sorted(result[dim]))
 
-            # this is only used in reduce() - skip it for now
+            # JavaScript says:
             # result.values = roots.sort(utils.numberSort).filter(function (v, idx) {
             #       return roots.indexOf(v) === idx;
             #     });
+            #
+            # This basically says sort roots and remove any duplicates, so:
+            result[2] = list(dict.fromkeys(sorted(roots)))
+
             self._extrema = result
 
         return self._extrema
+
+    def overlaps(self, curve):
+        return self.boundsRectangle.intersection(curve.boundsRectangle) is not None
 
     def hull(self, t):
         p = self.controlPoints
@@ -411,6 +418,128 @@ class Bezier(object):
             segment = self.controlPoints
 
         return Bezier(Bezier._align(self.controlPoints, segment))
+
+    def normal(self, t):
+        dx, dy = self._derivative(t)
+        q = butils.sqrt(dx * dx + dy * dy)
+        return (-dy / q, dx / q)
+
+
+    def simple(self):
+        if self.order == 3:
+            a1 = butils.angle(self.controlPoints[0], self.controlPoints[3], self.controlPoints[1])
+            a2 = butils.angle(self.controlPoints[0], self.controlPoints[3], self.controlPoints[2])
+            if (a1 > 0 and a2 < 0) or (a1 < 0 and a2 > 0): return False
+
+        n1x, n1y = self.normal(0)
+        n2x, n2y = self.normal(1)
+        s = n1x * n2x + n1y * n2y
+        return abs(math.acos(s)) < math.pi / 3
+
+    def reduce(self):
+        pass1 = []
+        pass2 = []
+
+        # first pass: split on extrema
+        extrema = self.extrema[2]
+        if not 0 in extrema: extrema.insert(0, 0)
+        if not 1 in extrema: extrema.append(1)
+
+        t1 = extrema[0]
+        for i in range(1, len(extrema)):
+            t2 = extrema[i]
+            segment = self.split(t1, t2)
+            segment._t1 = t1
+            segment._t2 = t2
+            pass1.append(segment)
+            t1 = t2
+
+        # second pass: further reduce these segments to simple segments
+        step = 0.01
+        for p1 in pass1:
+            t1 = 0
+            t2 = 0
+            while t2 <= 1:
+                t2 = t1 + step
+                while t2 <= 1:
+                    segment = p1.split(t1, t2)
+                    if not segment.simple():
+                        t2 -= step
+                        if abs(t1 - t2) < step:
+                            # we can never form a reduction
+                            return []
+                        segment = p1.split(t1, t2)
+                        segment._t1 = butils.map(t1, 0, 1, p1._t1, p1._t2)
+                        segment._t2 = butils.map(t2, 0, 1, p1._t1, p1._t2)
+                        pass2.append(segment)
+                        t1 = t2
+                        break
+                    t2 += step
+
+            if t1 < 1:
+                segment = p1.split(t1, 1)
+                segment._t1 = butils.map(t1, 0, 1, p1._t1, p1._t2)
+                segment._t2 = p1._t2
+                pass2.append(segment)
+
+        return pass2
+
+    def lineIntersects(self, line):
+        p1, p2 = line
+        p1x, p1y = p1
+        p2x, p2y = p2
+        mx = min(p1x, p2x)
+        my = min(p1y, p2y)
+        MX = max(p1x, p2x)
+        MY = max(p1y, p2y)
+
+        def onLine(t):
+            x, y = self.get(t)
+            return butils.between(x, mx, MX) and butils.between(y, my, MY)
+
+        return list(filter(onLine, self.roots(line)))
+
+    @staticmethod
+    def curveIntersects(c1, c2, intersectionThreshold=0.5):
+        pairs = []
+
+        # step 1: pair off any overlapping segments
+        for l in c1:
+            for r in c2:
+                if l.overlaps(r):
+                    pairs.append((l, r))
+
+        # step 2: for each pairing, run through the convergence algorithm.
+        intersections = []
+        for pair in pairs:
+            result = butils.pairiteration(pair[0], pair[1], intersectionThreshold)
+            if len(result) > 0:
+                intersections.extend(result)
+
+        return intersections
+
+    def selfIntersects(self, intersectionThreshold=0.5):
+        # "simple" curves cannot intersect with their direct
+        # neighbor, so for each segment X we check whether
+        # it intersects [0:x-2][x+2:last].
+        reduced = self.reduce()
+        length = len(reduced) - 2
+        results = []
+
+        for i in range(length):
+            left = reduced[i]
+            right = reduced[i+2:]
+            result = Bezier.curveIntersects(left, right, intersectionThreshold)
+            results.extend(result)
+
+        return results
+
+    def intersects(self, curve, intersectionThreshold=0.5):
+        if curve is None: return self.selfIntersects(intersectionThreshold)
+        # if curve is a line: self.lineIntersects(line, intersectionThreshold)
+        #if curve instanceOf Bezier: curve = curve.reduce()
+
+        return Bezier.curveIntersects(self.reduce(), curve.reduce(), intersectionThreshold)
 
 def test():
     from FontDocTools import GlyphPlotterEngine
@@ -668,6 +797,41 @@ def test():
     image3File = open("Line and Curve Intersect Test.svg", "wt", encoding="UTF-8")
     image3File.write(image3)
     image3File.close()
+
+    curve4Points = [(10, 200), (90, 270), (40, 160), (220, 80)]
+    curve5Points = [(5, 150), (180, 280), (80, 50), (210, 120)]
+
+    curve4 = Bezier(curve4Points)
+    curve5 = Bezier(curve5Points)
+
+    bounds = curve4.boundsRectangle.union(curve5.boundsRectangle)
+    cp4 = ContourPlotter(bounds.points)
+    cp4.setStrokeWidth(1)
+    # cp4.setStrokeOpacity(0.8)
+    cp4.drawCurve(curve4.controlPoints, colorGreen)
+    cp4.drawCurve(curve5.controlPoints, colorBlue)
+
+    results = curve4.intersects(curve5)
+    tvals = []
+    for i in range(0, len(results), 2):
+        tvals.append((results[i], results[i+1]))
+
+    def same(a, b):
+        return abs(a[0] - b[0]) < 0.01 and abs(a[1] - b[1]) < 0.01
+
+    cp4.setStrokeColor(colorCyan)
+    last = (2.0, 2.0)
+    for tval in tvals:
+        ip = curve4.get(tval[0])
+        if not same(ip, last):
+            cp4.drawPointsAsCircles([ip], 3, fill=False)
+            last = ip
+
+    image4 = cp4.generateFinalImage()
+    image4File = open("Curve and Curve Intersect Test.svg", "wt", encoding="UTF-8")
+    image4File.write(image4)
+    image4File.close()
+
 
 if __name__ == "__main__":
     test()

@@ -121,7 +121,10 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
 
     def drawPointsAsCircles(self, points, radius, color=None, fill=True):
         if color:
-            self._fillColor = color
+            if fill:
+                self._fillColor = color
+            else:
+                self._strokeColor = color
 
         paintMode = GlyphPlotterEngine.PaintMode.fill if fill else GlyphPlotterEngine.PaintMode.stroke
 

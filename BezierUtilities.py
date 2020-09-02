@@ -81,6 +81,8 @@ def approximately(a, b, precision=epsilon):
     """Return True if a is approximately equal to b (within the given precision)"""
     return abs(a - b) <= precision
 
+def between(v, m, M):
+    return m <= v <= M or (approximately(v, m) or approximately(v, M))
 
 def sqrt(x):
     try:
@@ -172,3 +174,45 @@ def map(v, ds, de, ts, te):
 
     return ts + d2 * r
 
+def angle(o, v1, v2):
+    ox, oy = o
+    v1x, v1y = v1
+    v2x, v2y = v2
+    dx1 = v1x - ox
+    dy1 = v1y - oy
+    dx2 = v2x - ox
+    dy2 = v2y - oy
+    cross = dx1 * dy2 - dy1 * dx2
+    dot = dx1 * dx2 + dy1 * dy2
+
+    return math.atan2(cross, dot)
+
+def pairiteration(c1, c2, intersectionThreshold=0.5):
+    c1b = c1.boundsRectangle
+    c2b = c2.boundsRectangle
+    r = 100000
+
+    if c1b.height + c1b.width < intersectionThreshold and c2b.height + c2b.width < intersectionThreshold:
+        return (((r * (c1._t1 + c1._t2)) / 2) / r, ((r * (c2._t1 + c2._t2)) / 2) / r)
+
+    cc1left, cc1right, _ = c1.split(0.5)
+    cc2left, cc2right, _ = c2.split(0.5)
+    pairs = [(cc1left, cc2left), (cc1left, cc2right), (cc1right, cc2right), (cc1right, cc2left)]
+    pairs = list(filter(lambda pair: pair[0].overlaps(pair[1]), pairs))
+
+    results = []
+    if len(pairs) == 0: return results
+
+    for pair in pairs:
+        left, right = pair
+        results.extend(pairiteration(left, right, intersectionThreshold))
+
+    # JavaScript says:
+    # results = results.filter(function (v, i) {
+    #   return results.indexOf(v) === i;
+    # });
+    #
+    # this removes duplicates (right?)
+
+    # return list(dict.fromkeys(results))
+    return results  # duplicates?
