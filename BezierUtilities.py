@@ -212,7 +212,7 @@ def pairiteration(c1, c2, intersectionThreshold=0.5):
     #   return results.indexOf(v) === i;
     # });
     #
-    # this removes duplicates (right?)
+    # this removes duplicates
 
     # return list(dict.fromkeys(results))
     return results  # duplicates?

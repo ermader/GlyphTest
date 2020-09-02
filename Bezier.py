@@ -811,21 +811,23 @@ def test():
     cp4.drawCurve(curve4.controlPoints, colorGreen)
     cp4.drawCurve(curve5.controlPoints, colorBlue)
 
-    results = curve4.intersects(curve5)
-    tvals = []
-    for i in range(0, len(results), 2):
-        tvals.append((results[i], results[i+1]))
-
     def same(a, b):
         return abs(a[0] - b[0]) < 0.01 and abs(a[1] - b[1]) < 0.01
+
+    results = curve4.intersects(curve5)
+    tvals = []
+    last = (2.0, 2.0)
+    for i in range(0, len(results), 2):
+        tval = (results[i], results[i+1])
+        if not same(tval, last):
+            tvals.append(tval)
+            last = tval
 
     cp4.setStrokeColor(colorCyan)
     last = (2.0, 2.0)
     for tval in tvals:
         ip = curve4.get(tval[0])
-        if not same(ip, last):
-            cp4.drawPointsAsCircles([ip], 3, fill=False)
-            last = ip
+        cp4.drawPointsAsCircles([ip], 3, fill=False)
 
     image4 = cp4.generateFinalImage()
     image4File = open("Curve and Curve Intersect Test.svg", "wt", encoding="UTF-8")
