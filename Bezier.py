@@ -815,16 +815,15 @@ def test():
         return abs(a[0] - b[0]) < 0.01 and abs(a[1] - b[1]) < 0.01
 
     results = curve4.intersects(curve5)
+
     tvals = []
     last = (2.0, 2.0)
-    for i in range(0, len(results), 2):
-        tval = (results[i], results[i+1])
+    for tval in results:
         if not same(tval, last):
             tvals.append(tval)
             last = tval
 
     cp4.setStrokeColor(colorCyan)
-    last = (2.0, 2.0)
     for tval in tvals:
         ip = curve4.get(tval[0])
         cp4.drawPointsAsCircles([ip], 3, fill=False)

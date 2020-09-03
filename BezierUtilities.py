@@ -193,7 +193,7 @@ def pairiteration(c1, c2, intersectionThreshold=0.5):
     r = 100000
 
     if c1b.height + c1b.width < intersectionThreshold and c2b.height + c2b.width < intersectionThreshold:
-        return (((r * (c1._t1 + c1._t2)) / 2) / r, ((r * (c2._t1 + c2._t2)) / 2) / r)
+        return [(((r * (c1._t1 + c1._t2)) / 2) / r, ((r * (c2._t1 + c2._t2)) / 2) / r)]
 
     cc1left, cc1right, _ = c1.split(0.5)
     cc2left, cc2right, _ = c2.split(0.5)
@@ -215,4 +215,11 @@ def pairiteration(c1, c2, intersectionThreshold=0.5):
     # this removes duplicates
 
     # return list(dict.fromkeys(results))
-    return results  # duplicates?
+
+    filtered = []
+    for i in range(len(results)):
+        result = results[i]
+        if results.index(result) == i:
+            filtered.append(result)
+
+    return filtered
