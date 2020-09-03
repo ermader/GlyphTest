@@ -226,13 +226,7 @@ class Bezier(object):
                 result[dim] = list(filter(lambda t: t >= 0 and t <= 1, result[dim]))
                 roots.extend(sorted(result[dim]))
 
-            # JavaScript says:
-            # result.values = roots.sort(utils.numberSort).filter(function (v, idx) {
-            #       return roots.indexOf(v) === idx;
-            #     });
-            #
-            # This basically says sort roots and remove any duplicates, so:
-            result[2] = list(dict.fromkeys(sorted(roots)))
+            result[2] = butils.removeDuplicates(sorted(roots))
 
             self._extrema = result
 

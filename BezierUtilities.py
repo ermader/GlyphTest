@@ -100,6 +100,25 @@ def crt(v):
     """Return the cube root of v"""
     return -math.pow(-v, 1 / 3) if v < 0 else math.pow(v, 1 / 3)
 
+def removeDuplicates(l):
+    """Return a list that is l with the duplicate entries removed."""
+
+    #The JavaScript idiom for this is:
+    # results = results.filter(function (v, i) {
+    #   return results.indexOf(v) === i;
+    # });
+
+    # This can't be done like this in Python because the filter callback
+    # only takes one argument. So, we have to do it by hand.
+
+    result = []
+    for i in range(len(l)):
+        v = l[i]
+        if l.index(v) == i:
+            result.append(v)
+
+    return result
+
 
 def lli8(x1, y1, x2, y2, x3, y3, x4, y4):
     nx = (x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)
@@ -207,17 +226,4 @@ def pairiteration(c1, c2, intersectionThreshold=0.5):
         left, right = pair
         results.extend(pairiteration(left, right, intersectionThreshold))
 
-    # JavaScript says:
-    # results = results.filter(function (v, i) {
-    #   return results.indexOf(v) === i;
-    # });
-    #
-    # this removes duplicates
-
-    filtered = []
-    for i in range(len(results)):
-        result = results[i]
-        if results.index(result) == i:
-            filtered.append(result)
-
-    return filtered
+    return removeDuplicates(results)
