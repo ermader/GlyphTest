@@ -214,8 +214,6 @@ def pairiteration(c1, c2, intersectionThreshold=0.5):
     #
     # this removes duplicates
 
-    # return list(dict.fromkeys(results))
-
     filtered = []
     for i in range(len(results)):
         result = results[i]
