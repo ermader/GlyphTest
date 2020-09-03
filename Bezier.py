@@ -545,6 +545,8 @@ def test():
     colorMagenta = PathUtilities.GTColor.fromName("magenta")
     colorCyan = PathUtilities.GTColor.fromName("cyan")
     colorYellow = PathUtilities.GTColor.fromName("yellow")
+    colorBlack = PathUtilities.GTColor.fromName("black")
+    colorLightGrey = PathUtilities.GTColor.fromName("lightgrey")
 
     curvePoints = [(90, 140), (25, 210), (230, 210), (150, 10)]
     # curvePoints = [(70, 0), (20, 140), (250, 190)]
@@ -826,6 +828,34 @@ def test():
     image4File = open("Curve and Curve Intersect Test.svg", "wt", encoding="UTF-8")
     image4File.write(image4)
     image4File.close()
+
+    points = curve2.controlPoints
+    hull = curve2.hull(0.5)
+    A = hull[5]
+    B = hull[9]
+    C = butils.lli4(A, B, points[0], points[3])
+
+    bounds = PathUtilities.GTBoundsRectangle.fromContour([curve2.controlPoints])
+    cp2 = ContourPlotter(bounds.points)
+    cp2.drawCurve(curve2.controlPoints, colorBlue)
+
+    cp2.setStrokeWidth(1)
+    cp2.drawSkeleton(curve2)
+
+    cp2.drawPointsAsSegments([points[0], points[3]], colorLightGrey)
+    cp2.drawPointsAsCircles([A, B, C], 2, colorBlack, fill=False)
+    cp2.drawPointsAsSegments([B, C], colorGreen)
+    cp2.drawPointsAsSegments([B, A], colorRed)
+
+    cp2.drawText(A[0] + 4, A[1] - 4, "left", "A", margin=False)
+    cp2.drawText(B[0] + 4, B[1] - 4, "left", "B (t = 0.5)", margin=False)
+    cp2.drawText(C[0] + 4, C[1] - 4, "left", "C", margin=False)
+
+    image2 = cp2.generateFinalImage()
+    image2File = open("ABC Test.svg", "wt", encoding="UTF-8")
+    image2File.write(image2)
+    image2File.close()
+
 
 
 if __name__ == "__main__":

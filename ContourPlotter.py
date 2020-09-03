@@ -7,6 +7,7 @@ Created June 23, 2020
 """
 
 from FontDocTools import GlyphPlotterEngine
+from PathUtilities import GTColor
 
 # Add methods for drawing lines, circles, titles w/o needing to know about contexts?
 class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
@@ -138,6 +139,19 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
     def drawText(self, x, y, alignment, text, margin=True):
         coordinates = GlyphPlotterEngine.CoordinateSystem.contentMargins if margin else GlyphPlotterEngine.CoordinateSystem.content
         self.drawLabel(coordinates, x, y, 0, alignment, text)
+
+    def drawSkeleton(self, curve):
+        points = curve.controlPoints
+        self._strokWidth = 1
+        self.drawPointsAsSegments(points, GTColor.fromName("lightgrey"))
+        self.drawPointsAsCircles(points, 2, GTColor.fromName("black"), fill=False)
+
+        self.setLabelFontSize(6, 6)
+        for point in points:
+            x, y = point
+            self.drawText(x + 4, y - 4, "left", f"({x}, {y})", margin=False)
+
+
 
 def test():
     import PathUtilities
