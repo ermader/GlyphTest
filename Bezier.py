@@ -535,6 +535,29 @@ class Bezier(object):
 
         return Bezier.curveIntersects(self.reduce(), curve.reduce(), intersectionThreshold)
 
+    def getABC(self, t):
+        hull = self.hull(t)
+        points = self.controlPoints
+        if self.order == 2:
+            A = points[1]
+            B = hull[5]
+            t2 = 2 * t
+            top = t2 * t - t2
+            bottom = top + 1
+        elif self.order == 3:
+            A = hull[5]
+            B = hull[9]
+            mt = (1 - t)
+            t3 = t * t * t
+            mt3 = mt * mt * mt
+            bottom = t3 + mt3
+            top = bottom - 1
+
+        C = butils.lli4(A, B, points[0], points[-1])
+        ratio = abs(top / bottom)
+
+        return (A, B, C, ratio, hull)
+
 def test():
     from FontDocTools import GlyphPlotterEngine
 
@@ -830,10 +853,7 @@ def test():
     image4File.close()
 
     points = curve2.controlPoints
-    hull = curve2.hull(0.5)
-    A = hull[5]
-    B = hull[9]
-    C = butils.lli4(A, B, points[0], points[3])
+    A, B, C, ratio, _ = curve2.getABC(0.5)
 
     bounds = PathUtilities.GTBoundsRectangle.fromContour([curve2.controlPoints])
     cp2 = ContourPlotter(bounds.points)
@@ -856,6 +876,69 @@ def test():
     image2File.write(image2)
     image2File.close()
 
+    curve6Points = [(100, 70), (30, 140), (200, 250), (210, 140)]
+    curve6 = Bezier(curve6Points)
+
+    t = 0.5
+    # preserve struts for B when repositioning
+    A, B, C, ratio, hull = curve6.getABC(t)
+    Bx, By = B
+    Cx, Cy = C
+    Blx, Bly = hull[7]
+    Brx, Bry = hull[8]
+    dbl = (Blx - Bx, Bly - By)
+    dblx, dbly = dbl
+    dbr = (Brx - Bx, Bry - By)
+    dbrx, dbry = dbr
+    pts = curve6.controlPoints
+
+    newBx = Bx - 30
+    newBy = By + 15
+    newB = (newBx, newBy)
+
+
+    newA = (newBx - (Cx - newBx) / ratio,
+            newBy - (Cy - newBy) / ratio)
+    newAx, newAy = newA
+
+    # find new point on s--c1
+    p1 = (newBx + dblx, newBy + dbly)
+    p1x, p1y = p1
+    sc1 = (newAx - (newAx - p1x) / (1 - t),
+            newAy - (newAy - p1y) / (1 - t))
+    # find new point on c2--e
+    p2 = (newBx + dbrx, newBy + dbry)
+    p2x, p2y = p2
+    sc2 = (newAx + (p2x - newAx) / (t),
+            newAy + (p2y - newAy) / (t))
+
+    # construct new c1` based on the fact that s--sc1 is s--c1 * t
+    nc1 = (pts[0][0] + (sc1[0] - pts[0][0]) / (t),
+            pts[0][1] + (sc1[1] - pts[0][1]) / (t))
+
+    # construct new c2` based on the fact that e--sc2 is e--c2 * (1-t)
+    nc2 = (pts[3][0] - (pts[3][0] - sc2[0]) / (1 - t),
+            pts[3][1] - (pts[3][1] - sc2[1]) / (1 - t))
+
+    npts = [pts[0], nc1, nc2, pts[3]]
+    nCurve = Bezier(npts)
+
+    bounds = curve6.boundsRectangle.union(nCurve.boundsRectangle)
+    cp6 = ContourPlotter(bounds.points)
+    cp6.setStrokeOpacity(0.5)
+    cp6.setStrokeWidth(1)
+    cp6.drawCurve(curve6.controlPoints, colorBlue)
+    cp6.drawCurve(nCurve.controlPoints, colorGreen)
+
+    cp6.setStrokeOpacity(1.0)
+    cp6.drawPointsAsCircles([B], 2, colorBlack, fill=False)
+    cp6.drawPointsAsCircles([(newBx, newBy)], 2, colorBlack, fill=False)
+    cp6.drawArrowBetweenPoints(B, newB, colorRed)
+
+    image6 = cp6.generateFinalImage()
+    image6File = open("Curve Moulding Test.svg", "wt", encoding="UTF-8")
+    image6File.write(image6)
+    image6File.close()
 
 
 if __name__ == "__main__":

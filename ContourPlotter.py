@@ -38,7 +38,7 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
             self._fillOpacity = fill
         elif color:
             self._strokeColor = color
-            self._strokeWidth = 2
+            # self._strokeWidth = 2
 
         path = "<path d='"
         commands = []
@@ -150,6 +150,15 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         for point in points:
             x, y = point
             self.drawText(x + 4, y - 4, "left", f"({x}, {y})", margin=False)
+
+    def drawArrowBetweenPoints(self, startPoint, endPoint, color=None):
+        if color:
+            self._strokeColor = color
+
+        startX, startY = startPoint
+        endX, endY = endPoint
+        self.drawArrow(GlyphPlotterEngine.CoordinateSystem.content, startX, startY, endX, endY, "open60", "end")
+
 
 
 
