@@ -936,7 +936,7 @@ def test():
     cp6.drawArrowBetweenPoints(B, newB, colorRed)
 
     image6 = cp6.generateFinalImage()
-    image6File = open("Curve Moulding Test.svg", "wt", encoding="UTF-8")
+    image6File = open("Curve Molding Test.svg", "wt", encoding="UTF-8")
     image6File.write(image6)
     image6File.close()
 
