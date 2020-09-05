@@ -140,24 +140,27 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         coordinates = GlyphPlotterEngine.CoordinateSystem.contentMargins if margin else GlyphPlotterEngine.CoordinateSystem.content
         self.drawLabel(coordinates, x, y, 0, alignment, text)
 
-    def drawSkeleton(self, curve):
+    colorLightGrey = GTColor.fromName("lightgrey")
+    colorBlack = GTColor.fromName("black")
+
+    def drawSkeleton(self, curve, lineColor=colorLightGrey, pointColor=colorBlack):
         points = curve.controlPoints
         self._strokWidth = 1
-        self.drawPointsAsSegments(points, GTColor.fromName("lightgrey"))
-        self.drawPointsAsCircles(points, 2, GTColor.fromName("black"), fill=False)
+        self.drawPointsAsSegments(points, lineColor)
+        self.drawPointsAsCircles(points, 2, pointColor, fill=False)
 
         self.setLabelFontSize(6, 6)
         for point in points:
             x, y = point
             self.drawText(x + 4, y - 4, "left", f"({x}, {y})", margin=False)
 
-    def drawArrowBetweenPoints(self, startPoint, endPoint, color=None):
+    def drawArrowBetweenPoints(self, startPoint, endPoint, color=None, style="open60", position="end"):
         if color:
             self._strokeColor = color
 
         startX, startY = startPoint
         endX, endY = endPoint
-        self.drawArrow(GlyphPlotterEngine.CoordinateSystem.content, startX, startY, endX, endY, "open60", "end")
+        self.drawArrow(GlyphPlotterEngine.CoordinateSystem.content, startX, startY, endX, endY, style, position)
 
 
 

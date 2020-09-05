@@ -570,6 +570,8 @@ def test():
     colorYellow = PathUtilities.GTColor.fromName("yellow")
     colorBlack = PathUtilities.GTColor.fromName("black")
     colorLightGrey = PathUtilities.GTColor.fromName("lightgrey")
+    colorLightBlue = PathUtilities.GTColor.fromName("lightblue")
+    colorLightGreen = PathUtilities.GTColor.fromName("lightgreen")
 
     curvePoints = [(90, 140), (25, 210), (230, 210), (150, 10)]
     # curvePoints = [(70, 0), (20, 140), (250, 190)]
@@ -923,7 +925,10 @@ def test():
     npts = [pts[0], nc1, nc2, pts[3]]
     nCurve = Bezier(npts)
 
-    bounds = curve6.boundsRectangle.union(nCurve.boundsRectangle)
+    # bounds = curve6.boundsRectangle.union(nCurve.boundsRectangle)
+    bounds6 = PathUtilities.GTBoundsRectangle.fromContour([curve6.controlPoints])
+    nBounds = PathUtilities.GTBoundsRectangle.fromContour([nCurve.controlPoints])
+    bounds = bounds6.union(nBounds)
     cp6 = ContourPlotter(bounds.points)
     cp6.setStrokeOpacity(0.5)
     cp6.setStrokeWidth(1)
@@ -934,6 +939,9 @@ def test():
     cp6.drawPointsAsCircles([B], 2, colorBlack, fill=False)
     cp6.drawPointsAsCircles([(newBx, newBy)], 2, colorBlack, fill=False)
     cp6.drawArrowBetweenPoints(B, newB, colorRed)
+
+    cp6.drawSkeleton(curve6, lineColor=colorLightBlue)
+    cp6.drawSkeleton(nCurve, lineColor=colorLightGreen)
 
     image6 = cp6.generateFinalImage()
     image6File = open("Curve Molding Test.svg", "wt", encoding="UTF-8")
