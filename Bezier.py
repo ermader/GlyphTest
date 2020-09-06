@@ -237,10 +237,8 @@ class Bezier(object):
 
     def hull(self, t):
         p = self.controlPoints
-        q = [p[0], p[1], p[2]]
-
-        if self.order == 3:
-            q.append(p[3])
+        q = []
+        q.extend(p)
 
         # we lerp between all points at each iteration, until we have 1 point left.
         while len(p) > 1:
@@ -925,7 +923,6 @@ def test():
     npts = [pts[0], nc1, nc2, pts[3]]
     nCurve = Bezier(npts)
 
-    # bounds = curve6.boundsRectangle.union(nCurve.boundsRectangle)
     bounds6 = PathUtilities.GTBoundsRectangle.fromContour([curve6.controlPoints])
     nBounds = PathUtilities.GTBoundsRectangle.fromContour([nCurve.controlPoints])
     bounds = bounds6.union(nBounds)
@@ -938,10 +935,12 @@ def test():
     cp6.setStrokeOpacity(1.0)
     cp6.drawPointsAsCircles([B], 2, colorBlack, fill=False)
     cp6.drawPointsAsCircles([(newBx, newBy)], 2, colorBlack, fill=False)
-    cp6.drawArrowBetweenPoints(B, newB, colorRed)
+    cp6.drawArrowBetweenPoints(B, newB, colorRed, style="closed45")
 
     cp6.drawSkeleton(curve6, lineColor=colorLightBlue)
     cp6.drawSkeleton(nCurve, lineColor=colorLightGreen)
+    # cp6.drawHull(curve6, 0.5, colorLightBlue)
+    # cp6.drawHull(nCurve, 0.5, colorLightGreen)
 
     image6 = cp6.generateFinalImage()
     image6File = open("Curve Molding Test.svg", "wt", encoding="UTF-8")

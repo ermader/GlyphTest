@@ -19,6 +19,20 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         self.setContentMargins(GlyphPlotterEngine.Margins(15, 15, 15, 15))
         self._poly = poly
         self._lastCommand = ""
+        self._strokeAttributeStack = []
+
+    # Maybe add strokeDash to this?
+    def pushStrokeAttributes(self, width=None, color=None, opacity=None):
+        self._strokeAttributeStack.append((self._strokWidth, self._strokeColor, self._strokeOpacity))
+        if width: self.setStrokeWidth(width)
+        if color: self.setStrokeColor(color)
+        if opacity: self.setStrokeOpacity(opacity)
+
+    def popStrokeAtributes(self):
+        width ,color, opacity = self._strokeAttributeStack.pop()
+        self.setStrokeWidth(width)
+        self.setStrokeColor(color)
+        self.setStrokeOpacity(opacity)
 
     def pointToString(self, point):
         return " ".join([str(i) for i in point])
@@ -154,13 +168,26 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
             x, y = point
             self.drawText(x + 4, y - 4, "left", f"({x}, {y})", margin=False)
 
+    def drawHull(self, curve, t, lineColor=colorLightGrey, pointColor=colorBlack):
+        self.drawSkeleton(curve, lineColor, pointColor)
+        order = curve.order
+        hull = curve.hull(t)
+        start = len(curve.controlPoints)
+        while order > 1:
+            stop = start + order
+            self.drawPointsAsSegments(hull[start:stop], lineColor)
+            start = stop
+            order -= 1
+
     def drawArrowBetweenPoints(self, startPoint, endPoint, color=None, style="open60", position="end"):
         if color:
             self._strokeColor = color
 
+        self.setStrokeDash("2, 1")
         startX, startY = startPoint
         endX, endY = endPoint
         self.drawArrow(GlyphPlotterEngine.CoordinateSystem.content, startX, startY, endX, endY, style, position)
+        self.setStrokeDash(None)
 
 
 
