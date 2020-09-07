@@ -180,6 +180,19 @@ def lerp(r, v1, v2):
     v2x, v2y = v2
     return (v1x + r * (v2x - v1x), v1y + r * (v2y - v1y))
 
+def quadraticRatio(t):
+    t2 = 2 * t
+    top = t2 * t - t2
+    bottom = top + 1
+    return abs(top / bottom)
+
+def cubicRatio(t):
+    mt = (1 - t)
+    t3 = t * t * t
+    mt3 = mt * mt * mt
+    bottom = t3 + mt3
+    top = bottom - 1
+    return abs(top / bottom)
 
 def map(v, ds, de, ts, te):
     """\

@@ -539,20 +539,13 @@ class Bezier(object):
         if self.order == 2:
             A = points[1]
             B = hull[5]
-            t2 = 2 * t
-            top = t2 * t - t2
-            bottom = top + 1
+            ratio = butils.quadraticRatio(t)
         elif self.order == 3:
             A = hull[5]
             B = hull[9]
-            mt = (1 - t)
-            t3 = t * t * t
-            mt3 = mt * mt * mt
-            bottom = t3 + mt3
-            top = bottom - 1
+            ratio = butils.cubicRatio(t)
 
         C = butils.lli4(A, B, points[0], points[-1])
-        ratio = abs(top / bottom)
 
         return (A, B, C, ratio, hull)
 
@@ -626,8 +619,8 @@ def test():
     imageFile1.close()
 
     cp1 = ContourPlotter(bounds1.points)
-    points = curve1.getLUT(30)
-    cp1.drawPointsAsSegments(points, colorBlue)
+    lpts = curve1.getLUT(30)
+    cp1.drawPointsAsSegments(lpts, colorBlue)
 
     image1 = cp1.generateFinalImage()
 
@@ -636,8 +629,8 @@ def test():
     imageFile1.close()
 
     cp1 = ContourPlotter(bounds1.points)
-    points = curve1.getLUT(100)
-    cp1.drawPointsAsCircles(points, 0.5, colorBlue)
+    lpts = curve1.getLUT(100)
+    cp1.drawPointsAsCircles(lpts, 0.5, colorBlue)
 
     image1 = cp1.generateFinalImage()
 
@@ -652,9 +645,10 @@ def test():
     bounds5 = PathUtilities.GTBoundsRectangle.fromContour([curve5.controlPoints])
 
     cp5 = ContourPlotter(bounds5.points)
-    points = curve5.getLUT(100)
-    cp5.drawPointsAsCircles(points, 0.5, colorBlue)
+    lpts = curve5.getLUT(100)
+    cp5.drawPointsAsCircles(lpts, 0.5, colorBlue)
     cp5.drawSkeleton(curve5, colorLightBlue)
+    # cp5.drawHull(curve5, 0.5, colorLightBlue)
 
     image5 = cp5.generateFinalImage()
 
@@ -668,8 +662,8 @@ def test():
     bounds9 = PathUtilities.GTBoundsRectangle.fromContour([curve9.controlPoints])
 
     cp9 = ContourPlotter(bounds9.points)
-    points = curve9.getLUT(200)
-    cp9.drawPointsAsCircles(points, 0.5, colorBlue)
+    lpts = curve9.getLUT(200)
+    cp9.drawPointsAsCircles(lpts, 0.5, colorBlue)
     cp9.drawSkeleton(curve9, colorLightBlue, colorBlack)
 
     image9 = cp9.generateFinalImage()
@@ -682,10 +676,10 @@ def test():
     curve2 = Bezier(curve2Points)
     bounds2 = curve2.boundsRectangle
 
-    points = curve2.getLUT(16)
+    lpts = curve2.getLUT(16)
     aLen = 0
-    for i in range(len(points) - 1):
-        aLen += PathUtilities.length([points[i], points[i+1]])
+    for i in range(len(lpts) - 1):
+        aLen += PathUtilities.length([lpts[i], lpts[i+1]])
 
     cp2 = ContourPlotter(bounds2.points)
     margin = cp2._contentMargins.left
@@ -701,12 +695,12 @@ def test():
     cp2.setLabelFontSize(4, 4)  # Not sure what the "scaled" parameter is for...
 
 
-    points = curve2.getLUT(16)
+    lpts = curve2.getLUT(16)
     aLen = 0
-    for i in range(len(points) - 1):
-        aLen += PathUtilities.length([points[i], points[i + 1]])
+    for i in range(len(lpts) - 1):
+        aLen += PathUtilities.length([lpts[i], lpts[i + 1]])
 
-    cp2.drawPointsAsSegments(points, colorBlue)
+    cp2.drawPointsAsSegments(lpts, colorBlue)
     cp2.drawText(bounds2.width / 2 + margin, -6, "center", f"Approximate curve length, 16 steps: {aLen}")
 
     image2 = cp2.generateFinalImage()
@@ -718,6 +712,7 @@ def test():
     left, right, _ = curve2.split(0.50)
     cp2.drawCurve(left.controlPoints, colorBlue)
     cp2.drawCurve(right.controlPoints, colorMagenta)
+    cp2.drawHull(curve2, 0.5, colorLightGreen)
 
 
     image2 = cp2.generateFinalImage()
@@ -856,7 +851,7 @@ def test():
     image4File.write(image4)
     image4File.close()
 
-    points = curve2.controlPoints
+    lpts = curve2.controlPoints
     A, B, C, ratio, _ = curve2.getABC(0.5)
 
     bounds = PathUtilities.GTBoundsRectangle.fromContour([curve2.controlPoints])
@@ -866,7 +861,7 @@ def test():
     cp2.setStrokeWidth(1)
     cp2.drawSkeleton(curve2)
 
-    cp2.drawPointsAsSegments([points[0], points[3]], colorLightGrey)
+    cp2.drawPointsAsSegments([lpts[0], lpts[3]], colorLightGrey)
     cp2.drawPointsAsCircles([A, B, C], 2, colorBlack, fill=False)
     cp2.drawPointsAsSegments([B, C], colorGreen)
     cp2.drawPointsAsSegments([B, A], colorRed)
@@ -951,6 +946,44 @@ def test():
     image6File.write(image6)
     image6File.close()
 
+    lpts = [(56, 147), (144, 217), (188, 115)]
+
+    (Sx, Sy), (Bx, By), (Ex, Ey) = S, B, E = lpts
+
+    Cx, Cy = C = ((Sx + Ex) / 2, (Sy + Ey) / 2)
+
+    ratio = butils.cubicRatio(0.5)
+    Ax, Ay = A = (Bx + (Bx - Cx) / ratio, By + (By - Cy) / ratio)
+
+    selen = PathUtilities.length([S, E])
+    bclen_min = selen / 8
+    bclen = PathUtilities.length([B, C])
+    be12dist = bclen_min + bclen / 4  # aesthetics = 4
+    bx = be12dist * (Ex - Sx) / selen
+    by = be12dist * (Ey - Sy) / selen
+    e1x, e1y = e1 = (Bx - bx, By - by)
+    e2x, e2y = e2 = (Bx + bx, By + by)
+    v1x, v1y = v1 = (Ax + (e1x - Ax) * 2, Ay + (e1y - Ay) * 2)
+    v2x, v2y = v2 = (Ax + (e2x - Ax) * 2, Ay + (e2y - Ay) * 2)
+    nc1 = (Sx + (v1x - Sx) * 2, Sy + (v1y - Sy) * 2)
+    nc2 = (Ex + (v2x - Ex) * 2, Ey + (v2y - Ey) * 2)
+
+    curve = Bezier([S, nc1, nc2, E])
+    bounds = PathUtilities.GTBoundsRectangle.fromContour([curve.controlPoints])
+
+    cp6 = ContourPlotter(bounds.points)
+    cp6.drawCurve(curve.controlPoints, colorBlue)
+    cp6.drawPointsAsSegments([S, E], colorLightGrey)
+    cp6.drawHull(curve, 0.5)
+    cp6.drawPointsAsCircles([C], 1)
+    cp6.drawPointsAsCircles([B], 2, fill=False)
+    cp6.drawPointsAsCircles([A], 1)
+
+
+    image6 = cp6.generateFinalImage()
+    image6File = open("Point Curve Test.svg", "wt", encoding="UTF-8")
+    image6File.write(image6)
+    image6File.close()
 
 if __name__ == "__main__":
     test()

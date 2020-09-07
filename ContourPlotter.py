@@ -182,13 +182,13 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         self.setLabelFontSize(6, 6)
         for point in points:
             x, y = point
-            self.drawText(x + 4, y - 4, "left", f"({x}, {y})", margin=False)
+            self.drawText(x + 4, y - 4, "left", f"({round(x, 2)}, {round(y, 2)})", margin=False)
         if pointColor: self.popFillAttributes()
 
     def drawHull(self, curve, t, lineColor=colorLightGrey, pointColor=colorBlack):
         self.drawSkeleton(curve, lineColor, pointColor)
 
-        if lineColor: self.pushStrokeAttributes(color=lineColor)
+        if lineColor: self.pushStrokeAttributes(color=lineColor, opacity=0.5)
         order = curve.order
         hull = curve.hull(t)
         start = len(curve.controlPoints)
