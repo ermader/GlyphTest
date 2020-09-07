@@ -60,8 +60,6 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
 
     def drawContours(self, contours, color=None, fill=False, close=True):
         if fill:
-            # self._fillColor = color
-            # self._fillOpacity = fill
             self.pushFillAttributes(color=color, fill=fill)
         elif color:
             self.pushStrokeAttributes(color=color)
