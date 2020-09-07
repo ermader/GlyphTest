@@ -19,20 +19,32 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         self.setContentMargins(GlyphPlotterEngine.Margins(15, 15, 15, 15))
         self._poly = poly
         self._lastCommand = ""
+        self._fillAttributeStack = []
         self._strokeAttributeStack = []
 
-    # Maybe add strokeDash to this?
-    def pushStrokeAttributes(self, width=None, color=None, opacity=None):
-        self._strokeAttributeStack.append((self._strokWidth, self._strokeColor, self._strokeOpacity))
+    def pushFillAttributes(self, color=None, opacity=None):
+        self._fillAttributeStack.append((self._fillColor, self._fillOpacity))
+        if color: self.setFillColor(color)
+        if opacity: self.setFillOpacity(opacity)
+
+    def popFillAttributes(self):
+        color, opacity = self._fillAttributeStack.pop()
+        self.setFillColor(color)
+        self.setFillOpacity(opacity)
+
+    def pushStrokeAttributes(self, width=None, color=None, opacity=None, dash=None):
+        self._strokeAttributeStack.append((self._strokeWidth, self._strokeColor, self._strokeOpacity, self._strokeDash))
         if width: self.setStrokeWidth(width)
         if color: self.setStrokeColor(color)
         if opacity: self.setStrokeOpacity(opacity)
+        if dash: self.setStrokeDash(dash)
 
     def popStrokeAtributes(self):
-        width ,color, opacity = self._strokeAttributeStack.pop()
+        width ,color, opacity, dash = self._strokeAttributeStack.pop()
         self.setStrokeWidth(width)
         self.setStrokeColor(color)
         self.setStrokeOpacity(opacity)
+        self.setStrokeDash(dash)
 
     def pointToString(self, point):
         return " ".join([str(i) for i in point])
@@ -48,10 +60,11 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
 
     def drawContours(self, contours, color=None, fill=False, close=True):
         if fill:
-            self._fillColor = color
-            self._fillOpacity = fill
+            # self._fillColor = color
+            # self._fillOpacity = fill
+            self.pushFillAttributes(color=color, fill=fill)
         elif color:
-            self._strokeColor = color
+            self.pushStrokeAttributes(color=color)
             # self._strokeWidth = 2
 
         path = "<path d='"
@@ -102,14 +115,15 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
 
         if fill:
             path += f"' {self._fillAttributes()}/>"
+            self.popFillAttributes()
         else:
             path += f"' fill='none' {self._strokeAttributes()}/>"
+            if color: self.popStrokeAtributes()
+
         self._content.append(path)
 
     def drawPointsAsSegments(self, points, color=None):
-        if color:
-            self._strokeColor = color
-            # self._strokeWidth = 2
+        if color: self.pushStrokeAttributes(color=color)  # used to set stroke width to 2...
 
         path = "<path d='"
         commands = []
@@ -133,19 +147,22 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
 
         path += f"' fill='none' {self._strokeAttributes()}/>"
         self._content.append(path)
+        if color: self.popStrokeAtributes()
 
     def drawPointsAsCircles(self, points, radius, color=None, fill=True):
         if color:
             if fill:
                 self._fillColor = color
             else:
-                self._strokeColor = color
+                self.pushStrokeAttributes(color=color)
 
         paintMode = GlyphPlotterEngine.PaintMode.fill if fill else GlyphPlotterEngine.PaintMode.stroke
 
         for point in points:
             x, y = point
             self.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, x, y, radius, paintMode)
+
+        if color and not fill: self.popStrokeAtributes()
 
     def drawCurve(self, segment, color=None):
         self.drawContours([[segment]], color=color, fill=False, close=False)
@@ -163,13 +180,17 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         self.drawPointsAsSegments(points, lineColor)
         self.drawPointsAsCircles(points, 2, pointColor, fill=False)
 
+        if pointColor: self.pushFillAttributes(color=pointColor)
         self.setLabelFontSize(6, 6)
         for point in points:
             x, y = point
             self.drawText(x + 4, y - 4, "left", f"({x}, {y})", margin=False)
+        if pointColor: self.popFillAttributes()
 
     def drawHull(self, curve, t, lineColor=colorLightGrey, pointColor=colorBlack):
         self.drawSkeleton(curve, lineColor, pointColor)
+
+        if lineColor: self.pushStrokeAttributes(color=lineColor)
         order = curve.order
         hull = curve.hull(t)
         start = len(curve.controlPoints)
@@ -178,6 +199,8 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
             self.drawPointsAsSegments(hull[start:stop], lineColor)
             start = stop
             order -= 1
+
+        if lineColor: self.popStrokeAtributes()
 
     def drawArrowBetweenPoints(self, startPoint, endPoint, color=None, style="open60", position="end"):
         if color:

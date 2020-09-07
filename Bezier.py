@@ -648,11 +648,13 @@ def test():
     curve5Points = [(0, 5), (40, 5), (40, 40), (80, 40), (80, -50), (120, -50)]
 
     curve5 = Bezier(curve5Points)
-    bounds5 = curve5.boundsRectangle
+    # bounds5 = curve5.boundsRectangle
+    bounds5 = PathUtilities.GTBoundsRectangle.fromContour([curve5.controlPoints])
 
     cp5 = ContourPlotter(bounds5.points)
     points = curve5.getLUT(100)
     cp5.drawPointsAsCircles(points, 0.5, colorBlue)
+    cp5.drawSkeleton(curve5, colorLightBlue)
 
     image5 = cp5.generateFinalImage()
 
@@ -660,19 +662,21 @@ def test():
     imageFile5.write(image5)
     imageFile5.close()
 
-    curve11Points = [(175, 178), (220, 250), (114, 285), (27, 267), (33, 159), (146, 143), (205, 33), (84, 117), (43, 59), (58, 24)]
-    curve11 = Bezier(curve11Points)
-    bounds11 = curve11.boundsRectangle
+    curve9Points = [(175, 178), (220, 250), (114, 285), (27, 267), (33, 159), (146, 143), (205, 33), (84, 117), (43, 59), (58, 24)]
+    curve9 = Bezier(curve9Points)
+    bounds9 = curve9.boundsRectangle
+    bounds9 = PathUtilities.GTBoundsRectangle.fromContour([curve9.controlPoints])
 
-    cp11 = ContourPlotter(bounds11.points)
-    points = curve11.getLUT(200)
-    cp11.drawPointsAsCircles(points, 0.5, colorBlue)
+    cp9 = ContourPlotter(bounds9.points)
+    points = curve9.getLUT(200)
+    cp9.drawPointsAsCircles(points, 0.5, colorBlue)
+    cp9.drawSkeleton(curve9, colorLightBlue, colorBlack)
 
-    image11 = cp11.generateFinalImage()
+    image9 = cp9.generateFinalImage()
 
-    imageFile11 = open(f"Eleventh Order Curve Test.svg", "wt", encoding="UTF-8")
-    imageFile11.write(image11)
-    imageFile11.close()
+    imageFile9 = open(f"Ninth Order Curve Test.svg", "wt", encoding="UTF-8")
+    imageFile9.write(image9)
+    imageFile9.close()
 
     curve2Points = [(120, 140), (35, 100), (220, 40), (220, 260)]
     curve2 = Bezier(curve2Points)
