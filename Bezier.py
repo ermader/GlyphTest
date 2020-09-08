@@ -237,8 +237,7 @@ class Bezier(object):
 
     def hull(self, t):
         p = self.controlPoints
-        q = []
-        q.extend(p)
+        q = [pt for pt in p]
 
         # we lerp between all points at each iteration, until we have 1 point left.
         while len(p) > 1:
@@ -549,6 +548,14 @@ class Bezier(object):
 
         return (A, B, C, ratio, hull)
 
+def getDefaultQuadratic():
+    qPoints = [(70, 50), (20, 190), (250, 240)]
+    return Bezier(qPoints)
+
+def getDefaultCubic():
+    cPoints = [(120, 140), (35, 100), (220, 40), (220, 260)]
+    return Bezier(cPoints)
+
 def test():
     from FontDocTools import GlyphPlotterEngine
 
@@ -672,8 +679,7 @@ def test():
     imageFile9.write(image9)
     imageFile9.close()
 
-    curve2Points = [(120, 140), (35, 100), (220, 40), (220, 260)]
-    curve2 = Bezier(curve2Points)
+    curve2 = getDefaultCubic()
     bounds2 = curve2.boundsRectangle
 
     lpts = curve2.getLUT(16)
@@ -885,10 +891,8 @@ def test():
     Cx, Cy = C
     Blx, Bly = hull[7]
     Brx, Bry = hull[8]
-    dbl = (Blx - Bx, Bly - By)
-    dblx, dbly = dbl
-    dbr = (Brx - Bx, Bry - By)
-    dbrx, dbry = dbr
+    dblx, dbly = dbl = (Blx - Bx, Bly - By)
+    dbrx, dbry = dbr = (Brx - Bx, Bry - By)
     pts = curve6.controlPoints
 
     newBx = Bx - 30
@@ -896,18 +900,15 @@ def test():
     newB = (newBx, newBy)
 
 
-    newA = (newBx - (Cx - newBx) / ratio,
+    newAx, newAy = newA = (newBx - (Cx - newBx) / ratio,
             newBy - (Cy - newBy) / ratio)
-    newAx, newAy = newA
 
     # find new point on s--c1
-    p1 = (newBx + dblx, newBy + dbly)
-    p1x, p1y = p1
+    p1x, p1y = p1 = (newBx + dblx, newBy + dbly)
     sc1 = (newAx - (newAx - p1x) / (1 - t),
             newAy - (newAy - p1y) / (1 - t))
     # find new point on c2--e
-    p2 = (newBx + dbrx, newBy + dbry)
-    p2x, p2y = p2
+    p2x, p2y = p2 = (newBx + dbrx, newBy + dbry)
     sc2 = (newAx + (p2x - newAx) / (t),
             newAy + (p2y - newAy) / (t))
 
