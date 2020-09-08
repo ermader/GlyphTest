@@ -653,7 +653,8 @@ def test():
 
     cp5 = ContourPlotter(bounds5.points)
     lpts = curve5.getLUT(100)
-    cp5.drawPointsAsCircles(lpts, 0.5, colorBlue)
+    # cp5.drawPointsAsCircles(lpts, 0.5, colorBlue)
+    cp5.drawPointsAsSegments(lpts, colorBlue)
     cp5.drawSkeleton(curve5, colorLightBlue)
     # cp5.drawHull(curve5, 0.5, colorLightBlue)
 
@@ -670,7 +671,8 @@ def test():
 
     cp9 = ContourPlotter(bounds9.points)
     lpts = curve9.getLUT(200)
-    cp9.drawPointsAsCircles(lpts, 0.5, colorBlue)
+    # cp9.drawPointsAsCircles(lpts, 0.5, colorBlue)
+    cp9.drawPointsAsSegments(lpts, colorBlue)
     cp9.drawSkeleton(curve9, colorLightBlue, colorBlack)
 
     image9 = cp9.generateFinalImage()
