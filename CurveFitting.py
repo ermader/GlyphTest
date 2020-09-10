@@ -62,6 +62,28 @@ def raiseRowPower(row, i):
     return [math.pow(v, i) for v in row]
 
 def basisMatrix(n):
+    """\
+    Return the (n x n) basis matrix
+    We can form any basis matrix using a generative approach:
+
+     - it's a lower triangular matrix: all the entries above the main diagonal are zero
+     - the main diagonal consists of the binomial coefficients for n
+     - all entries are symmetric about the antidiagonal.
+
+    What's more, if we number rows and columns starting at 0, then
+    the value at position M[r,c], with row=r and column=c, can be
+    expressed as:
+
+      M[r,c] = (r choose c) * M[r,r] * S,
+
+      where S = 1 if r+c is even, or -1 otherwise
+
+    That is: the values in column c are directly computed off of the
+    binomial coefficients on the main diagonal, through multiplication
+    by a binomial based on matrix position, with the sign of the value
+    also determined by matrix position. This is actually very easy to
+    write out in code:
+"""
     m = [[0 for c in range(n)] for r in range(n)]
     k = n - 1
 
@@ -69,6 +91,7 @@ def basisMatrix(n):
     for i in range(n):
         m[i][i] = binomial(k, i)
 
+    # compute the remaining values
     for c in range(n):
         for r in range(c+1, n):
             sign = 1 if (r+c) & 1 == 0 else -1
@@ -79,10 +102,9 @@ def basisMatrix(n):
 
 def transpose(m):
     t = []
-    n = len(m)
-    for column in range(n):
+    for column in range(len(m[0])):
         tc = []
-        for row in range(n):
+        for row in range(len(m)):
             tc.append(m[row][column])
         t.append(tc)
     return t
@@ -167,6 +189,9 @@ def test():
     pc = [[100], [200], [1]]
     print(multiply(m, pc))
     print(multiply(pr, m))
+
+    m = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
+    print(transpose(m))
 
     # points = [(70, 120), (80, 160), (110, 170), (120, 120)]
     #
