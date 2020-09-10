@@ -13,6 +13,7 @@ import math
 from decimal import Decimal, getcontext
 import BezierUtilities as butils
 import PathUtilities
+import CurveFitting
 from ContourPlotter import ContourPlotter
 
 class Bezier(object):
@@ -171,6 +172,12 @@ class Bezier(object):
             self._boundsRectangle = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
 
         return self._boundsRectangle
+
+    @property
+    def skeletonBounds(self):
+        sbounds = PathUtilities.GTBoundsRectangle.fromContour([self.controlPoints])
+        sbounds.right += 40
+        return sbounds
 
     def get(self, t):
         return self._compute(t)
@@ -972,7 +979,8 @@ def test():
     nc2 = (Ex + (v2x - Ex) * 2, Ey + (v2y - Ey) * 2)
 
     curve = Bezier([S, nc1, nc2, E])
-    bounds = PathUtilities.GTBoundsRectangle.fromContour([curve.controlPoints])
+    # bounds = PathUtilities.GTBoundsRectangle.fromContour([curve.controlPoints])
+    bounds = curve.skeletonBounds
 
     cp6 = ContourPlotter(bounds.points)
     cp6.drawCurve(curve.controlPoints, colorBlue)
@@ -985,6 +993,27 @@ def test():
 
     image6 = cp6.generateFinalImage()
     image6File = open("Point Curve Test.svg", "wt", encoding="UTF-8")
+    image6File.write(image6)
+    image6File.close()
+
+    points = [(70, 120), (80, 160), (110, 160), (120, 120)]
+
+    p, m, s, c = CurveFitting.fit(points)
+    cx, cy = c
+    bpoints = []
+    for i in range(len(p)):
+        bpoints.append((cx[i][0], cy[i][0]))
+
+    curve = Bezier(bpoints)
+    # bounds = curve.boundsRectangle
+    bounds = curve.skeletonBounds
+    cp6 = ContourPlotter(bounds.points)
+    cp6.drawCurve(curve.controlPoints, colorBlue)
+    cp6.drawSkeleton(curve)
+    cp6.drawPointsAsCircles(points[1:-1], 2, colorGreen, fill=False)
+
+    image6 = cp6.generateFinalImage()
+    image6File = open("Curve Fitting Test.svg", "wt", encoding="UTF-8")
     image6File.write(image6)
     image6File.close()
 
