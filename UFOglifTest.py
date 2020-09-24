@@ -46,7 +46,7 @@ class GlifTestArgumentIterator(ArgumentIterator):
 
 class GlifTestArgs:
     def __init__(self):
-        self.verbose = False
+        self.debug = False
         self.fontName = None
         self.glyphList = []
 
@@ -89,8 +89,8 @@ class GlifTestArgs:
                 args.fontName = arguments.nextExtra("font")
             elif argument == "--glyph":
                 args.glyphList = arguments.getGlyphList()
-            elif argument == "--verbose":
-                args.verbose = True
+            elif argument == "--debug":
+                args.debug = True
             else:
                 raise ValueError(f"Unrecognized option “{argument}”.")
 
@@ -98,7 +98,6 @@ class GlifTestArgs:
         return args
 
 
-# Add verbose mode to print calls?
 class SegmentPen:
     def __init__(self, glyphSet, logger):
         self._contours = []
@@ -115,20 +114,20 @@ class SegmentPen:
         # so we assume that the move is the start of a new contour
         self._contour = []
         self._segment = []
-        self.logger.info(f"moveTo({pt})")
+        self.logger.debug(f"moveTo({pt})")
 
     def lineTo(self, pt):
         segment = [self._lastOnCurve, pt]
         self._contour.append(segment)
         self._lastOnCurve = pt
-        self.logger.info(f"lineTo({pt})")
+        self.logger.debug(f"lineTo({pt})")
 
     def curveTo(self, *points):
         segment = [self._lastOnCurve]
         segment.extend(points)
         self._contour.append(segment)
         self._lastOnCurve = points[-1]
-        self.logger.info(f"curveTo({points})")
+        self.logger.debug(f"curveTo({points})")
 
     def qCurveTo(self, *points):
         segment = [self._lastOnCurve]
@@ -147,7 +146,7 @@ class SegmentPen:
                 startPoint = impliedPoint
             self._contour.append([startPoint, segment[-2], segment[-1]])
         self._lastOnCurve = segment[-1]
-        self.logger.info(f"qCurveTo({points})")
+        self.logger.debug(f"qCurveTo({points})")
 
     def beginPath(self):
         raise NotImplementedError
@@ -157,7 +156,7 @@ class SegmentPen:
         if self._contour[0][0] != self._contour[-1][-1]:
             self._contour.append([self._contour[-1][-1], self._contour[0][0]])
         self._contour = []
-        self.logger.info("closePath()")
+        self.logger.debug("closePath()")
 
     def endPath(self):
         raise NotImplementedError
@@ -165,7 +164,7 @@ class SegmentPen:
     identityTransformation = (1, 0, 0, 1, 0, 0)
 
     def addComponent(self, glyphName, transformation):
-        self.logger.info(f"addComponent(\"{glyphName}\", {transformation}")
+        self.logger.debug(f"addComponent(\"{glyphName}\", {transformation}")
         if transformation != self.identityTransformation:
             xScale, xyScale, yxScale, yScale, xOffset, yOffset = transformation
             m = PathUtilities.GTTransform._matrix(
@@ -214,7 +213,7 @@ def getGLIFOutline(glyphSet, glyphName, logger):
 
 
 def glifOutlineTest(glyphSet, glyphName, logger, color=None):
-    logger.info(f"{glyphSet.dirName}/{glyphName}.glif")
+    logger.debug(f"{glyphSet.dirName}/{glyphName}.glif")
     outline = getGLIFOutline(glyphSet, glyphName, logger)
     bounds = outline.boundsRectangle
 
@@ -231,6 +230,7 @@ def glifOutlineTest(glyphSet, glyphName, logger, color=None):
     imageFile = open(f"{fontName}_{glyphName}.svg", "wt", encoding="UTF-8")
     imageFile.write(image)
     imageFile.close()
+    logger.debug("")
 
 def test():
     argumentList = argv
@@ -246,12 +246,9 @@ def test():
         exit(1)
 
     try:
-        level = logging.INFO if args.verbose else logging.WARNING
+        level = logging.DEBUG if args.debug else logging.WARNING
         logging.basicConfig(level=level)
-        # logger = logging.Logger("glif-test")
-        # logger = logging.getLogger("root")
         logger = logging.getLogger("glif-test")
-        logger.setLevel(level)
         gs = ufoLib.glifLib.GlyphSet(f"{args.fontName}/glyphs")
         for glyphName in args.glyphList:
             glifOutlineTest(gs, glyphName, logger, colorBlue)
