@@ -1156,25 +1156,31 @@ def test():
         def endPath(self):
             raise NotImplementedError
 
+        identityTransformation = (1, 0, 0, 1, 0, 0)
+
         def addComponent(self, glyphName, transformation):
-            xScale, xyScale, yxScale, yScale, xOffset, yOffset = transformation
-            m = PathUtilities.GTTransform._matrix(
-                a=xScale,
-                b=xyScale,
-                c=yxScale,
-                d=yScale,
-                m=xOffset,
-                n=yOffset
-            )
-            t = PathUtilities.GTTransform(m)  # should check to see if it's the identity matrix...
-            # need the glyphSet to capture the component...
+            if transformation != self.identityTransformation:
+                xScale, xyScale, yxScale, yScale, xOffset, yOffset = transformation
+                m = PathUtilities.GTTransform._matrix(
+                    a=xScale,
+                    b=xyScale,
+                    c=yxScale,
+                    d=yScale,
+                    m=xOffset,
+                    n=yOffset
+                )
+                t = PathUtilities.GTTransform(m)
+            else:
+                t = None
+
             glifString = self._glyphSet.getGLIF(glyphName)
             glyph = ufoLib.glifLib.Glyph(self._glyphSet, "")
             cpen = SegmentPen(self._glyphSet)
             psp = ufoLib.glifLib.PointToSegmentPen(cpen)
             ufoLib.glifLib.readGlyphFromString(glifString, glyph, psp)
-            self.contours.extend(t.applyToContours(cpen.contours))
-            print(f"addComponent(\"{glyphName}\", {transformation}")
+            contours = t.applyToContours(cpen.contours) if t else cpen.contours
+            self.contours.extend(contours)
+            # print(f"addComponent(\"{glyphName}\", {transformation}")
 
         @property
         def contours(self):
@@ -1210,7 +1216,9 @@ def test():
     gsNewYork = ufoLib.glifLib.GlyphSet("/Users/emader/Downloads/NewYork.ufo/glyphs")
 
     glifOutlineTest(gsSFNS, "a", colorBlue)
+    glifOutlineTest(gsNewYork, "a", colorBlue)
     glifOutlineTest(gsNewYork, "acircumflexacute", colorBlue)
+    glifOutlineTest(gsNewYork, "ccedillaacute", colorBlue)
 
 if __name__ == "__main__":
     test()
