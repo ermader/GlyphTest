@@ -175,10 +175,10 @@ def bestFit(P, M, S, n=None):
 
     return (Cx, Cy)
 
-def fit(points, polygonal=False):
+def fit(points, polygonal=True):
     n = len(points)
     m = basisMatrix(n)
-    s = computeTimeValues(points, polygonal)
+    s = computeTimeValues(points, polygonal=polygonal)
     c = bestFit(points, m, s)
 
     return (points, m, s, c)

@@ -555,6 +555,72 @@ class Bezier(object):
 
         return (A, B, C, ratio, hull)
 
+class BContour(object):
+    def __init__(self, contour):
+        beziers = []
+        bounds = PathUtilities.GTBoundsRectangle()
+
+        for segment in contour:
+            bezier = Bezier(segment)
+            bounds = bounds.union(bezier.boundsRectangle)
+            beziers.append(bezier)
+
+        self._beziers = beziers
+        self._bounds = bounds
+
+    @property
+    def boundsRectangle(self):
+        return self._bounds
+
+    @property
+    def beziers(self):
+        return self._beziers
+
+class BOutline(object):
+    def __init__(self, contours):
+        bounds = PathUtilities.GTBoundsRectangle()
+        bContours = []
+
+        for contour in contours:
+            bc = BContour(contour)
+            bContours.append(bc)
+            bounds = bounds.union(bc.boundsRectangle)
+
+        self._bContours = bContours
+        self._bounds = bounds
+
+    @property
+    def bContours(self):
+        return self._bContours
+
+    @property
+    def boundsRectangle(self):
+        return self._bounds
+
+def drawCurve(cp, curve, color=None):
+    if curve.order <= 3:
+        cp.drawCurve(curve.controlPoints)
+    else:
+        lpts = curve.getLUT()
+        cp.drawPointsAsSegments(lpts, color)
+
+def drawContour(cp, contour, color=None):
+    for bezier in contour.beziers:
+        cp.drawCurve(bezier.controlPoints, color)
+
+def drawOutline(cp, outline, color=None):
+    for bc in outline.bContours:
+        drawContour(cp, bc, color=color)
+
+def fitCurveToPoints(points, polygonal=True):
+    p, m, s, c = CurveFitting.fit(points, polygonal=polygonal)
+    cx, cy = c
+    bpoints = []
+    for i in range(len(p)):
+        bpoints.append((cx[i][0], cy[i][0]))
+
+    return Bezier(bpoints)
+
 def getDefaultQuadratic():
     qPoints = [(70, 50), (20, 190), (250, 240)]
     return Bezier(qPoints)
@@ -996,15 +1062,9 @@ def test():
     image6File.write(image6)
     image6File.close()
 
-    points = [(70, 120), (80, 160), (110, 160), (120, 120)]
+    points = [(70, 120), (90, 200), (150, 200), (170, 120)]
 
-    p, m, s, c = CurveFitting.fit(points)
-    cx, cy = c
-    bpoints = []
-    for i in range(len(p)):
-        bpoints.append((cx[i][0], cy[i][0]))
-
-    curve = Bezier(bpoints)
+    curve = fitCurveToPoints(points, polygonal=True)
     # bounds = curve.boundsRectangle
     bounds = curve.skeletonBounds
     cp6 = ContourPlotter(bounds.points)
@@ -1016,6 +1076,141 @@ def test():
     image6File = open("Curve Fitting Test.svg", "wt", encoding="UTF-8")
     image6File.write(image6)
     image6File.close()
+
+
+    curve = fitCurveToPoints(points, polygonal=False)
+    # bounds = curve.boundsRectangle
+    bounds = curve.skeletonBounds
+    cp6 = ContourPlotter(bounds.points)
+    cp6.drawCurve(curve.controlPoints, colorBlue)
+    cp6.drawSkeleton(curve)
+    cp6.drawPointsAsCircles(points[1:-1], 2, colorGreen, fill=False)
+
+    image6 = cp6.generateFinalImage()
+    image6File = open("Equadistant Curve Fitting Test.svg", "wt", encoding="UTF-8")
+    image6File.write(image6)
+    image6File.close()
+
+    import ufoLib
+
+    # Add verbose mode to print calls?
+    class SegmentPen:
+        def __init__(self, glyphSet):
+            self._contours = []
+            self._glyphSet = glyphSet
+
+        def addPoint(self, pt, segmentType, smooth, name):
+            raise NotImplementedError
+
+        def moveTo(self, pt):
+            self._lastOnCurve = pt
+
+            # This is for glyphs, which are always closed paths,
+            # so we assume that the move is the start of a new contour
+            self._contour = []
+            self._segment = []
+            # print(f"moveTo({pt})")
+
+        def lineTo(self, pt):
+            segment = [self._lastOnCurve, pt]
+            self._contour.append(segment)
+            self._lastOnCurve = pt
+            # print(f"lineTo({pt})")
+
+        def curveTo(self, *points):
+            segment = [self._lastOnCurve]
+            segment.extend(points)
+            self._contour.append(segment)
+            self._lastOnCurve = points[-1]
+            # print(f"curveTo({points})")
+
+        def qCurveTo(self, *points):
+            segment = [self._lastOnCurve]
+            segment.extend(points)
+
+            if len(segment) <= 3:
+                self._contour.append(segment)
+            else:
+                # a starting on-curve point, two or more off-curve points, and a final on-curve point
+                startPoint = segment[0]
+                for i in range(1, len(segment) - 2):
+                    p1x, p1y = segment[i]
+                    p2x, p2y = segment[i + 1]
+                    impliedPoint = (0.5 * (p1x + p2x), 0.5 * (p1y + p2y))
+                    self._contour.append([startPoint, segment[i], impliedPoint])
+                    startPoint = impliedPoint
+                self._contour.append([startPoint, segment[-2], segment[-1]])
+            self._lastOnCurve = segment[-1]
+            # print(f"qCurveTo({points})")
+
+        def beginPath(self):
+            raise NotImplementedError
+
+        def closePath(self):
+            self._contours.append(self._contour)
+            if self._contour[0][0] != self._contour[-1][-1]:
+                self._contour.append([self._contour[-1][-1], self._contour[0][0]])
+            self._contour = []
+            # print("closePath()")
+
+        def endPath(self):
+            raise NotImplementedError
+
+        def addComponent(self, glyphName, transformation):
+            xScale, xyScale, yxScale, yScale, xOffset, yOffset = transformation
+            m = PathUtilities.GTTransform._matrix(
+                a=xScale,
+                b=xyScale,
+                c=yxScale,
+                d=yScale,
+                m=xOffset,
+                n=yOffset
+            )
+            t = PathUtilities.GTTransform(m)  # should check to see if it's the identity matrix...
+            # need the glyphSet to capture the component...
+            glifString = self._glyphSet.getGLIF(glyphName)
+            glyph = ufoLib.glifLib.Glyph(self._glyphSet, "")
+            cpen = SegmentPen(self._glyphSet)
+            psp = ufoLib.glifLib.PointToSegmentPen(cpen)
+            ufoLib.glifLib.readGlyphFromString(glifString, glyph, psp)
+            self.contours.extend(t.applyToContours(cpen.contours))
+            print(f"addComponent(\"{glyphName}\", {transformation}")
+
+        @property
+        def contours(self):
+            return self._contours
+
+    def getGLIFOutline(glyphSet, glyphName):
+        glyph = ufoLib.glifLib.Glyph(glyphSet, "")
+        glifString = glyphSet.getGLIF(glyphName)
+        pen = SegmentPen(glyphSet)
+        psp = ufoLib.glifLib.PointToSegmentPen(pen)
+        ufoLib.glifLib.readGlyphFromString(glifString, glyph, psp)
+        return BOutline(pen.contours)
+
+    def glifOutlineTest(glyphSet, glyphName, color=None):
+        outline = getGLIFOutline(glyphSet, glyphName)
+        bounds = outline.boundsRectangle
+
+        cp = ContourPlotter(bounds.points)
+        drawOutline(cp, outline, color=color)
+
+        cp.pushStrokeAttributes(opacity=0.5)
+        cp.drawContours([bounds.contour], colorGreen)
+        cp.popStrokeAtributes()
+
+        fontName = glyphSet.dirName.split("/")[-2]
+
+        image = cp.generateFinalImage()
+        imageFile = open(f"{fontName}_{glyphName}.svg", "wt", encoding="UTF-8")
+        imageFile.write(image)
+        imageFile.close()
+
+    gsSFNS = ufoLib.glifLib.GlyphSet("/Users/emader/Downloads/SF NS Text Condensed-Regular.ufo/glyphs")
+    gsNewYork = ufoLib.glifLib.GlyphSet("/Users/emader/Downloads/NewYork.ufo/glyphs")
+
+    glifOutlineTest(gsSFNS, "a", colorBlue)
+    glifOutlineTest(gsNewYork, "acircumflexacute", colorBlue)
 
 if __name__ == "__main__":
     test()
