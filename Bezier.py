@@ -643,6 +643,9 @@ def test():
     colorLightGrey = PathUtilities.GTColor.fromName("lightgrey")
     colorLightBlue = PathUtilities.GTColor.fromName("lightblue")
     colorLightGreen = PathUtilities.GTColor.fromName("lightgreen")
+    colorOrange = PathUtilities.GTColor.fromName("orange")
+    colorAqua = PathUtilities.GTColor.fromName("aqua")
+    colorDarkGrey = PathUtilities.GTColor.fromName("darkgrey")
 
     curvePoints = [(90, 140), (25, 210), (230, 210), (150, 10)]
     # curvePoints = [(70, 0), (20, 140), (250, 190)]
@@ -710,7 +713,7 @@ def test():
 
     cp1 = ContourPlotter(bounds1.points)
     lpts = curve1.getLUT(100)
-    cp1.drawPointsAsCircles(lpts, 0.5, colorBlue)
+    cp1.drawPointsAsCircles(lpts, 0.5, [colorBlue])
 
     image1 = cp1.generateFinalImage()
 
@@ -746,7 +749,7 @@ def test():
     lpts = curve9.getLUT(200)
     # cp9.drawPointsAsCircles(lpts, 0.5, colorBlue)
     cp9.drawPointsAsSegments(lpts, colorBlue)
-    cp9.drawSkeleton(curve9, colorLightBlue, colorBlack)
+    cp9.drawSkeleton(curve9, colorLightBlue, [colorBlack])
 
     image9 = cp9.generateFinalImage()
 
@@ -943,7 +946,7 @@ def test():
     cp2.drawSkeleton(curve2)
 
     cp2.drawPointsAsSegments([lpts[0], lpts[3]], colorLightGrey)
-    cp2.drawPointsAsCircles([A, B, C], 2, colorBlack, fill=False)
+    cp2.drawPointsAsCircles([A, B, C], 2, [colorBlack], fill=False)
     cp2.drawPointsAsSegments([B, C], colorGreen)
     cp2.drawPointsAsSegments([B, A], colorRed)
 
@@ -1008,8 +1011,8 @@ def test():
     cp6.drawCurve(nCurve.controlPoints, colorGreen)
 
     cp6.setStrokeOpacity(1.0)
-    cp6.drawPointsAsCircles([B], 2, colorBlack, fill=False)
-    cp6.drawPointsAsCircles([(newBx, newBy)], 2, colorBlack, fill=False)
+    cp6.drawPointsAsCircles([B], 2, [colorBlack], fill=False)
+    cp6.drawPointsAsCircles([(newBx, newBy)], 2, [colorBlack], fill=False)
     cp6.drawArrowBetweenPoints(B, newB, colorRed, style="closed45")
 
     cp6.drawSkeleton(curve6, lineColor=colorLightBlue)
@@ -1070,7 +1073,7 @@ def test():
     cp6 = ContourPlotter(bounds.points)
     cp6.drawCurve(curve.controlPoints, colorBlue)
     cp6.drawSkeleton(curve)
-    cp6.drawPointsAsCircles(points[1:-1], 2, colorGreen, fill=False)
+    cp6.drawPointsAsCircles(points[1:-1], 2, [colorGreen], fill=False)
 
     image6 = cp6.generateFinalImage()
     image6File = open("Curve Fitting Test.svg", "wt", encoding="UTF-8")
@@ -1083,12 +1086,102 @@ def test():
     cp6 = ContourPlotter(bounds.points)
     cp6.drawCurve(curve.controlPoints, colorBlue)
     cp6.drawSkeleton(curve)
-    cp6.drawPointsAsCircles(points[1:-1], 2, colorGreen, fill=False)
+    cp6.drawPointsAsCircles(points[1:-1], 2, [colorGreen], fill=False)
 
     image6 = cp6.generateFinalImage()
     image6File = open("Equadistant Curve Fitting Test.svg", "wt", encoding="UTF-8")
     image6File.write(image6)
     image6File.close()
+
+    curvePoints = [(288, 182), (258, 66), (85, 70), (52, 124), (54, 278), (216, 183), (261, 270), (58, 204), (84, 303), (238, 352)]
+    testPoint = (280, 135)
+    pointColors = [colorRed, colorGreen, colorBlue, colorYellow, colorOrange, colorCyan, colorMagenta]
+    curve = Bezier(curvePoints)
+    bounds = curve.skeletonBounds
+    cp = ContourPlotter(bounds.points)
+    drawCurve(cp, curve, colorBlue)
+    cp.drawSkeleton(curve, lineColor=colorLightBlue, pointColors=pointColors)
+
+    def findClosest(point, LUT):
+        x, y = point
+        closest = +9007199254740991  # Number.MAX_SAFE_INTEGER
+        for index in range(len(LUT)):
+            px, py = LUT[index]
+            dist = math.hypot(px - x, py - y)
+            if dist < closest:
+                closest = dist
+                i = index
+
+        return i
+
+    """\
+      We already know that LUT[i1] and LUT[i2] are *not* good distances,
+      so we know that a better distance will be somewhere between them.
+      We generate three new points between those two, so we end up with
+      five points, and then check which three of those five are a new,
+      better, interval to check within.
+    """
+    def refineBinary(point, curve, LUT, i):
+        closest = +9007199254740991  # Number.MAX_SAFE_INTEGER
+        steps = len(LUT)
+        TT = [t/(steps - 1) for t in range(steps)]
+        px, py = point
+
+        for _ in range(25):  # This is for safety; the loop should always break
+            steps = len(LUT)
+            i1 = 0 if i == 0 else i - 1
+            i2 = i if i == steps - 1 else i + 1
+            t1 = TT[i1]
+            t2 = TT[i2]
+            lut = []
+            tt = []
+            step = (t2 - t1) / 5
+
+            if step < 0.001: break
+            lut.append(LUT[i1])
+            tt.append(TT[i1])
+            for j in range(1, 4):
+                nt = t1 + (j * step)
+                nx, ny = n = curve.get(nt)
+                dist = math.hypot(nx - px, ny - py)
+                if dist < closest:
+                    closest = dist
+                    q = n
+                    i = j
+                lut.append(n)
+                tt.append(nt)
+            lut.append(LUT[i2])
+            tt.append(TT[i2])
+
+            # update the LUT to be our new five point LUT, and run again.
+            LUT = lut
+            TT = tt
+
+        return q
+
+
+    LUT = curve.getLUT(20)
+    i = findClosest(testPoint, LUT)
+    candidateColor = PathUtilities.GTColor(100, 255, 100)
+    candidates = [LUT[i]]
+    if i > 0: candidates.append(LUT[i - 1])
+    if i < len(LUT) - 1: candidates.append(LUT[i + 1])
+
+    cp.drawPointsAsCircles(candidates, 3, [candidateColor])
+
+    for candidate in candidates:
+        cp.drawCurve([testPoint, candidate], candidateColor)
+
+    closestColor = PathUtilities.GTColor(100, 100, 255)
+    closest = refineBinary(testPoint, curve, LUT, i)
+    cp.drawPointsAsCircles([closest], 3, [closestColor])
+    cp.drawCurve([testPoint, closest], closestColor)
+    cp.drawPointsAsCircles([testPoint], 3, [colorDarkGrey])
+
+    image = cp.generateFinalImage()
+    imageFile = open("Point Projection Test.svg", "wt", encoding="UTF-8")
+    imageFile.write(image)
+    imageFile.close()
 
 if __name__ == "__main__":
     test()

@@ -147,20 +147,27 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         self._content.append(path)
         if color: self.popStrokeAtributes()
 
-    def drawPointsAsCircles(self, points, radius, color=None, fill=True):
-        if color:
+    def drawPointsAsCircles(self, points, radius, colors=None, fill=True):
+        if colors:
             if fill:
-                self._fillColor = color
+                self._fillColor = colors[0]
             else:
-                self.pushStrokeAttributes(color=color)
+                self.pushStrokeAttributes(color=colors[0])
 
         paintMode = GlyphPlotterEngine.PaintMode.fill if fill else GlyphPlotterEngine.PaintMode.stroke
 
+        i = 0
         for point in points:
             x, y = point
+            color = colors[i % len(colors)] if colors else None
+            i += 1
+            if fill:
+                if color: self.setFillColor(color)
+            else:
+                if color: self.setStrokeColor(color)
             self.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, x, y, radius, paintMode)
 
-        if color and not fill: self.popStrokeAtributes()
+        if colors and not fill: self.popStrokeAtributes()
 
     def drawCurve(self, segment, color=None):
         self.drawContours([[segment]], color=color, fill=False, close=False)
@@ -172,21 +179,21 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
     colorLightGrey = GTColor.fromName("lightgrey")
     colorBlack = GTColor.fromName("black")
 
-    def drawSkeleton(self, curve, lineColor=colorLightGrey, pointColor=colorBlack):
+    def drawSkeleton(self, curve, lineColor=colorLightGrey, pointColors=[colorBlack]):
         points = curve.controlPoints
         self._strokWidth = 1
         self.drawPointsAsSegments(points, lineColor)
-        self.drawPointsAsCircles(points, 2, pointColor, fill=False)
+        self.drawPointsAsCircles(points, 2, pointColors, fill=True)
 
-        if pointColor: self.pushFillAttributes(color=pointColor)
+        self.pushFillAttributes(color=self.colorBlack)
         self.setLabelFontSize(6, 6)
         for point in points:
             x, y = point
             self.drawText(x + 4, y - 4, "left", f"({round(x, 2)}, {round(y, 2)})", margin=False)
-        if pointColor: self.popFillAttributes()
+        self.popFillAttributes()
 
     def drawHull(self, curve, t, lineColor=colorLightGrey, pointColor=colorBlack):
-        self.drawSkeleton(curve, lineColor, pointColor)
+        self.drawSkeleton(curve, lineColor, [pointColor])
 
         if lineColor: self.pushStrokeAttributes(color=lineColor, opacity=0.5)
         order = curve.order
