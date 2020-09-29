@@ -1094,7 +1094,7 @@ def test():
     image6File.close()
 
     curvePoints = [(288, 182), (258, 66), (85, 70), (52, 124), (54, 278), (216, 183), (261, 270), (58, 204), (84, 303), (238, 352)]
-    testPoints = [(280, 135), (175, 80), (75, 105), (100, 230), (218, 292)]
+    testPoints = [(280, 135), (175, 80), (75, 105), (100, 230), (105, 295), (218, 292)]
     pointColors = [colorRed, colorGreen, colorBlue, colorYellow, colorOrange, colorCyan, colorMagenta]
     curve = Bezier(curvePoints)
     bounds = curve.skeletonBounds
