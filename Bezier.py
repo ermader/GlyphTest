@@ -1094,7 +1094,7 @@ def test():
     image6File.close()
 
     curvePoints = [(288, 182), (258, 66), (85, 70), (52, 124), (54, 278), (216, 183), (261, 270), (58, 204), (84, 303), (238, 352)]
-    testPoint = (280, 135)
+    testPoints = [(280, 135), (175, 80), (75, 105), (100, 230), (218, 292)]
     pointColors = [colorRed, colorGreen, colorBlue, colorYellow, colorOrange, colorCyan, colorMagenta]
     curve = Bezier(curvePoints)
     bounds = curve.skeletonBounds
@@ -1159,24 +1159,29 @@ def test():
 
         return q
 
+    candidateColor = PathUtilities.GTColor(100, 255, 100)
+    closestColor = PathUtilities.GTColor(100, 100, 255)
+
+    def projectionTest(point, curve, LUT, cp):
+        i = findClosest(testPoint, LUT)
+        candidates = [LUT[i]]
+        if i > 0: candidates.append(LUT[i - 1])
+        if i < len(LUT) - 1: candidates.append(LUT[i + 1])
+
+        cp.drawPointsAsCircles(candidates, 3, [candidateColor])
+
+        for candidate in candidates:
+            cp.drawCurve([testPoint, candidate], candidateColor)
+
+        closest = refineBinary(testPoint, curve, LUT, i)
+        cp.drawPointsAsCircles([closest], 3, [closestColor])
+        cp.drawCurve([testPoint, closest], closestColor)
+        cp.drawPointsAsCircles([testPoint], 3, [colorDarkGrey])
 
     LUT = curve.getLUT(20)
-    i = findClosest(testPoint, LUT)
-    candidateColor = PathUtilities.GTColor(100, 255, 100)
-    candidates = [LUT[i]]
-    if i > 0: candidates.append(LUT[i - 1])
-    if i < len(LUT) - 1: candidates.append(LUT[i + 1])
 
-    cp.drawPointsAsCircles(candidates, 3, [candidateColor])
-
-    for candidate in candidates:
-        cp.drawCurve([testPoint, candidate], candidateColor)
-
-    closestColor = PathUtilities.GTColor(100, 100, 255)
-    closest = refineBinary(testPoint, curve, LUT, i)
-    cp.drawPointsAsCircles([closest], 3, [closestColor])
-    cp.drawCurve([testPoint, closest], closestColor)
-    cp.drawPointsAsCircles([testPoint], 3, [colorDarkGrey])
+    for testPoint in testPoints:
+        projectionTest(testPoint, curve, LUT, cp)
 
     image = cp.generateFinalImage()
     imageFile = open("Point Projection Test.svg", "wt", encoding="UTF-8")
