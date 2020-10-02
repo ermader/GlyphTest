@@ -10,6 +10,7 @@ from https://github.com/Pomax/BezierInfo-2
 """
 
 import math
+import types
 from decimal import Decimal, getcontext
 import BezierUtilities as butils
 import PathUtilities
@@ -27,6 +28,17 @@ class Bezier(object):
         self._bbox = None
         self._boundsRectangle = None
         self._lut = []
+
+        # a bit of a hack to deal with the fact that control points
+        # are sometimes Decimal values...
+        def fp(p): return (float(p[0]), float(p[1]))
+
+        cp = [fp(p) for p in self.controlPoints]
+        aligned = self._align(cp, [cp[0], cp[-1]])
+        self._linear = len([x for x in aligned if abs(x[1]) > 0.0001]) == 0
+
+        angle = butils.angle(cp[0], cp[-1], cp[1])
+        self._clockwise = angle > 0
 
     def _compute(self, t):
         # shortcuts...
@@ -111,6 +123,8 @@ class Bezier(object):
             p0y = Decimal(p0y)
             p1x = Decimal(p1x)
             p1y = Decimal(p1y)
+            p2x = Decimal(p2x)
+            p2y = Decimal(p2y)
 
         rx = a * p0x + b * p1x + c * p2x
         ry = a * p0y + b * p1y + c * p2y
@@ -555,6 +569,96 @@ class Bezier(object):
 
         return (A, B, C, ratio, hull)
 
+    def raiseOrder(self):
+        p = self.controlPoints
+        k = len(p)
+        np = [p[0]]
+        for i in range(k):
+            pix, piy = pi = p[i]
+            pimx, pimy = pim = p[i - 1]
+            x = ((k - i) / k) * pix + (i / k) * pimx
+            y = ((k - i) / k) * piy + (i / k) * pimy
+            np.append((x, y))
+        np.append(p[-1])
+        return Bezier(np)
+
+    def offset(self, t, d=None):
+        def rp(r):
+            if r._linear:
+                return r.offset(t)[0]
+            return r.scale(t)
+
+        if d:
+            cx, cy = c = self.get(t)
+            nx, ny = n = self.normal(t)
+            px = cx + nx * d
+            py = cy + ny * d
+            return [c, n, (px, py)]
+
+        if self._linear:
+            nv = self.normal(0)
+            coords = list(map(lambda p: (p[0] + t * nv[0], p[1] + t * nv[1]), self.controlPoints))
+            return [Bezier(coords)]
+
+        reduced = self.reduce()
+        return list(map(rp, reduced))
+
+    def scale(self, d):
+        distanceFn = None
+        order = self.order
+
+        if type(d) == types.FunctionType:
+            distanceFn = d
+
+        if distanceFn and order == 2: return self.raiseOrder().scale(distanceFn)
+
+        # TODO: add special handling for degenerate (=linear) curves.
+        clockwise = self._clockwise
+        r1 = distanceFn(0) if distanceFn else d
+        r2 = distanceFn(1) if distanceFn else d
+        v = [self.offset(0, 10), self.offset(1, 10)]
+        np = [(0, 0) for _ in range(order+1)]
+        ox, oy = o = butils.lli4(v[0][2], v[0][0], v[1][2], v[1][0])
+
+        if not o:
+            raise ValueError("Cannot scale this curve. Try reducing it first.")
+
+        # move all points by distance 'd' wrt the origin 'o'
+
+        # move end points by fixed distance along normal.
+        for t in range(2):
+            px, py = self.controlPoints[t * order]
+            px += (r2 if t > 0 else r1) * v[t][1][0]  # v[t].n.x
+            py += (r2 if t > 0 else r1) * v[t][1][1]  # v[t].n.y
+            np[t * order] = (px, py)
+
+        if distanceFn is None:
+            # move control points to lie on the intersection of the offset
+            # derivative vector, and the origin-through-control vector
+            for t in range(2):
+                if order == 2 and t > 0: break
+                px, py = p = np[t * order]
+                dx, dy = d = self._derivative(t)
+                p2 = (px + dx, py + dy)
+                np[t + 1] = butils.lli4(p, p2, o, self.controlPoints[t + 1])
+
+            return Bezier(np)
+
+        # move control points by "however much necessary to
+        # ensure the correct tangent to endpoint".
+        for t in range(2):
+            if order == 2 and t > 0: break
+            px, py = p = self.controlPoints[t + 1]
+            ovx, ovy = (px - ox, py - oy)
+            rc = distanceFn((t + 1) / order) if distanceFn else d
+            if distanceFn and not clockwise: rc = -rc
+            m = math.hypot(ovx, ovy)
+            ovx /= m
+            ovy /= m
+            np[t + 1] = (px + rc * ovx, py + rc * ovy)
+
+        return Bezier(np)
+
 class BContour(object):
     def __init__(self, contour):
         beziers = []
@@ -599,7 +703,7 @@ class BOutline(object):
 
 def drawCurve(cp, curve, color=None):
     if curve.order <= 3:
-        cp.drawCurve(curve.controlPoints)
+        cp.drawCurve(curve.controlPoints, color)
     else:
         lpts = curve.getLUT()
         cp.drawPointsAsSegments(lpts, color)
@@ -1185,6 +1289,73 @@ def test():
 
     image = cp.generateFinalImage()
     imageFile = open("Point Projection Test.svg", "wt", encoding="UTF-8")
+    imageFile.write(image)
+    imageFile.close()
+
+    curve = getDefaultCubic()
+    bounds = curve.boundsRectangle
+    cp = ContourPlotter(bounds.points)
+
+    reduced = curve.reduce()
+    for r in reduced:
+        color = PathUtilities.GTColor.randomHSLColor()
+        drawCurve(cp, r, color)
+        cp.drawPointsAsCircles([r.controlPoints[0]], 2, [color])
+    cp.drawPointsAsCircles([reduced[-1].controlPoints[-1]], 2, [color])
+
+    cp.pushStrokeAttributes(opacity=0.3)
+    cp.pushFillAttributes(opacity=0.3)
+    offset = curve.offset(-20)
+    for o in offset:
+        drawCurve(cp, o, colorRed)
+        cp.drawPointsAsCircles([o.controlPoints[0]], 2, [colorRed])
+    cp.drawPointsAsCircles([offset[-1].controlPoints[-1]], 2, [colorRed])
+
+    offset = curve.offset(20)
+    for o in offset:
+        drawCurve(cp, o, colorBlue)
+        cp.drawPointsAsCircles([o.controlPoints[0]], 2, [colorBlue])
+    cp.drawPointsAsCircles([offset[-1].controlPoints[-1]], 2, [colorBlue])
+
+    image = cp.generateFinalImage()
+    imageFile = open("Curve Offset Test.svg", "wt", encoding="UTF-8")
+    imageFile.write(image)
+    imageFile.close()
+
+    def linearDistanceFunction(d, tlen, alen, slen):
+        f1 = alen / tlen
+        f2 = (alen + slen) / tlen
+        return lambda v: butils.map(v, 0, 1, f1 * d, f2 * d)
+
+    def outline(curve, d):
+        fcurves = []
+        bcurves = []
+        reduced = curve.reduce()
+        alen = 0
+        tlen = float(curve.length)
+
+        for segment in reduced:
+            slen = float(segment.length)
+            fcurves.append(segment.scale(linearDistanceFunction(-d, tlen, alen, slen)))
+            bcurves.append(segment.scale(linearDistanceFunction(d, tlen, alen, slen)))
+            alen += slen
+
+        map(lambda s: s.controlPoints.reverse(), bcurves)
+        bcurves.reverse()
+        fcurves.extend(bcurves)
+        return fcurves
+
+    curve = getDefaultCubic()
+    bounds = curve.boundsRectangle
+    cp = ContourPlotter(bounds.points)
+
+    PathUtilities.GTColor.setCurrentHue()
+    drawCurve(cp, curve, colorLightBlue)
+    for s in outline(curve, 20):
+        drawCurve(cp, s, PathUtilities.GTColor.randomHSLColor())
+
+    image = cp.generateFinalImage()
+    imageFile = open("Curve Graduated Offset Test.svg", "wt", encoding="UTF-8")
     imageFile.write(image)
     imageFile.close()
 

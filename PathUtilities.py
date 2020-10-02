@@ -6,7 +6,8 @@ Created on July 7, 2020
 @author Eric Mader
 """
 
-import math
+import math, random
+from colorsys import hls_to_rgb
 from FontDocTools.Color import Color
 from BezierUtilities import lli
 
@@ -189,6 +190,31 @@ class GTColor(Color):
         Return a color given the name.
         """
         return cls._forKeyword(name)
+
+    @classmethod
+    def randomRGBColor(cls):
+        red = random.randint(0, 255)
+        green = random.randint(0, 255)
+        blue = random.randint(0, 255)
+        return GTColor(red, green, blue)
+
+    CURRENT_HUE = 0
+
+    @classmethod
+    def setCurrentHue(cls, hue=0):
+        cls.CURRENT_HUE = hue
+
+    # Based on randomColor() from graphics-api.js from
+    # from https://github.com/Pomax/BezierInfo-2
+    # (not really random...)
+    @classmethod
+    def randomHSLColor(cls):
+        cls.CURRENT_HUE = (cls.CURRENT_HUE + 73) % 360
+        hue = cls.CURRENT_HUE
+        saturation = 50
+        lightness = 50
+        red, green, blue = hls_to_rgb(hue / 360, lightness / 100, saturation / 100)
+        return GTColor(round(red * 255), round(green * 255), round(blue * 255))
 
 class GTBoundsRectangle(object):
     """\
