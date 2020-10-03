@@ -1294,9 +1294,13 @@ def test():
 
     curve = getDefaultCubic()
     bounds = curve.boundsRectangle
-    cp = ContourPlotter(bounds.points)
 
     reduced = curve.reduce()
+    for r in reduced:
+        bounds = bounds.union(r.boundsRectangle)
+
+    cp = ContourPlotter(bounds.points)
+
     for r in reduced:
         color = PathUtilities.GTColor.randomHSLColor()
         drawCurve(cp, r, color)
@@ -1330,29 +1334,42 @@ def test():
     def outline(curve, d):
         fcurves = []
         bcurves = []
+        bounds = curve.boundsRectangle
         reduced = curve.reduce()
         alen = 0
         tlen = float(curve.length)
 
         for segment in reduced:
             slen = float(segment.length)
-            fcurves.append(segment.scale(linearDistanceFunction(-d, tlen, alen, slen)))
-            bcurves.append(segment.scale(linearDistanceFunction(d, tlen, alen, slen)))
+            fc = segment.scale(linearDistanceFunction(-d, tlen, alen, slen))
+            bounds = bounds.union(fc.boundsRectangle)
+            fcurves.append(fc)
+
+            bc = segment.scale(linearDistanceFunction(d, tlen, alen, slen))
+            bounds = bounds.union(bc.boundsRectangle)
+            bcurves.append(bc)
+
             alen += slen
 
-        map(lambda s: s.controlPoints.reverse(), bcurves)
-        bcurves.reverse()
-        fcurves.extend(bcurves)
-        return fcurves
+        # JavaScript code does this to enable it to draw
+        # fcurves and bcurves as one continuous shape...
+        # map(lambda s: s.controlPoints.reverse(), bcurves)
+        # bcurves.reverse()
+        # fcurves.extend(bcurves)
+        return (fcurves, bcurves, bounds)
 
     curve = getDefaultCubic()
-    bounds = curve.boundsRectangle
+    fcurves, bcurves, bounds = outline(curve, 20)
     cp = ContourPlotter(bounds.points)
 
     PathUtilities.GTColor.setCurrentHue()
-    drawCurve(cp, curve, colorLightBlue)
-    for s in outline(curve, 20):
-        drawCurve(cp, s, PathUtilities.GTColor.randomHSLColor())
+    drawCurve(cp, curve, colorBlue)
+
+    for fc in fcurves:
+        drawCurve(cp, fc, colorRed)
+
+    for bc in bcurves:
+        drawCurve(cp, bc, colorGreen)
 
     image = cp.generateFinalImage()
     imageFile = open("Curve Graduated Offset Test.svg", "wt", encoding="UTF-8")
