@@ -1382,5 +1382,38 @@ def test():
     imageFile.write(image)
     imageFile.close()
 
+    kappa = 0.5519768352769461
+    r = 100
+    quarterCirclePoints = [(r, 0), (r, kappa * r), (kappa * r, r), (0, r)]
+    quarterCircle = Bezier(quarterCirclePoints)
+    cp = ContourPlotter((-100, -100, 100, 100))
+    cp.drawPointsAsSegments([(0, 100), (0, -100)], colorDarkGrey)
+    cp.drawPointsAsSegments([(100, 0), (-100, 0)], colorDarkGrey)
+    cp.drawPointsAsCircles([(0, 0)], r, [colorDarkGrey], fill=False)
+
+    cp.pushStrokeAttributes(opacity=0.25)
+    drawCurve(cp, quarterCircle, colorRed)
+
+    mirror = PathUtilities.GTTransform.mirror(xAxis=True)
+    mpoints = mirror.applyToSegment(quarterCircle.controlPoints)
+    c = Bezier(mpoints)
+    drawCurve(cp, c, colorGreen)
+
+    mirror = PathUtilities.GTTransform.mirror(xAxis=True, yAxis=True)
+    mpoints = mirror.applyToSegment(quarterCircle.controlPoints)
+    c = Bezier(mpoints)
+    drawCurve(cp, c, colorBlue)
+
+    mirror = PathUtilities.GTTransform.mirror(yAxis=True)
+    mpoints = mirror.applyToSegment(quarterCircle.controlPoints)
+    c = Bezier(mpoints)
+    drawCurve(cp, c, colorCyan)
+
+
+    image = cp.generateFinalImage()
+    imageFile = open("Cubic Circle Test.svg", "wt", encoding="UTF-8")
+    imageFile.write(image)
+    imageFile.close()
+
 if __name__ == "__main__":
     test()
