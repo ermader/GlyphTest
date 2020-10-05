@@ -1296,8 +1296,15 @@ def test():
     bounds = curve.boundsRectangle
 
     reduced = curve.reduce()
-    for r in reduced:
-        bounds = bounds.union(r.boundsRectangle)
+
+    offset1 = curve.offset(-20)
+    offset2 = curve.offset(20)
+
+    for o in offset1:
+        bounds = bounds.union(o.boundsRectangle)
+
+    for o in offset2:
+        bounds = bounds.union(o.boundsRectangle)
 
     cp = ContourPlotter(bounds.points)
 
@@ -1309,17 +1316,16 @@ def test():
 
     cp.pushStrokeAttributes(opacity=0.3)
     cp.pushFillAttributes(opacity=0.3)
-    offset = curve.offset(-20)
-    for o in offset:
+
+    for o in offset1:
         drawCurve(cp, o, colorRed)
         cp.drawPointsAsCircles([o.controlPoints[0]], 2, [colorRed])
-    cp.drawPointsAsCircles([offset[-1].controlPoints[-1]], 2, [colorRed])
+    cp.drawPointsAsCircles([offset1[-1].controlPoints[-1]], 2, [colorRed])
 
-    offset = curve.offset(20)
-    for o in offset:
+    for o in offset2:
         drawCurve(cp, o, colorBlue)
         cp.drawPointsAsCircles([o.controlPoints[0]], 2, [colorBlue])
-    cp.drawPointsAsCircles([offset[-1].controlPoints[-1]], 2, [colorBlue])
+    cp.drawPointsAsCircles([offset2[-1].controlPoints[-1]], 2, [colorBlue])
 
     image = cp.generateFinalImage()
     imageFile = open("Curve Offset Test.svg", "wt", encoding="UTF-8")
