@@ -787,17 +787,17 @@ def test():
     lLength = 20
     for i in range(nPoints + 1):
         t = i / nPoints
-        p = curve1.get(t)
+        px, py = curve1.get(t)
 
-        tp = curve1._tangent(t)
-        tx = tp[0] * lLength/2
-        ty = tp[1] * lLength/2
-        cp1.drawContours([[[(p[0] - tx, p[1] - ty), (p[0] + tx, p[1] + ty)]]], colorRed)
+        tpx, tpy = curve1._tangent(t)
+        tx = tpx * lLength/2
+        ty = tpy * lLength/2
+        cp1.drawContours([[[(px - tx, py - ty), (px + tx, py + ty)]]], colorRed)
 
-        np = curve1._normal(t)
-        nx = np[0] * lLength/2
-        ny = np[1] * lLength/2
-        cp1.drawContours([[[(p[0] - nx, p[1] - ny), (p[0] + nx, p[1] + ny)]]], colorGreen)
+        npx, npy = curve1._normal(t)
+        nx = npx * lLength/2
+        ny = npy * lLength/2
+        cp1.drawContours([[[(px - nx, py - ny), (px + nx, py + ny)]]], colorGreen)
 
     image1 = cp1.generateFinalImage()
 
