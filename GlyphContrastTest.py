@@ -17,70 +17,6 @@ import GlyphContours
 import PathUtilities
 import ContourPlotter
 
-MAX_SAFE_INTEGER = +9007199254740991  # Number.MAX_SAFE_INTEGER
-MIN_SAFE_INTEGER = -9007199254740991  # Number.MIN_SAFE_INTEGER
-
-# findClosest() and refineBinary() copied from Bezier.test()...
-def findClosest(point, LUT):
-    x, y = point
-    closest = MAX_SAFE_INTEGER
-    for index in range(len(LUT)):
-        px, py = LUT[index]
-        dist = math.hypot(px - x, py - y)
-        if dist < closest:
-            closest = dist
-            i = index
-
-    return i
-
-
-"""\
-  We already know that LUT[i1] and LUT[i2] are *not* good distances,
-  so we know that a better distance will be somewhere between them.
-  We generate three new points between those two, so we end up with
-  five points, and then check which three of those five are a new,
-  better, interval to check within.
-"""
-
-
-def refineBinary(point, curve, LUT, i):
-    closest = MAX_SAFE_INTEGER
-    steps = len(LUT)
-    TT = [t / (steps - 1) for t in range(steps)]
-    px, py = point
-
-    for _ in range(25):  # This is for safety; the loop should always break
-        steps = len(LUT)
-        i1 = 0 if i == 0 else i - 1
-        i2 = i if i == steps - 1 else i + 1
-        t1 = TT[i1]
-        t2 = TT[i2]
-        lut = []
-        tt = []
-        step = (t2 - t1) / 5
-
-        if step < 0.001: break
-        lut.append(LUT[i1])
-        tt.append(TT[i1])
-        for j in range(1, 4):
-            nt = t1 + (j * step)
-            nx, ny = n = curve.get(nt)
-            dist = math.hypot(nx - px, ny - py)
-            if dist < closest:
-                closest = dist
-                q = n
-                i = j
-            lut.append(n)
-            tt.append(nt)
-        lut.append(LUT[i2])
-        tt.append(TT[i2])
-
-        # update the LUT to be our new five point LUT, and run again.
-        LUT = lut
-        TT = tt
-
-    return (q, closest)
-
 def test():
     steps = 20
     font = GTFont("/System/Library/Fonts/NewYork.ttf")
@@ -91,22 +27,12 @@ def test():
     bounds = outline.boundsRectangle
     closePoints = []
 
-    for outer in outline.bContours[0].beziers:
-        outerLUT = outer.getLUT(steps)
+    outerContour, innerContour = outline.bContours
+    outerLUT = outerContour.getLUT(steps)
 
-        for op in outerLUT:
-            cop = cip = None  # just to remove a referenced before assignment warning...
-            closest = MAX_SAFE_INTEGER
-            for inner in outline.bContours[1].beziers:
-                innerLUT = inner.getLUT(steps)
-                i = findClosest(op, innerLUT)
-                ip, dist = refineBinary(op, inner, innerLUT, i)
-                if dist < closest:
-                    closest = dist
-                    cop = op
-                    cip = ip
-
-            closePoints.append((closest, cop, cip))
+    for op in outerLUT:
+        closest, ip = innerContour.findClosestPoint(op, steps)
+        closePoints.append((closest, op, ip))
 
     closePoints.sort(key=lambda cp: cp[0])
 

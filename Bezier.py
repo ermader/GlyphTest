@@ -17,6 +17,9 @@ import PathUtilities
 import CurveFitting
 from ContourPlotter import ContourPlotter
 
+MAX_SAFE_INTEGER = +9007199254740991  # Number.MAX_SAFE_INTEGER
+MIN_SAFE_INTEGER = -9007199254740991  # Number.MIN_SAFE_INTEGER
+
 class Bezier(object):
     def __init__(self, controlPoints):
         self._controlPoints = controlPoints
@@ -671,6 +674,84 @@ class BContour(object):
 
         self._beziers = beziers
         self._bounds = bounds
+        self._lut = []
+
+    def getLUT(self, steps=100):
+        if len(self._lut) == steps: return self._lut
+
+        self._lut = []
+        startPoint = 0
+        for curve in self._beziers:
+            self._lut.extend(curve.getLUT(steps)[startPoint:])
+            # for every curve but the first, the first point is
+            # the same as the last point of the last curve
+            startPoint = 1
+
+        return self._lut
+
+    @classmethod
+    def _findClosest(cls, point, LUT):
+        x, y = point
+        closest = MAX_SAFE_INTEGER
+        for index in range(len(LUT)):
+            px, py = LUT[index]
+            dist = math.hypot(px - x, py - y)
+            if dist < closest:
+                closest = dist
+                i = index
+
+        return i
+
+    @classmethod
+    def _refineBinary(cls, point, curve, LUT, i):
+        closest = MAX_SAFE_INTEGER
+        steps = len(LUT)
+        TT = [t / (steps - 1) for t in range(steps)]
+        px, py = point
+
+        for _ in range(25):  # This is for safety; the loop should always break
+            steps = len(LUT)
+            i1 = 0 if i == 0 else i - 1
+            i2 = i if i == steps - 1 else i + 1
+            t1 = TT[i1]
+            t2 = TT[i2]
+            lut = []
+            tt = []
+            step = (t2 - t1) / 5
+
+            if step < 0.001: break
+            lut.append(LUT[i1])
+            tt.append(TT[i1])
+            for j in range(1, 4):
+                nt = t1 + (j * step)
+                nx, ny = n = curve.get(nt)
+                dist = math.hypot(nx - px, ny - py)
+                if dist < closest:
+                    closest = dist
+                    q = n
+                    i = j
+                lut.append(n)
+                tt.append(nt)
+            lut.append(LUT[i2])
+            tt.append(TT[i2])
+
+            # update the LUT to be our new five point LUT, and run again.
+            LUT = lut
+            TT = tt
+
+        return (q, closest)
+
+    def findClosestPoint(self, point, steps):
+        closest = MAX_SAFE_INTEGER
+        for curve in self._beziers:
+            LUT = curve.getLUT(steps)
+            i = self._findClosest(point, LUT)
+            ip, dist = self._refineBinary(point, curve, LUT, i)
+            if dist < closest:
+                closest = dist
+                cip = ip
+
+        return (closest, cip)
 
     @property
     def boundsRectangle(self):
