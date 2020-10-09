@@ -742,21 +742,31 @@ class BContour(object):
         return (q, closest)
 
     def findClosestPoint(self, point, steps):
+        nCurves = len(self.beziers)
+        curve2 = None
         i = self._findClosest(point, self.getLUT(steps))
 
-        # if i is the last point on a curve, it's also the
-        # first point on the next curve, so we should probably
-        # check that curve too...
         if i < steps:
             curve = self.beziers[0]
+            if i == steps - 1 and nCurves >= 2: curve2 = self.beziers[1]
         else:
             i -= steps
             s1 = steps - 1
-            curve = self.beziers[1 + (i // s1)]
+            ix = i // s1 + 1
+            curve = self.beziers[ix]
+            if ix < nCurves - 1: curve2 = self.beziers[ix + 1]
             i %= s1
 
         LUT = curve.getLUT(steps)
         cip, closest = self._refineBinary(point, curve, LUT, i)
+
+        if curve2:
+            LUT = curve2.getLUT(steps)
+            cip2, c2 = self._refineBinary(point, curve2, LUT, 0)
+
+            if c2 < closest:
+                closest = c2
+                cip = cip2
 
         return (closest, cip)
 
