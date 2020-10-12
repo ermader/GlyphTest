@@ -8,7 +8,8 @@ Created on September 24, 2020
 from os.path import basename
 from sys import argv, exit, stderr
 import logging
-import ufoLib
+# import ufoLib
+from ufoLib import glifLib
 from FontDocTools.ArgumentIterator import ArgumentIterator
 import Bezier
 import PathUtilities
@@ -180,10 +181,10 @@ class SegmentPen:
             t = None
 
         glifString = self._glyphSet.getGLIF(glyphName)
-        glyph = ufoLib.glifLib.Glyph(self._glyphSet, "")
+        glyph = glifLib.Glyph(self._glyphSet, "")
         cpen = SegmentPen(self._glyphSet, self.logger)
-        psp = ufoLib.glifLib.PointToSegmentPen(cpen)
-        ufoLib.glifLib.readGlyphFromString(glifString, glyph, psp)
+        psp = glifLib.PointToSegmentPen(cpen)
+        glifLib.readGlyphFromString(glifString, glyph, psp)
         contours = t.applyToContours(cpen.contours) if t else cpen.contours
         self.contours.extend(contours)
 
@@ -204,11 +205,11 @@ colorLightBlue = PathUtilities.GTColor.fromName("lightblue")
 colorLightGreen = PathUtilities.GTColor.fromName("lightgreen")
 
 def getGLIFOutline(glyphSet, glyphName, logger):
-    glyph = ufoLib.glifLib.Glyph(glyphSet, "")
+    glyph = glifLib.Glyph(glyphSet, "")
     glifString = glyphSet.getGLIF(glyphName)
     pen = SegmentPen(glyphSet, logger)
-    psp = ufoLib.glifLib.PointToSegmentPen(pen)
-    ufoLib.glifLib.readGlyphFromString(glifString, glyph, psp)
+    psp = glifLib.PointToSegmentPen(pen)
+    glifLib.readGlyphFromString(glifString, glyph, psp)
     return Bezier.BOutline(pen.contours)
 
 
@@ -249,7 +250,7 @@ def test():
         level = logging.DEBUG if args.debug else logging.WARNING
         logging.basicConfig(level=level)
         logger = logging.getLogger("glif-test")
-        gs = ufoLib.glifLib.GlyphSet(f"{args.fontName}/glyphs")
+        gs = glifLib.GlyphSet(f"{args.fontName}/glyphs")
         for glyphName in args.glyphList:
             glifOutlineTest(gs, glyphName, logger, colorBlue)
 

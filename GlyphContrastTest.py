@@ -14,6 +14,7 @@ from os.path import basename
 from sys import argv, exit, stderr
 import logging
 from re import fullmatch
+from ufoLib import glifLib, plistlib
 from FontDocTools.ArgumentIterator import ArgumentIterator
 from GlyphTest import GTFont
 from Bezier import Bezier, BOutline, drawOutline
@@ -42,6 +43,24 @@ class ContrastTestArgumentIterator(ArgumentIterator):
 
         return nextArgument
 
+    def nextExtraAsFont(self, valueName):
+        """\
+        Returns a tuple (fontFile, fontName).
+        The font file is taken from the first extra argument.
+        If the font file name ends in “.ttc”, the font name is taken from
+        the second extra argument; otherwise it is None.
+        Raises ValueError if there’s no more argument, or if the next
+        argument starts with “--”, or if it’s not a valid file name,
+        or if there’s no font name along with a font file name ending in “.ttc”.
+        """
+        fontFile = self.nextExtra(valueName + " file")
+        fontName = None
+        if fontFile.endswith(".ttc"):
+            fontName = self.nextExtra(valueName + " name")
+        elif not fontFile.endswith(".ttf") and not fontFile.endswith(".otf") and not fontFile.endswith(".ufo"):
+            raise ValueError(f"Expected file name with “.ttf” or “.otf” or “.ufo”; got “{fontFile}”.")
+        return (fontFile, fontName)
+
     def getGlyphList(self):
         glist = []
         nextArg = self.nextOptional()
@@ -59,6 +78,7 @@ class ContrastTestArgs:
         self.glyphName = None
         self.glyphID = None
         self.charCode = None
+        self.steps = 20
 
     def completeInit(self):
         """\
@@ -119,6 +139,8 @@ class ContrastTestArgs:
                     args.charCode = cls.getHexCharCode(extra[1:])
                 elif extra[0:3] == "gid":
                     args.glyphID = cls.getGlyphID(extra[3:])
+            elif argument == "--steps":
+                args.steps = arguments.nextExtraAsPosInt("steps")
             elif argument == "--debug":
                 args.debug = True
             else:
@@ -127,10 +149,136 @@ class ContrastTestArgs:
         args.completeInit()
         return args
 
+class SegmentPen:
+    def __init__(self, glyphSet, logger):
+        self._contours = []
+        self._glyphSet = glyphSet
+        self.logger = logger
+
+    def addPoint(self, pt, segmentType, smooth, name):
+        raise NotImplementedError
+
+    def moveTo(self, pt):
+        self._lastOnCurve = pt
+
+        # This is for glyphs, which are always closed paths,
+        # so we assume that the move is the start of a new contour
+        self._contour = []
+        self._segment = []
+        self.logger.debug(f"moveTo({pt})")
+
+    def lineTo(self, pt):
+        segment = [self._lastOnCurve, pt]
+        self._contour.append(segment)
+        self._lastOnCurve = pt
+        self.logger.debug(f"lineTo({pt})")
+
+    def curveTo(self, *points):
+        segment = [self._lastOnCurve]
+        segment.extend(points)
+        self._contour.append(segment)
+        self._lastOnCurve = points[-1]
+        self.logger.debug(f"curveTo({points})")
+
+    def qCurveTo(self, *points):
+        segment = [self._lastOnCurve]
+        segment.extend(points)
+
+        if len(segment) <= 3:
+            self._contour.append(segment)
+        else:
+            # a starting on-curve point, two or more off-curve points, and a final on-curve point
+            startPoint = segment[0]
+            for i in range(1, len(segment) - 2):
+                p1x, p1y = segment[i]
+                p2x, p2y = segment[i + 1]
+                impliedPoint = (0.5 * (p1x + p2x), 0.5 * (p1y + p2y))
+                self._contour.append([startPoint, segment[i], impliedPoint])
+                startPoint = impliedPoint
+            self._contour.append([startPoint, segment[-2], segment[-1]])
+        self._lastOnCurve = segment[-1]
+        self.logger.debug(f"qCurveTo({points})")
+
+    def beginPath(self):
+        raise NotImplementedError
+
+    def closePath(self):
+        self._contours.append(self._contour)
+        if self._contour[0][0] != self._contour[-1][-1]:
+            self._contour.append([self._contour[-1][-1], self._contour[0][0]])
+        self._contour = []
+        self.logger.debug("closePath()")
+
+    def endPath(self):
+        raise NotImplementedError
+
+    identityTransformation = (1, 0, 0, 1, 0, 0)
+
+    def addComponent(self, glyphName, transformation):
+        self.logger.debug(f"addComponent(\"{glyphName}\", {transformation}")
+        if transformation != self.identityTransformation:
+            xScale, xyScale, yxScale, yScale, xOffset, yOffset = transformation
+            m = PathUtilities.GTTransform._matrix(
+                a=xScale,
+                b=xyScale,
+                c=yxScale,
+                d=yScale,
+                m=xOffset,
+                n=yOffset
+            )
+            t = PathUtilities.GTTransform(m)
+        else:
+            t = None
+
+        glifString = self._glyphSet.getGLIF(glyphName)
+        glyph = glifLib.Glyph(self._glyphSet, "")
+        cpen = SegmentPen(self._glyphSet, self.logger)
+        psp = glifLib.PointToSegmentPen(cpen)
+        glifLib.readGlyphFromString(glifString, glyph, psp)
+        contours = t.applyToContours(cpen.contours) if t else cpen.contours
+        self.contours.extend(contours)
+
+    @property
+    def contours(self):
+        return self._contours
+
+class UFOFont(object):
+    def __init__(self, fileName):
+        infoFile = open(f"{fileName}/fontinfo.plist", "r", encoding="UTF-8")
+        self._fileInfo = plistlib.load(infoFile)
+        self._glyphSet = glifLib.GlyphSet(f"{fileName}/glyphs")
+
+    @property
+    def fullName(self):
+        return self._fileInfo["postscriptFontName"]  # Should also check for full name...
+
+    def getGlyphContours(self, glyphName, logger):
+        glyph = glifLib.Glyph(self._glyphSet, "")
+        glifString = self._glyphSet.getGLIF(glyphName)
+        pen = SegmentPen(self._glyphSet, logger)
+        psp = glifLib.PointToSegmentPen(pen)
+        glifLib.readGlyphFromString(glifString, glyph, psp)
+        return pen.contours
+
+
 def getGlyphFromArgs(args, font):
     if args.glyphName: return font.glyphForName(args.glyphName)
     if args.glyphID: return font.glyphForIndex(args.glyphID)
     if args.charCode: return font.glyphForCharacter(args.charCode)
+
+def getGlyphContours(args, font):
+    if args.fontFile.endswith(".ufo"):
+        level = logging.DEBUG if args.debug else logging.WARNING
+        logging.basicConfig(level=level)
+        logger = logging.getLogger("glif-test")
+        glyphContours = font.getGlyphContours(args.glyphName, logger)
+        return (glyphContours, args.glyphName)
+
+    font = GTFont(args.fontFile, fontName=args.fontName)
+    glyph = getGlyphFromArgs(args, font)
+    glyphContours = GlyphContours.GTGlyphCoutours(glyph)
+    return (glyphContours.contours, glyph.name())
+
 
 def main():
     argumentList = argv
@@ -145,13 +293,18 @@ def main():
         print(programName + ": " + str(error), file=stderr)
         exit(1)
 
-    steps = 20
-    font = GTFont(args.fontFile, fontName=args.fontName)
+    steps = args.steps
+
+    if args.fontFile.endswith(".ufo"):
+        font = UFOFont(args.fontFile)
+    else:
+        font = GTFont(args.fontFile, fontName=args.fontName)
     fullName = font.fullName
     if fullName.startswith("."): fullName = fullName[1:]
-    glyph = getGlyphFromArgs(args, font)
-    glyphContours = GlyphContours.GTGlyphCoutours(glyph)
-    contours = glyphContours.contours
+    # glyph = getGlyphFromArgs(args, font)
+    # glyphContours = GlyphContours.GTGlyphCoutours(glyph)
+    # contours = glyphContours.contours
+    contours, glyphName = getGlyphContours(args, font)
     outline = BOutline(contours)
     bounds = outline.boundsRectangle
     closePoints = []
@@ -165,7 +318,7 @@ def main():
 
     closePoints.sort(key=lambda cp: cp[0])
 
-    print(f"Glyph {glyph.name()}: Max distance = {closePoints[-1][0]}, min distance = {closePoints[0][0]}")
+    print(f"Glyph {glyphName}: Max distance = {closePoints[-1][0]}, min distance = {closePoints[0][0]}")
     cp = ContourPlotter.ContourPlotter(bounds.points)
     cp.drawContours([bounds.contour], PathUtilities.GTColor.fromName("grey"))
     drawOutline(cp, outline)
@@ -179,7 +332,7 @@ def main():
 
     image = cp.generateFinalImage()
 
-    imageFile = open(f"Glyph Contrast Test {fullName}_{glyph.name()}.svg", "wt", encoding="UTF-8")
+    imageFile = open(f"Glyph Contrast Test {fullName}_{glyphName}.svg", "wt", encoding="UTF-8")
     imageFile.write(image)
     imageFile.close()
 

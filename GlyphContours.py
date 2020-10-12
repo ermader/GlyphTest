@@ -18,6 +18,7 @@ class GTGlyphCoutours(object):
         font = glyph._font
         glyfTable = font['glyf']
         ttGlyph = glyfTable[glyph.name()]
+        # ttGlyph = font._ttGlyphSet[glyph.name()]
 
         self._minX = self._minY = 65536
         self._maxX = self._maxY = -65536
