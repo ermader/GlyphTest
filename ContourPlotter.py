@@ -16,7 +16,10 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
     def __init__(self, bounds, poly=False):
         GlyphPlotterEngine.GlyphPlotterEngine.__init__(self)
         self._boundsAggregator.addBounds(bounds)
-        self.setContentMargins(GlyphPlotterEngine.Margins(24, 24, 24, 24))
+        left, bottom, right, top = bounds
+        width = right - left
+        height = top - bottom
+        self.setContentMargins(GlyphPlotterEngine.Margins(width // 20, height // 20, width // 20, height // 20))
         self._poly = poly
         self._lastCommand = ""
         self._fillAttributeStack = []

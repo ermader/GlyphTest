@@ -201,10 +201,11 @@ def main():
 
     print(f"Glyph {glyphName}: Max distance = {closePoints[-1][0]}, min distance = {closePoints[0][0]}")
     cp = ContourPlotter.ContourPlotter(bounds.points)
-    cp.setLabelFontSize(20, 20)
     margin = cp._contentMargins.left
+    pointSize = cp._contentMargins.top / 2
+    cp.setLabelFontSize(pointSize, pointSize)
 
-    cp.drawText(bounds.width / 2 + margin, 5, "center", f"min = {round(closePoints[0][0], 2)}, max = {round(closePoints[-1][0], 2)}")
+    cp.drawText(bounds.width / 2 + margin, pointSize / 4, "center", f"min = {round(closePoints[0][0], 2)}, max = {round(closePoints[-1][0], 2)}")
 
     cp.drawContours([bounds.contour], PathUtilities.GTColor.fromName("grey"))
     drawOutline(cp, outline)
