@@ -7,67 +7,35 @@ Created on August 5, 2020
 """
 
 import math
+import logging
 import PathUtilities
+from SegmentPen import SegmentPen
 
 class GTGlyphCoutours(object):
     # This class needs access to Glyph internals that shouldn’t be exposed otherwise.
     # pylint: disable=protected-access
 
+    logger = logging.getLogger("glyph-contours")
+
     def __init__(self, glyph):
         self._glyph = glyph
         font = glyph._font
-        glyfTable = font['glyf']
-        ttGlyph = glyfTable[glyph.name()]
-        # ttGlyph = font._ttGlyphSet[glyph.name()]
+        pen = SegmentPen(font.glyphSet, self.logger)
+        font.glyphSet[glyph.name()].draw(pen)
+        self._contours = pen.contours
 
-        self._minX = self._minY = 65536
-        self._maxX = self._maxY = -65536
-        self._contours = []
+        # make a pass over the contours to calculate the bounds
+        minX = minY = 65536
+        maxX = maxY = -65536
+        for contour in self._contours:
+            for segment in contour:
+                for x, y in segment:
+                    minX = min(minX, x)
+                    minY = min(minY, y)
+                    maxX = max(maxX, x)
+                    maxY = max(maxY, y)
 
-        coords, endPoints, flags = ttGlyph.getCoordinates(glyfTable)
-        coords = coords.copy()
-
-        startPoint = 0
-        for endPoint in endPoints:
-            self._segments = []
-            limitPoint = endPoint + 1
-            contour = coords[startPoint:limitPoint]
-            contourFlags = [flag & 0x1 for flag in flags[startPoint:limitPoint]]
-
-            contour.append(contour[0])
-            contourFlags.append(contourFlags[0])
-            startPoint = limitPoint
-
-            while len(contour) > 1:
-                firstOnCurve = contourFlags.index(1)
-                nextOnCurve = contourFlags.index(1, firstOnCurve + 1)
-                self.handleSegment(contour[firstOnCurve:nextOnCurve + 1])
-                contour = contour[nextOnCurve:]
-                contourFlags = contourFlags[nextOnCurve:]
-
-            self._contours.append(self._segments)
-
-        self._boundsRectangle = PathUtilities.GTBoundsRectangle((self._minX, self._minY), (self._maxX, self._maxY))
-
-    def handleSegment(self, segment):
-        for x, y in segment:
-            self._minX = min(self._minX, x)
-            self._minY = min(self._minY, y)
-            self._maxX = max(self._maxX, x)
-            self._maxY = max(self._maxY, y)
-
-        if len(segment) <= 3:
-            self._segments.append(segment)
-        else:
-            # a starting on-curve point, two or more off-curve points, and a final on-curve point
-            startPoint = segment[0]
-            for i in range(1, len(segment) - 2):
-                p1x, p1y = segment[i]
-                p2x, p2y = segment[i + 1]
-                impliedPoint = (0.5 * (p1x + p2x), 0.5 * (p1y + p2y))
-                self._segments.append([startPoint, segment[i], impliedPoint])
-                startPoint = impliedPoint
-            self._segments.append([startPoint, segment[-2], segment[-1]])
+        self._boundsRectangle = PathUtilities.GTBoundsRectangle((minX, minY), (maxX, maxY))
 
     @property
     def contours(self):
