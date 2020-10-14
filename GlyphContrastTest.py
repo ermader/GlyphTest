@@ -230,11 +230,10 @@ class SegmentPen:
         else:
             t = None
 
-        glifString = self._glyphSet.getGLIF(glyphName)
-        glyph = glifLib.Glyph(self._glyphSet, "")
+        # glyph = glifLib.Glyph(glyphName, self._glyphSet)
+        glyph = self.glyphSet[glyphName]
         cpen = SegmentPen(self._glyphSet, self.logger)
-        psp = glifLib.PointToSegmentPen(cpen)
-        glifLib.readGlyphFromString(glifString, glyph, psp)
+        glyph.draw(cpen)
         contours = t.applyToContours(cpen.contours) if t else cpen.contours
         self.contours.extend(contours)
 
@@ -247,19 +246,42 @@ class UFOFont(object):
         infoFile = open(f"{fileName}/fontinfo.plist", "r", encoding="UTF-8")
         self._fileInfo = plistlib.load(infoFile)
         self._glyphSet = glifLib.GlyphSet(f"{fileName}/glyphs")
+        self._unicodes = self._glyphSet.getUnicodes()
 
     @property
     def fullName(self):
         return self._fileInfo["postscriptFontName"]  # Should also check for full name...
 
+    @property
+    def glyphSet(self):
+        return self._glyphSet
+
+    def glyphForName(self, glyphName):
+        return UFOGlyph(glyphName, self._glyphSet)
+
+    def glyphForIndex(self, index):
+        return None
+
+    def glyphForCharacter(self, charCode):
+        for name, codes in self._unicodes.items():
+            if charCode in codes: return self.glyphForName(name)
+        return None
+
     def getGlyphContours(self, glyphName, logger):
-        glyph = glifLib.Glyph(self._glyphSet, "")
-        glifString = self._glyphSet.getGLIF(glyphName)
+        glyph = glifLib.Glyph(glyphName, self._glyphSet)
         pen = SegmentPen(self._glyphSet, logger)
-        psp = glifLib.PointToSegmentPen(pen)
-        glifLib.readGlyphFromString(glifString, glyph, psp)
+        glyph.draw(pen)
         return pen.contours
 
+class UFOGlyph(object):
+    def __init__(self, glyphName, glyphSet):
+        self._glyph = glifLib.Glyph(glyphName, glyphSet)
+
+    def name(self):
+        return self._glyph.glyphName
+
+    def draw(self, pen):
+        self._glyph.draw(pen)
 
 def getGlyphFromArgs(args, font):
     if args.glyphName: return font.glyphForName(args.glyphName)
@@ -267,17 +289,14 @@ def getGlyphFromArgs(args, font):
     if args.charCode: return font.glyphForCharacter(args.charCode)
 
 def getGlyphContours(args, font):
-    if args.fontFile.endswith(".ufo"):
-        level = logging.DEBUG if args.debug else logging.WARNING
-        logging.basicConfig(level=level)
-        logger = logging.getLogger("glif-test")
-        glyphContours = font.getGlyphContours(args.glyphName, logger)
-        return (glyphContours, args.glyphName)
+    level = logging.DEBUG if args.debug else logging.WARNING
+    logging.basicConfig(level=level)
+    logger = logging.getLogger("glyph-contrast-test")
 
-    font = GTFont(args.fontFile, fontName=args.fontName)
     glyph = getGlyphFromArgs(args, font)
-    glyphContours = GlyphContours.GTGlyphCoutours(glyph)
-    return (glyphContours.contours, glyph.name())
+    pen = SegmentPen(font.glyphSet, logger)
+    font.glyphSet[glyph.name()].draw(pen)
+    return (pen.contours, glyph.name())
 
 
 def main():
@@ -301,15 +320,12 @@ def main():
         font = GTFont(args.fontFile, fontName=args.fontName)
     fullName = font.fullName
     if fullName.startswith("."): fullName = fullName[1:]
-    # glyph = getGlyphFromArgs(args, font)
-    # glyphContours = GlyphContours.GTGlyphCoutours(glyph)
-    # contours = glyphContours.contours
     contours, glyphName = getGlyphContours(args, font)
     outline = BOutline(contours)
     bounds = outline.boundsRectangle
     closePoints = []
 
-    outerContour, innerContour = outline.bContours
+    outerContour, innerContour = outline.bContours[:2]  # slice in case there's more than two contours...
     outerLUT = outerContour.getLUT(steps)
 
     for op in outerLUT:
@@ -320,6 +336,11 @@ def main():
 
     print(f"Glyph {glyphName}: Max distance = {closePoints[-1][0]}, min distance = {closePoints[0][0]}")
     cp = ContourPlotter.ContourPlotter(bounds.points)
+    cp.setLabelFontSize(20, 20)
+    margin = cp._contentMargins.left
+
+    cp.drawText(bounds.width / 2 + margin, 5, "center", f"min = {round(closePoints[0][0], 2)}, max = {round(closePoints[-1][0], 2)}")
+
     cp.drawContours([bounds.contour], PathUtilities.GTColor.fromName("grey"))
     drawOutline(cp, outline)
     cp.pushStrokeAttributes(width=4)
