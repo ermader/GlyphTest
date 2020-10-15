@@ -20,10 +20,16 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         width = right - left
         height = top - bottom
         self.setContentMargins(GlyphPlotterEngine.Margins(width // 20, height // 20, width // 20, height // 20))
+        fs = self._contentMargins.top / 2
+        self.setLabelFontSize(fs, fs)
         self._poly = poly
         self._lastCommand = ""
         self._fillAttributeStack = []
         self._strokeAttributeStack = []
+
+    @property
+    def labelFontSize(self):
+        return self._labelFontSize
 
     def pushFillAttributes(self, color=None, opacity=None):
         self._fillAttributeStack.append((self._fillColor, self._fillOpacity))

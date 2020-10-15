@@ -969,16 +969,14 @@ def test():
 
     cp2 = ContourPlotter(bounds2.points)
     margin = cp2._contentMargins.left
-    cp2.setLabelFontSize(4, 4)  # Not sure what the "scaled" parameter is for...
     cp2.drawCurve(curve2.controlPoints, colorBlue)
-    cp2.drawText(bounds2.width / 2 + margin, -6, "center", f"Curve length: {curve2.length}")
+    cp2.drawText(bounds2.width / 2 + margin, cp2.labelFontSize / 4 - cp2._contentMargins.top, "center", f"Curve length: {curve2.length}")
     image2 = cp2.generateFinalImage()
     imageFile2 = open("Curve Length Test.svg", "wt", encoding="UTF-8")
     imageFile2.write(image2)
     imageFile2.close()
 
     cp2 = ContourPlotter(bounds2.points)
-    cp2.setLabelFontSize(4, 4)  # Not sure what the "scaled" parameter is for...
 
 
     lpts = curve2.getLUT(16)
@@ -987,7 +985,7 @@ def test():
         aLen += PathUtilities.length([lpts[i], lpts[i + 1]])
 
     cp2.drawPointsAsSegments(lpts, colorBlue)
-    cp2.drawText(bounds2.width / 2 + margin, -6, "center", f"Approximate curve length, 16 steps: {aLen}")
+    cp2.drawText(bounds2.width / 2 + margin, cp2.labelFontSize / 4 - cp2._contentMargins.top, "center", f"Approximate curve length, 16 steps: {aLen}")
 
     image2 = cp2.generateFinalImage()
     imageFile2 = open("Approximate curve Length Test.svg", "wt", encoding="UTF-8")
@@ -1014,7 +1012,7 @@ def test():
             t = Decimal(v) / steps
             left, _, _ = curve.split(t)
             d = left.length
-            pts.append((d, t))
+            pts.append((float(d), float(t)))
 
         return pts
 
