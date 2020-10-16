@@ -199,11 +199,15 @@ def main():
 
     closePoints.sort(key=lambda cp: cp[0])
 
-    print(f"Glyph {glyphName}: Max distance = {closePoints[-1][0]}, min distance = {closePoints[0][0]}")
+    min = closePoints[0][0]
+    max = closePoints[-1][0]
+    ratio = max / min
+
+    print(f"Glyph {glyphName}: Max distance = {max}, min distance = {min}, ratio = {ratio}")
     cp = ContourPlotter.ContourPlotter(bounds.points)
     margin = cp._contentMargins.left
 
-    cp.drawText(bounds.width / 2 + margin, cp._labelFontSize / 4, "center", f"min = {round(closePoints[0][0], 2)}, max = {round(closePoints[-1][0], 2)}")
+    cp.drawText(bounds.width / 2 + margin, cp._labelFontSize / 4, "center", f"min = {round(min, 2)}, max = {round(max, 2)}, wsf = {round(ratio, 3)}")
 
     cp.drawContours([bounds.contour], PathUtilities.GTColor.fromName("grey"))
     drawOutline(cp, outline)
