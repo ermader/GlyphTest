@@ -29,15 +29,15 @@ class SegmentPen:
     def lineTo(self, pt):
         segment = [self._lastOnCurve, pt]
         self._contour.append(segment)
-        self._lastOnCurve = pt
         self.logger.debug(f"lineTo({pt})")
+        self._lastOnCurve = pt
 
     def curveTo(self, *points):
         segment = [self._lastOnCurve]
         segment.extend(points)
         self._contour.append(segment)
+        self.logger.debug(f"CurveTo({points})")
         self._lastOnCurve = points[-1]
-        self.logger.debug(f"curveTo({points})")
 
     def qCurveTo(self, *points):
         segment = [self._lastOnCurve]
@@ -55,8 +55,8 @@ class SegmentPen:
                 self._contour.append([startPoint, segment[i], impliedPoint])
                 startPoint = impliedPoint
             self._contour.append([startPoint, segment[-2], segment[-1]])
-        self._lastOnCurve = segment[-1]
         self.logger.debug(f"qCurveTo({points})")
+        self._lastOnCurve = segment[-1]
 
     def beginPath(self):
         raise NotImplementedError

@@ -228,6 +228,8 @@ def test():
     newYorkPath = "/System/Library/Fonts/NewYork.ttf"
     newYorkItalicPath = "/System/Library/Fonts/NewYorkItalic.ttf"
 
+    trattelloPath = "/Users/emader/Downloads/Trattatello-Font/Trattatello/Trattatello.ttf"
+
     # removed M, N because the heuristic doesn't find the right stroke:
     # the middle strokes are longer than the side strokes...
     strokeMethodChars = "BDHIJKLPRTbdhijklmnpqrt"
@@ -344,6 +346,28 @@ def test():
 
     # print(f"diagonal strokes of Helvetica Neue X = {diagonals}")
     # print()
+
+    ttFont = GTFont(trattelloPath)
+    ttColonGlyph =ttFont.glyphForCharacter(":")
+    ttColonGlyphContours = GTGlyphCoutours(ttColonGlyph)
+    print(f"italic angle of Trattatello from colon method = {ttColonGlyphContours.italicAngle()}")
+    print()
+
+    averageItalicAngle = 0
+    for char in strokeMethodChars:
+        glyph = ttFont.glyphForCharacter(char)
+        glyphContours = GTGlyphCoutours(glyph)
+        italicAngle = glyphContours.italicAngle()
+        averageItalicAngle += italicAngle
+        print(f"italic angle of Trattatello {char} from stroke method = {italicAngle}")
+    print(f"average italic angle = {round(averageItalicAngle / len(strokeMethodChars), 1)}")
+    print()
+
+    ttpGlyph = ttFont.glyphForCharacter("p")
+    ttpGlyphContours = GTGlyphCoutours(ttipGlyph)
+    isw = ttpGlyphContours.italicStrokeWidth()
+    print(f"stroke width of Trattatello p = {PathUtilities.toMicros(isw, hniFont.unitsPerEm())} micro")
+    print()
 
 if __name__ == "__main__":
     test()

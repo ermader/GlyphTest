@@ -21,6 +21,11 @@ MAX_SAFE_INTEGER = +9007199254740991  # Number.MAX_SAFE_INTEGER
 MIN_SAFE_INTEGER = -9007199254740991  # Number.MIN_SAFE_INTEGER
 
 class Bezier(object):
+    dir_mixed = -1
+    dir_flat = 0
+    dir_up = 1
+    dir_down = 2
+
     def __init__(self, controlPoints):
         self._controlPoints = controlPoints
         self._t1 = 0
@@ -32,6 +37,8 @@ class Bezier(object):
         self._boundsRectangle = None
         self._lut = []
 
+        self._direction = self._computeDirection()
+
         # a bit of a hack to deal with the fact that control points
         # are sometimes Decimal values...
         def fp(p): return (float(p[0]), float(p[1]))
@@ -42,6 +49,42 @@ class Bezier(object):
 
         angle = butils.angle(cp[0], cp[-1], cp[1])
         self._clockwise = angle > 0
+
+    def _computeDirection(self):
+        p0x, p0y = self._controlPoints[0]
+        p1x, p1y = self._controlPoints[1]
+
+        if self.order == 1:
+            if p0y == p1y:
+                return Bezier.dir_flat
+
+            if p0y < p1y:
+                return Bezier.dir_up
+
+            return Bezier.dir_down
+
+        p2x, p2y = self._controlPoints[2]
+        if self.order == 2:
+            if p0y <= p1y <= p2y:
+                return Bezier.dir_up
+            if p0y >= p1y >= p2y:
+                return Bezier.dir_down
+
+            # we assume that a quadratic bezier wan't be flat...
+            return Bezier.dir_mixed
+
+        p3x, p3y = self._controlPoints[3]
+        if self.order == 3:
+            if p0y <= p1y <= p2y <= p3y:
+                return Bezier.dir_up
+            if p0y >= p1y >= p2y >= p3y:
+                return Bezier.dir_down
+
+            # we assume that a cubic bezier won't be flat...
+            return Bezier.dir_mixed
+
+        # For now, just say higher-order curves are mied...
+        return Bezier.dir_mixed
 
     def _compute(self, t):
         # shortcuts...
@@ -212,6 +255,10 @@ class Bezier(object):
     @property
     def order(self):
         return len(self._controlPoints) - 1
+
+    @property
+    def direction(self):
+        return self._direction
 
     @property
     def dcPoints(self):
