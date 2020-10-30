@@ -27,10 +27,13 @@ class SegmentPen:
         self.logger.debug(f"moveTo({pt})")
 
     def lineTo(self, pt):
-        segment = [self._lastOnCurve, pt]
-        self._contour.append(segment)
-        self.logger.debug(f"lineTo({pt})")
-        self._lastOnCurve = pt
+        # an old bug in fontTools.ttLib.tables._g_l_y_f.Glyph.draw()
+        # can cause this to be called w/ a zero-length line.
+        if pt != self._lastOnCurve:
+            segment = [self._lastOnCurve, pt]
+            self._contour.append(segment)
+            self.logger.debug(f"lineTo({pt})")
+            self._lastOnCurve = pt
 
     def curveTo(self, *points):
         segment = [self._lastOnCurve]

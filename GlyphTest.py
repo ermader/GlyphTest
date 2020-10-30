@@ -261,6 +261,13 @@ class GTFont(Font):
         charCode = ord(char) if type(char) == type("") else char
         return self.glyphForName(self.glyphNameForCharacterCode(charCode))
 
+    def unicodeForName(self, charName):
+        for code, name in self._ttFont.getBestCmap().items():
+            if name == charName:
+                return code
+
+        return None
+
 def getGlyphFromArgs(args, font):
     if args.glyphName: return font.glyphForName(args.glyphName)
     if args.glyphID: return font.glyphForIndex(args.glyphID)

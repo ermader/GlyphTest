@@ -31,6 +31,10 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
     def labelFontSize(self):
         return self._labelFontSize
 
+    @property
+    def labelFont(self):
+        return self._labelFont
+
     def pushFillAttributes(self, color=None, opacity=None):
         self._fillAttributeStack.append((self._fillColor, self._fillOpacity))
         if color: self.setFillColor(color)
