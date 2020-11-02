@@ -93,11 +93,16 @@ def main():
     font.glyphSet[glyph.name()].draw(pen)
     contours = pen.contours
     outline = BOutline(contours)
-    bounds = outline.boundsRectangle
+    # bounds = outline.boundsRectangle
     upList = []
     downList = []
     flatList = []
     mixedList = []
+
+    ascent = font.fontMetric("OS/2", "sTypoAscender")
+    descent = font.fontMetric("OS/2", "sTypoDescender")
+    advance = glyph.glyphMetric("advanceWidth")
+    bounds = PathUtilities.GTBoundsRectangle((0, descent), (advance, ascent))
 
     for bContour in outline.bContours:
         for curve in bContour.beziers:
@@ -130,7 +135,7 @@ def main():
             # for s in splits: print(f"    {s.controlPoints}")
         print()
 
-    cp = ContourPlotter.ContourPlotter(bounds.points)
+    cp = ContourPlotter.ContourPlotter(bounds.union(outline.boundsRectangle).points)
 
     # Make room for two lines in the content margins
     cp._contentMargins.top *= 2
@@ -149,18 +154,25 @@ def main():
     else:
         margin = cp._contentMargins.left
 
-    cp.drawContours([bounds.contour], PathUtilities.GTColor.fromName("grey"))
+    cp.pushStrokeAttributes(color=PathUtilities.GTColor.fromName("grey"), dash="2,4")
+    cp.drawContours([bounds.contour])
+    cp.drawPointsAsSegments([(0, 0), (advance, 0)])
+    cp.popStrokeAtributes()
+
     drawOutline(cp, outline)
 
     cp.drawText(bounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
     cp.drawText(bounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
 
     rasters = []
-    height = bounds.height
+    height = outline.boundsRectangle.height
     lowerBound = round(height * .30)
     upperBound = round(height * .70)
     interval = round(height * .02)
     left, _, right, _ = bounds.points
+    oLeft, _, oRight, _ = outline.boundsRectangle.points
+    left = min(left, oLeft)
+    right = max(right, oRight)
     for y in range(lowerBound, upperBound, interval):
         raster = [(left, y), (right, y)]
         upCurve = curveAtY(upList, y)
