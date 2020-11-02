@@ -93,7 +93,7 @@ def main():
     font.glyphSet[glyph.name()].draw(pen)
     contours = pen.contours
     outline = BOutline(contours)
-    # bounds = outline.boundsRectangle
+    outlineBounds = outline.boundsRectangle
     upList = []
     downList = []
     flatList = []
@@ -102,7 +102,7 @@ def main():
     ascent = font.fontMetric("OS/2", "sTypoAscender")
     descent = font.fontMetric("OS/2", "sTypoDescender")
     advance = glyph.glyphMetric("advanceWidth")
-    bounds = PathUtilities.GTBoundsRectangle((0, descent), (advance, ascent))
+    typoBounds = PathUtilities.GTBoundsRectangle((0, descent), (advance, ascent))
 
     for bContour in outline.bContours:
         for curve in bContour.beziers:
@@ -135,7 +135,7 @@ def main():
             # for s in splits: print(f"    {s.controlPoints}")
         print()
 
-    cp = ContourPlotter.ContourPlotter(bounds.union(outline.boundsRectangle).points)
+    cp = ContourPlotter.ContourPlotter(typoBounds.union(outlineBounds).points)
 
     # Make room for two lines in the content margins
     cp._contentMargins.top *= 2
@@ -147,29 +147,29 @@ def main():
     fullNameWidth = TextUtilities.stringWidth(fullName, ctFont)
     charInfoWidth = TextUtilities.stringWidth(charInfo, ctFont)
     labelWidth = max(fullNameWidth, charInfoWidth)
-    if labelWidth > bounds.width:
-        margin = (labelWidth - bounds.width) / 2
+    if labelWidth > typoBounds.width:
+        margin = (labelWidth - typoBounds.width) / 2
         cp._contentMargins.left = margin
         cp._contentMargins.right = margin
     else:
         margin = cp._contentMargins.left
 
     cp.pushStrokeAttributes(color=PathUtilities.GTColor.fromName("grey"), dash="2,4")
-    cp.drawContours([bounds.contour])
+    cp.drawContours([typoBounds.contour])
     cp.drawPointsAsSegments([(0, 0), (advance, 0)])
     cp.popStrokeAtributes()
 
     drawOutline(cp, outline)
 
-    cp.drawText(bounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
-    cp.drawText(bounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
+    cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
+    cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
 
     rasters = []
     height = outline.boundsRectangle.height
     lowerBound = round(height * .30)
     upperBound = round(height * .70)
     interval = round(height * .02)
-    left, _, right, _ = bounds.points
+    left, _, right, _ = typoBounds.points
     oLeft, _, oRight, _ = outline.boundsRectangle.points
     left = min(left, oLeft)
     right = max(right, oRight)
