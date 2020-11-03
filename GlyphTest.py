@@ -228,6 +228,14 @@ class GTFont(Font):
             self._vMetrics = self["vmtx"].metrics
         return self._vMetrics
 
+    @property
+    def typographicAscender(self):
+        return self.fontMetric("OS/2", "sTypoAscender")
+
+    @property
+    def typographicDescender(self):
+        return self.fontMetric("OS/2", "sTypoDescender")
+
     def __str__(self):
         return self.postscriptName
 

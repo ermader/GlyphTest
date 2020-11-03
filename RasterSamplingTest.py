@@ -99,8 +99,8 @@ def main():
     flatList = []
     mixedList = []
 
-    ascent = font.fontMetric("OS/2", "sTypoAscender")
-    descent = font.fontMetric("OS/2", "sTypoDescender")
+    ascent = font.typographicAscender
+    descent = font.typographicDescender
     advance = glyph.glyphMetric("advanceWidth")
     typoBounds = PathUtilities.GTBoundsRectangle((0, descent), (advance, ascent))
 

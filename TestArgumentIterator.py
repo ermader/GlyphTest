@@ -95,7 +95,7 @@ class TestArgs:
     @classmethod
     def forArguments(cls, argumentList):
         """\
-        Return a new GlifTestArgs object representing the given
+        Return a new TestArgs object representing the given
         argument list.
         Raise ValueError if the argument list is missing required options,
         is missing required extra arguments for options,
