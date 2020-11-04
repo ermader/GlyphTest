@@ -20,6 +20,22 @@ import ContourPlotter
 from TestArgumentIterator import TestArgs
 import TextUtilities
 
+class RasterSamplingTestArgs(TestArgs):
+
+    boundsTypes = {"typographic": (True, False), "glyph": (False, True), "both": (True, True)}
+
+    def __init__(self, argumentList):
+        self.typoBounds = self.glyphBounds = False
+        TestArgs.__init__(self, argumentList)
+
+    def processArgument(self, argument, arguments):
+        if argument == "--bounds":
+            boundsType = arguments.nextExtra("bounds")
+            if boundsType in self.boundsTypes.keys():
+                self.typoBounds, self.glyphBounds = self.boundsTypes[boundsType]
+        else:
+            TestArgs.processArgument(self, argument, arguments)
+
 def splitCurve(curve, splits):
     p1, p2, p3 = curve.controlPoints
     q1 = p1
@@ -57,6 +73,19 @@ def intersection(curve, raster):
     roots = curve.roots(raster)
     return curve.get(roots[0])
 
+def bestFit(points):
+    n = len(points)
+    xbar = sum([x for x, _ in points]) / n
+    ybar = sum([y for _, y in points]) / n
+
+    numer = sum([x * y for x, y in points]) - n * xbar * ybar
+    denom = sum([x**2 for x, _ in points]) - n * xbar**2
+
+    b = numer/denom
+    a = ybar - b*xbar
+    return a, b
+
+
 def main():
     argumentList = argv
     args = None
@@ -65,12 +94,10 @@ def main():
         print(__doc__, file=stderr)
         exit(1)
     try:
-        args = TestArgs.forArguments(argumentList)
+        args = RasterSamplingTestArgs(argumentList)
     except ValueError as error:
         print(programName + ": " + str(error), file=stderr)
         exit(1)
-
-    steps = args.steps
 
     if args.fontFile.endswith(".ufo"):
         font = UFOFont(args.fontFile)
@@ -155,8 +182,11 @@ def main():
         margin = cp._contentMargins.left
 
     cp.pushStrokeAttributes(color=PathUtilities.GTColor.fromName("grey"), dash="2,4")
-    cp.drawContours([typoBounds.contour])
-    cp.drawPointsAsSegments([(0, 0), (advance, 0)])
+    if args.typoBounds:
+        cp.drawContours([typoBounds.contour])
+        cp.drawPointsAsSegments([(0, 0), (advance, 0)])
+    if args.glyphBounds:
+        cp.drawContours([outlineBounds.contour], color=PathUtilities.GTColor.fromName("magenta"))
     cp.popStrokeAtributes()
 
     drawOutline(cp, outline)
@@ -165,14 +195,11 @@ def main():
     cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
 
     rasters = []
-    height = outline.boundsRectangle.height
+    height = outlineBounds.height
     lowerBound = round(height * .30)
     upperBound = round(height * .70)
     interval = round(height * .02)
-    left, _, right, _ = typoBounds.points
-    oLeft, _, oRight, _ = outline.boundsRectangle.points
-    left = min(left, oLeft)
-    right = max(right, oRight)
+    left, _, right, _ = typoBounds.union(outlineBounds).points
     for y in range(lowerBound, upperBound, interval):
         raster = [(left, y), (right, y)]
         upCurve = curveAtY(upList, y)
@@ -183,9 +210,22 @@ def main():
         rasters.append([p1, p2])
         cp.drawPointsAsSegments(raster, color=PathUtilities.GTColor.fromName("red"))
 
+    midpoints = []
     for raster in rasters:
+        midpoint = PathUtilities.midpoint(raster)
+        midpoints.append(midpoint)
         cp.drawPointsAsCircles(raster, 4, [PathUtilities.GTColor.fromName("blue")])
-        cp.drawPointsAsCircles([PathUtilities.midpoint(raster)], 4, [PathUtilities.GTColor.fromName("green")])
+        cp.drawPointsAsCircles([midpoint], 4, [PathUtilities.GTColor.fromName("green")])
+
+    a, b = bestFit(midpoints)
+    print(f"slope = {round(b, 1)}")
+    mx0, my0 = midpoints[0]
+    mxn, myn = midpoints[-1]
+    my0 = outlineBounds.bottom
+    myn = outlineBounds.top
+    cp.pushStrokeAttributes(width=2, color=PathUtilities.GTColor.fromName("green"))
+    cp.drawPointsAsSegments([((my0-a)/b, my0), ((myn-a)/b, myn)])
+    cp.popStrokeAtributes()
 
     image = cp.generateFinalImage()
 

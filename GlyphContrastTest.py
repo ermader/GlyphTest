@@ -23,6 +23,18 @@ import PathUtilities
 import ContourPlotter
 from TestArgumentIterator import TestArgs
 
+class GlyphContrastTestArgs(TestArgs):
+
+    def __init__(self, argumentList):
+        self.steps = 20
+        TestArgs.__init__(self, argumentList)
+
+    def processArgument(self, argument, arguments):
+        if argument == "--steps":
+            self.steps = arguments.nextExtraAsPosInt("steps")
+        else:
+            TestArgs.processArgument(self, argument, arguments)
+
 dir_names = {Bezier.dir_mixed: "mixed", Bezier.dir_flat: "flat", Bezier.dir_up: "up", Bezier.dir_down: "down"}
 
 def main():
@@ -33,7 +45,7 @@ def main():
         print(__doc__, file=stderr)
         exit(1)
     try:
-        args = TestArgs.forArguments(argumentList)
+        args = GlyphContrastTestArgs(argumentList)
     except ValueError as error:
         print(programName + ": " + str(error), file=stderr)
         exit(1)

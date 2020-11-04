@@ -20,6 +20,7 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         width = right - left
         height = top - bottom
         self.setContentMargins(GlyphPlotterEngine.Margins(width // 20, height // 20, width // 20, height // 20))
+        self.setFrameMargins(GlyphPlotterEngine.Margins(10, 10, 10, 10))
         fs = self._contentMargins.top / 2
         self.setLabelFontSize(fs, fs)
         self._poly = poly

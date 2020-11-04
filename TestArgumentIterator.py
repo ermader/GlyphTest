@@ -57,14 +57,46 @@ class TestArgumentIterator(ArgumentIterator):
         return glist
 
 class TestArgs:
-    def __init__(self):
+    def __init__(self, argumentList):
         self.debug = False
         self.fontFile = None
         self.fontName = None
         self.glyphName = None
         self.glyphID = None
         self.charCode = None
-        self.steps = 20
+        # self.steps = 20
+
+        arguments = TestArgumentIterator(argumentList)
+        argumentsSeen = {}
+
+        for argument in arguments:
+            if argument in argumentsSeen:
+                raise ValueError("Duplicate option “" + argument + "”.")
+            argumentsSeen[argument] = True
+
+            self.processArgument(argument, arguments)
+
+        self.completeInit()
+
+    def processArgument(self, argument, arguments):
+        if argument == "--font":
+            self.fontFile, self.fontName = arguments.nextExtraAsFont("font")
+        elif argument == "--glyph":
+            extra = arguments.nextExtra("glyph")
+            if len(extra) == 1:
+                self.charCode = ord(extra)
+            elif extra[0] == "/":
+                self.glyphName = extra[1:]
+            elif extra[0] == "u":
+                self.charCode = TestArgs.getHexCharCode(extra[1:])
+            elif extra[0:3] == "gid":
+                self.glyphID = TestArgs.getGlyphID(extra[3:])
+        # elif argument == "--steps":
+        #     self.steps = arguments.nextExtraAsPosInt("steps")
+        elif argument == "--debug":
+            self.debug = True
+        else:
+            raise ValueError(f"Unrecognized option “{argument}”.")
 
     def completeInit(self):
         """\
