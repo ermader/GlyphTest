@@ -8,6 +8,7 @@ Created on October 26, 2020
 
 from os.path import basename
 from sys import argv, exit, stderr
+import math
 import logging
 import CharNames  # From UnicodeData...
 from GlyphTest import GTFont
@@ -80,6 +81,8 @@ def bestFit(points):
 
     numer = sum([x * y for x, y in points]) - n * xbar * ybar
     denom = sum([x**2 for x, _ in points]) - n * xbar**2
+
+    if denom == 0: return math.inf, math.inf
 
     b = numer/denom
     a = ybar - b*xbar
@@ -181,10 +184,11 @@ def main():
     else:
         margin = cp._contentMargins.left
 
-    cp.pushStrokeAttributes(color=PathUtilities.GTColor.fromName("grey"), dash="2,4")
+    cp.pushStrokeAttributes( dash="2,4")
     if args.typoBounds:
-        cp.drawContours([typoBounds.contour])
-        cp.drawPointsAsSegments([(0, 0), (advance, 0)])
+        cyan = PathUtilities.GTColor.fromName("cyan")
+        cp.drawContours([typoBounds.contour], color=cyan)
+        cp.drawPointsAsSegments([(0, 0), (advance, 0)], color=cyan)
     if args.glyphBounds:
         cp.drawContours([outlineBounds.contour], color=PathUtilities.GTColor.fromName("magenta"))
     cp.popStrokeAtributes()
@@ -218,14 +222,20 @@ def main():
         cp.drawPointsAsCircles([midpoint], 4, [PathUtilities.GTColor.fromName("green")])
 
     a, b = bestFit(midpoints)
-    print(f"slope = {round(b, 1)}")
-    mx0, my0 = midpoints[0]
-    mxn, myn = midpoints[-1]
+    # y = a + bx, so x = (y-a)/b
     my0 = outlineBounds.bottom
     myn = outlineBounds.top
     cp.pushStrokeAttributes(width=2, color=PathUtilities.GTColor.fromName("green"))
-    cp.drawPointsAsSegments([((my0-a)/b, my0), ((myn-a)/b, myn)])
+
+    if a != math.inf:
+        line = [((my0-a)/b, my0), ((myn-a)/b, myn)]
+    else:
+        x = midpoints[0][0]
+        line = [(x, my0), (x, myn)]
+
+    cp.drawPointsAsSegments(line)
     cp.popStrokeAtributes()
+    print(f"slope = {round(b, 1)}, angle = {round(PathUtilities.slopeAngle(line), 1)}")
 
     image = cp.generateFinalImage()
 
