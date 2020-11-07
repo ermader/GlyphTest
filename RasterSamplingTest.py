@@ -60,12 +60,8 @@ def splitCurve(curve, splits):
 def sortByP0(list):
     list.sort(key=lambda b: b.controlPoints[0][0])
 
-def curveAtY(list, y):
-    for curve in list:
-        if curve.boundsRectangle.crossesY(y):
-            return curve
-
-    return None
+def curvesAtY(curveList, y):
+    return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
 
 def intersection(curve, raster):
     if curve.order == 1:
@@ -74,10 +70,30 @@ def intersection(curve, raster):
     roots = curve.roots(raster)
     return curve.get(roots[0])
 
+def leftmostIntersection(curves, raster):
+    leftmost = (65536, 65536)
+
+    for curve in curves:
+        ip = intersection(curve, raster)
+        if ip[0] < leftmost[0]:
+            leftmost = ip
+
+    return leftmost
+
+def avg(list):
+    return sum(list) / len(list)
+
 def bestFit(points):
     n = len(points)
-    xbar = sum([x for x, _ in points]) / n
-    ybar = sum([y for _, y in points]) / n
+    xs = []
+    ys = []
+
+    for x, y in points:
+        xs.append(x)
+        ys.append(y)
+
+    xbar = avg(xs)
+    ybar = avg(ys)
 
     numer = sum([x * y for x, y in points]) - n * xbar * ybar
     denom = sum([x**2 for x, _ in points]) - n * xbar**2
@@ -206,18 +222,18 @@ def main():
     left, _, right, _ = typoBounds.union(outlineBounds).points
     for y in range(lowerBound, upperBound, interval):
         raster = [(left, y), (right, y)]
-        upCurve = curveAtY(upList, y)
-        downCurve = curveAtY(downList, y)
 
-        p1 = intersection(upCurve, raster)
-        p2 = intersection(downCurve, raster)
+        p1 = leftmostIntersection(curvesAtY(upList, y), raster)
+        p2 = leftmostIntersection(curvesAtY(downList, y), raster)
         rasters.append([p1, p2])
         cp.drawPointsAsSegments(raster, color=PathUtilities.GTColor.fromName("red"))
 
     midpoints = []
+    widths = []
     for raster in rasters:
         midpoint = PathUtilities.midpoint(raster)
         midpoints.append(midpoint)
+        widths.append(PathUtilities.length(raster))
         cp.drawPointsAsCircles(raster, 4, [PathUtilities.GTColor.fromName("blue")])
         cp.drawPointsAsCircles([midpoint], 4, [PathUtilities.GTColor.fromName("green")])
 
@@ -235,7 +251,16 @@ def main():
 
     cp.drawPointsAsSegments(line)
     cp.popStrokeAtributes()
-    print(f"slope = {round(b, 1)}, angle = {round(PathUtilities.slopeAngle(line), 1)}")
+
+    strokeAngle = round(PathUtilities.slopeAngle(line), 1)
+    avgWidth = round(avg(widths), 2)
+    print(f"slope = {round(b, 1)}, angle = {strokeAngle}")
+    print(f"average width = {avgWidth}")
+
+    cp.setFillColor(PathUtilities.GTColor.fromName("black"))
+
+    cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}")
+    cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
 
     image = cp.generateFinalImage()
 
