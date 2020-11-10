@@ -10,6 +10,7 @@ from os.path import basename
 from sys import argv, exit, stderr
 import math
 import logging
+import statistics
 import CharNames  # From UnicodeData...
 from GlyphTest import GTFont
 from Bezier import Bezier, BOutline, drawOutline
@@ -80,11 +81,7 @@ def leftmostIntersection(curves, raster):
 
     return leftmost
 
-def avg(list):
-    return sum(list) / len(list)
-
-def bestFit(points):
-    n = len(points)
+def unzipPoints(points):
     xs = []
     ys = []
 
@@ -92,17 +89,22 @@ def bestFit(points):
         xs.append(x)
         ys.append(y)
 
-    xbar = avg(xs)
-    ybar = avg(ys)
+    return xs, ys
+
+def bestFit(points):
+    xs, ys = unzipPoints(points)
+    n = len(points)
+    xbar = statistics.mean(xs)
+    ybar = statistics.mean(ys)
 
     numer = sum([x * y for x, y in points]) - n * xbar * ybar
-    denom = sum([x**2 for x, _ in points]) - n * xbar**2
+    denom = sum([x**2 for x in xs]) - n * xbar**2
 
     if denom == 0: return math.inf, math.inf
 
     b = numer/denom
     a = ybar - b*xbar
-    return a, b
+    return a, b, xbar, ybar
 
 
 def main():
@@ -237,7 +239,7 @@ def main():
         cp.drawPointsAsCircles(raster, 4, [PathUtilities.GTColor.fromName("blue")])
         cp.drawPointsAsCircles([midpoint], 4, [PathUtilities.GTColor.fromName("green")])
 
-    a, b = bestFit(midpoints)
+    a, b, xbar, ybar = bestFit(midpoints)
     # y = a + bx, so x = (y-a)/b
     my0 = outlineBounds.bottom
     myn = outlineBounds.top
@@ -252,10 +254,26 @@ def main():
     cp.drawPointsAsSegments(line)
     cp.popStrokeAtributes()
 
+    numer = 0
+    denom = 0
+    for midpoint in midpoints:
+        mx, my = midpoint
+        fy = a + (b * mx)
+        numer += (fy - ybar) ** 2
+        denom += (my - ybar) ** 2
+    r2 = numer / denom
+    print(f"a = {round(a, 2)}, b = {round(b, 4)}, r\u00B2 = {round(r2, 4)}")
+
     strokeAngle = round(PathUtilities.slopeAngle(line), 1)
-    avgWidth = round(avg(widths), 2)
+    avgWidth = round(statistics.mean(widths), 2)
+    quartiles = statistics.quantiles(widths, n=4, method="inclusive")
+    q1 = round(quartiles[0], 2)
+    median = round(quartiles[1], 2)
+    q3 = round(quartiles[2], 2)
+    minWidth = round(min(widths), 2)
+    maxWidth = round(max(widths), 2)
     print(f"slope = {round(b, 1)}, angle = {strokeAngle}")
-    print(f"average width = {avgWidth}")
+    print(f"widths: min = {minWidth}, Q1 = {q1}, median = {median}, mean = {avgWidth}, Q3 = {q3}, max = {maxWidth}")
 
     cp.setFillColor(PathUtilities.GTColor.fromName("black"))
 
