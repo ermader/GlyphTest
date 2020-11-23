@@ -10,17 +10,24 @@ from os.path import basename
 from sys import argv, exit, stderr
 import math
 import logging
+import warnings
 import statistics
+import numpy as np
+import scipy.stats
 import CharNames  # From UnicodeData...
 from GlyphTest import GTFont
 from Bezier import Bezier, BOutline, drawOutline
 import BezierUtilities as buitls
 from SegmentPen import SegmentPen
+from SVGPathPen import SVGPathPen
+from svgpathtools import Line, Path, wsvg
 from UFOFont import UFOFont
 import PathUtilities
 import ContourPlotter
 from TestArgumentIterator import TestArgs
 import TextUtilities
+
+# Polynomial = np.polynomial.Polynomial
 
 class RasterSamplingTestArgs(TestArgs):
 
@@ -61,22 +68,38 @@ def splitCurve(curve, splits):
 def sortByP0(list):
     list.sort(key=lambda b: b.controlPoints[0][0])
 
+def sortByP0i(list):
+    list.sort(key=lambda b: b.start.imag)
+
+def crossesY(path, y):
+    _, _, miny, maxy = path.bbox()
+    return miny <= y <= maxy
+
+def midpoint(line):
+    mp = (line.start + line.end) / 2
+    return mp
+
 def curvesAtY(curveList, y):
-    return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
+    # return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
+    return list(filter(lambda curve: crossesY(curve, y), curveList))
 
 def intersection(curve, raster):
-    if curve.order == 1:
-        return buitls.lli(curve.controlPoints, raster)
+    # if curve.order == 1:
+    #     return buitls.lli(curve.controlPoints, raster)
+    #
+    # roots = curve.roots(raster)
+    # return curve.get(roots[0])
+    t = curve.intersect(raster)[0][0]
+    cp = curve.point(t)
+    return cp
 
-    roots = curve.roots(raster)
-    return curve.get(roots[0])
 
 def leftmostIntersection(curves, raster):
-    leftmost = (65536, 65536)
+    leftmost = complex(65536, 65536)
 
     for curve in curves:
         ip = intersection(curve, raster)
-        if ip[0] < leftmost[0]:
+        if ip.real < leftmost.real:
             leftmost = ip
 
     return leftmost
@@ -85,26 +108,70 @@ def unzipPoints(points):
     xs = []
     ys = []
 
-    for x, y in points:
-        xs.append(x)
-        ys.append(y)
+    # for x, y in points:
+    #     xs.append(x)
+    #     ys.append(y)
+
+    for p in points:
+        xs.append(p.real)
+        ys.append(p.imag)
 
     return xs, ys
 
-def bestFit(points):
-    xs, ys = unzipPoints(points)
-    n = len(points)
-    xbar = statistics.mean(xs)
-    ybar = statistics.mean(ys)
+# def bestFit(points):
+#     xs, ys = unzipPoints(points)
+#     n = len(points)
+#     xbar = statistics.mean(xs)
+#     ybar = statistics.mean(ys)
+#
+#     numer = sum([x * y for x, y in points]) - n * xbar * ybar
+#     denom = sum([x**2 for x in xs]) - n * xbar**2
+#
+#     if denom == 0: return math.inf, math.inf, xbar, ybar
+#
+#     b = numer/denom
+#     a = ybar - b*xbar
+#     return a, b, xbar, ybar
+#
 
-    numer = sum([x * y for x, y in points]) - n * xbar * ybar
-    denom = sum([x**2 for x in xs]) - n * xbar**2
+def curveDirection(curve):
+    bpoints = curve.bpoints()
+    order = len(bpoints) - 1
 
-    if denom == 0: return math.inf, math.inf
+    p0y = bpoints[0].imag
+    p1y = bpoints[1].imag
 
-    b = numer/denom
-    a = ybar - b*xbar
-    return a, b, xbar, ybar
+    if order == 1:
+        if p0y == p1y:
+            return Bezier.dir_flat
+
+        if p0y < p1y:
+            return Bezier.dir_up
+
+        return Bezier.dir_down
+
+    p2y = bpoints[2].imag
+    if order == 2:
+        if p0y <= p1y <= p2y:
+            return Bezier.dir_up
+        if p0y >= p1y >= p2y:
+            return Bezier.dir_down
+
+        # we assume that a quadratic bezier won't be flat...
+        return Bezier.dir_mixed
+
+    p3y = bpoints[3].imag
+    if order == 3:
+        if p0y <= p1y <= p2y <= p3y:
+            return Bezier.dir_up
+        if p0y >= p1y >= p2y >= p3y:
+            return Bezier.dir_down
+
+        # we assume that a cubic bezier won't be flat...
+        return Bezier.dir_mixed
+
+    # For now, just say higher-order curves are mixed...
+    return Bezier.dir_mixed
 
 
 def main():
@@ -142,6 +209,11 @@ def main():
     contours = pen.contours
     outline = BOutline(contours)
     outlineBounds = outline.boundsRectangle
+
+    spen = SVGPathPen(font.glyphSet, logger)
+    font.glyphSet[glyph.name()].draw(spen)
+    # wsvg(spen.paths, filename="SVGPath Test.svg")
+
     upList = []
     downList = []
     flatList = []
@@ -152,30 +224,46 @@ def main():
     advance = glyph.glyphMetric("advanceWidth")
     typoBounds = PathUtilities.GTBoundsRectangle((0, descent), (advance, ascent))
 
-    for bContour in outline.bContours:
-        for curve in bContour.beziers:
-            if curve.direction == Bezier.dir_up: upList.append(curve)
-            elif curve.direction == Bezier.dir_down: downList.append(curve)
-            elif curve.direction == Bezier.dir_flat: flatList.append(curve)
+    # for bContour in outline.bContours:
+    #     for curve in bContour.beziers:
+    #         if curve.direction == Bezier.dir_up: upList.append(curve)
+    #         elif curve.direction == Bezier.dir_down: downList.append(curve)
+    #         elif curve.direction == Bezier.dir_flat: flatList.append(curve)
+    #         else: mixedList.append(curve)
+    #
+    # sortByP0(upList)
+    # sortByP0(downList)
+    # sortByP0(flatList)
+
+    for path in spen.paths:
+        for curve in path:
+            direction = curveDirection(curve)
+            if direction == Bezier.dir_up: upList.append(curve)
+            elif direction == Bezier.dir_down: downList.append(curve)
+            elif direction == Bezier.dir_flat: flatList.append(curve)
             else: mixedList.append(curve)
 
-    sortByP0(upList)
-    sortByP0(downList)
-    sortByP0(flatList)
+    sortByP0i(upList)
+    sortByP0i(downList)
+    sortByP0i(flatList)
 
     print("up list:")
-    for b in upList: print(b.controlPoints)
+    # for b in upList: print(b.controlPoints)
+    for b in upList: print(b.bpoints())
 
     print("\ndown list:")
-    for b in downList: print(b.controlPoints)
+    # for b in downList: print(b.controlPoints)
+    for b in downList: print(b.bpoints())
 
     print("\nflat list:")
-    for b in flatList: print(b.controlPoints)
+    # for b in flatList: print(b.controlPoints)
+    for b in flatList: print(b.bpoints())
 
     if len(mixedList) > 0:
         print("\nmixed list:")
         for b in mixedList:
-            print(b.controlPoints)
+            # print(b.controlPoints)
+            print(b.bpoints())
 
             # splits = []
             # splitCurve(b, splits)
@@ -211,7 +299,8 @@ def main():
         cp.drawContours([outlineBounds.contour], color=PathUtilities.GTColor.fromName("magenta"))
     cp.popStrokeAtributes()
 
-    drawOutline(cp, outline)
+    # drawOutline(cp, outline)
+    cp.drawPaths(spen.paths)
 
     cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
     cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
@@ -223,48 +312,61 @@ def main():
     interval = round(height * .02)
     left, _, right, _ = typoBounds.union(outlineBounds).points
     for y in range(lowerBound, upperBound, interval):
-        raster = [(left, y), (right, y)]
+        # raster = [(left, y), (right, y)]
+        raster = Line(complex(left, y), complex(right, y))
 
         p1 = leftmostIntersection(curvesAtY(upList, y), raster)
         p2 = leftmostIntersection(curvesAtY(downList, y), raster)
-        rasters.append([p1, p2])
-        cp.drawPointsAsSegments(raster, color=PathUtilities.GTColor.fromName("red"))
+        # rasters.append([p1, p2])
+        rasters.append(Line(p1, p2))
+        # cp.drawPointsAsSegments(raster, color=PathUtilities.GTColor.fromName("red"))
+        cp.drawPaths([Path(raster)], color=PathUtilities.GTColor.fromName("red"))
 
     midpoints = []
     widths = []
     for raster in rasters:
-        midpoint = PathUtilities.midpoint(raster)
-        midpoints.append(midpoint)
-        widths.append(PathUtilities.length(raster))
-        cp.drawPointsAsCircles(raster, 4, [PathUtilities.GTColor.fromName("blue")])
-        cp.drawPointsAsCircles([midpoint], 4, [PathUtilities.GTColor.fromName("green")])
+        # midpoint = PathUtilities.midpoint(raster)
+        mp = midpoint(raster)
+        midpoints.append(mp)
+        # widths.append(PathUtilities.length(raster))
+        widths.append(raster.length())
+        # cp.drawPointsAsCircles(raster, 4, [PathUtilities.GTColor.fromName("blue")])
+        # cp.drawPointsAsCircles([midpoint], 4, [PathUtilities.GTColor.fromName("green")])
+        cp.drawComplexPointsAsCircles([raster.start, raster.end], 4, [PathUtilities.GTColor.fromName("blue")])
+        cp.drawComplexPointsAsCircles([mp], 4, [PathUtilities.GTColor.fromName("green")])
 
-    a, b, xbar, ybar = bestFit(midpoints)
-    # y = a + bx, so x = (y-a)/b
+    # a, b, xbar, ybar = bestFit(midpoints)
+
+    # linregress(midpoints) can generate warnings if the best fit line is
+    # vertical. So we sway x, y and do the best fit that way.
+    # (which of course, would generate warnings if the best fit line is horizontal)
+    xs, ys = unzipPoints(midpoints)
+    b, a, rValue, pValue, stdErr = scipy.stats.linregress(ys, xs)
+    r2 = rValue * rValue
+
     my0 = outlineBounds.bottom
     myn = outlineBounds.top
-    cp.pushStrokeAttributes(width=2, color=PathUtilities.GTColor.fromName("green"))
+    cp.pushStrokeAttributes(width=2, opacity=0.25, color=PathUtilities.GTColor.fromName("green"))
 
-    if a != math.inf:
-        line = [((my0-a)/b, my0), ((myn-a)/b, myn)]
-    else:
-        x = midpoints[0][0]
-        line = [(x, my0), (x, myn)]
-
-    cp.drawPointsAsSegments(line)
+    # x = by + a
+    # line = [(my0*b + a, my0), (myn*b + a, myn)]
+    # cp.drawPointsAsSegments(line)
+    line = Line(complex(my0*b + a, my0), complex(myn*b + a, myn))
+    cp.drawPaths([Path(line)])
     cp.popStrokeAtributes()
 
-    numer = 0
-    denom = 0
-    for midpoint in midpoints:
-        mx, my = midpoint
-        fy = a + (b * mx)
-        numer += (fy - ybar) ** 2
-        denom += (my - ybar) ** 2
-    r2 = numer / denom
-    print(f"a = {round(a, 2)}, b = {round(b, 4)}, r\u00B2 = {round(r2, 4)}")
+    # numer = 0
+    # denom = 0
+    # for midpoint in midpoints:
+    #     mx, my = midpoint
+    #     fy = a + (b * mx)
+    #     numer += (fy - ybar) ** 2
+    #     denom += (my - ybar) ** 2
+    # r2 = numer / denom
+    print(f"a = {round(a, 2)}, b = {round(b, 4)}, R\u00B2 = {round(r2, 4)}")
 
-    strokeAngle = round(PathUtilities.slopeAngle(line), 1)
+    # strokeAngle = round(PathUtilities.slopeAngle(line), 1)
+    strokeAngle = round(PathUtilities.lineSlopeAngle(line), 1)
     avgWidth = round(statistics.mean(widths), 2)
     quartiles = statistics.quantiles(widths, n=4, method="inclusive")
     q1 = round(quartiles[0], 2)
@@ -272,13 +374,15 @@ def main():
     q3 = round(quartiles[2], 2)
     minWidth = round(min(widths), 2)
     maxWidth = round(max(widths), 2)
-    print(f"slope = {round(b, 1)}, angle = {strokeAngle}")
+    print(f"angle = {strokeAngle}\u00B0")
     print(f"widths: min = {minWidth}, Q1 = {q1}, median = {median}, mean = {avgWidth}, Q3 = {q3}, max = {maxWidth}")
 
     cp.setFillColor(PathUtilities.GTColor.fromName("black"))
 
-    cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}")
-    cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
+    # cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}")
+    # cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
+    cp.drawText(line.end.real + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}")
+    cp.drawText(line.end.real + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
 
     image = cp.generateFinalImage()
 

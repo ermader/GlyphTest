@@ -225,7 +225,7 @@ class GTBoundsRectangle(object):
         Initialize a bounds rectangle that encloses the given
         list of points.
 
-        Returns an empty retangle if the list is empty.
+        Returns an empty rectangle if the list is empty.
         """
         right = top = -32768
         left = bottom = 32768
@@ -435,6 +435,10 @@ def slopeAngle(segment):
     """
     dx, dy = getDeltas(segment)
     return math.degrees(math.atan2(abs(dx), abs(dy)))
+
+def lineSlopeAngle(line):
+    delta = line.end - line.start
+    return math.degrees(math.atan2(abs(delta.real), abs(delta.imag)))
 
 def rawSlopeAngle(segment):
     dx, dy = getDeltas(segment)
@@ -745,13 +749,22 @@ class GTTransform(object):
         """\
         Apply the transformation to the given point.
         """
-        px, py = point
+
+        complexPoint = isinstance(point, complex)
+
+        if complexPoint:
+            px = point.real
+            py = point.imag
+        else:
+            px, py = point
         rp = GTTransform.multiplyRowByMatrix([px, py, 1], self.transform)
 
         # in the general case, rp[2] may not be 1, so
         # normalize to 1.
-        return (rp[0]/rp[2], rp[1]/rp[2])
+        rx = rp[0]/rp[2]
+        ry = rp[1]/rp[2]
 
+        return complex(rx, ry) if complexPoint else (rx, ry)
 
     def applyToSegment(self, segment):
         """\

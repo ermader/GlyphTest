@@ -70,7 +70,7 @@ class Bezier(object):
             if p0y >= p1y >= p2y:
                 return Bezier.dir_down
 
-            # we assume that a quadratic bezier wan't be flat...
+            # we assume that a quadratic bezier won't be flat...
             return Bezier.dir_mixed
 
         p3x, p3y = self._controlPoints[3]
@@ -83,7 +83,7 @@ class Bezier(object):
             # we assume that a cubic bezier won't be flat...
             return Bezier.dir_mixed
 
-        # For now, just say higher-order curves are mied...
+        # For now, just say higher-order curves are mixed...
         return Bezier.dir_mixed
 
     def _compute(self, t):

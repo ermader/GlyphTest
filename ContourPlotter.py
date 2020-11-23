@@ -7,6 +7,7 @@ Created June 23, 2020
 """
 
 from FontDocTools import GlyphPlotterEngine
+from svgpathtools import Path
 from PathUtilities import GTColor
 
 # Add methods for drawing lines, circles, titles w/o needing to know about contexts?
@@ -134,6 +135,25 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
 
         self._content.append(path)
 
+    def drawPaths(self, paths, color=None, fill=False, close=True):
+        if fill:
+            self.pushFillAttributes(color=color, fill=fill)
+            attributes = self._fillAttributes()
+        else:
+            if color:
+                self.pushStrokeAttributes(color=color)
+            # self._strokeWidth = 2
+            attributes = f"fill='none' {self._strokeAttributes()}"
+
+        for path in paths:
+            self._content.append(f"<path d='{path.d()}' {attributes}/>")
+
+        if fill:
+            self.popFillAttributes()
+        elif color:
+            self.popStrokeAtributes()
+
+
     def drawPointsAsSegments(self, points, color=None):
         if color: self.pushStrokeAttributes(color=color)  # used to set stroke width to 2...
 
@@ -180,6 +200,27 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
             else:
                 if color: self.setStrokeColor(color)
             self.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, x, y, radius, paintMode)
+
+        if colors and not fill: self.popStrokeAtributes()
+
+    def drawComplexPointsAsCircles(self, points, radius, colors=None, fill=True):
+        if colors:
+            if fill:
+                self._fillColor = colors[0]
+            else:
+                self.pushStrokeAttributes(color=colors[0])
+
+        paintMode = GlyphPlotterEngine.PaintMode.fill if fill else GlyphPlotterEngine.PaintMode.stroke
+
+        i = 0
+        for point in points:
+            color = colors[i % len(colors)] if colors else None
+            i += 1
+            if fill:
+                if color: self.setFillColor(color)
+            else:
+                if color: self.setStrokeColor(color)
+            self.drawCircle(GlyphPlotterEngine.CoordinateSystem.content, point.real, point.imag, radius, paintMode)
 
         if colors and not fill: self.popStrokeAtributes()
 
