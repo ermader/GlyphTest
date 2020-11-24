@@ -39,6 +39,10 @@ class SVGPathPen:
         x, y = point
         return complex(x, y)
 
+    @classmethod
+    def convertComplexPoint(cls, cpoint):
+        return (cpoint.real, cpoint.imag)
+
     def addPoint(self, pt, segmentType, smooth, name):
         raise NotImplementedError
 
