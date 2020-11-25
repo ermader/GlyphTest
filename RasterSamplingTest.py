@@ -189,14 +189,15 @@ def main():
     charCode = font.unicodeForName(glyphName)
     charInfo = f"U+{charCode:04X} {CharNames.CharNames.getCharName(charCode)}"
 
-    pen = SegmentPen(font.glyphSet, logger)
-    font.glyphSet[glyph.name()].draw(pen)
-    contours = pen.contours
-    outline = BOutline(contours)
-    outlineBounds = outline.boundsRectangle
+    # pen = SegmentPen(font.glyphSet, logger)
+    # font.glyphSet[glyph.name()].draw(pen)
+    # contours = pen.contours
+    # outline = BOutline(contours)
+    # outlineBounds = outline.boundsRectangle
 
     spen = SVGPathPen(font.glyphSet, logger)
     font.glyphSet[glyph.name()].draw(spen)
+    outlineBounds = SVGPathUtilities.boundsRectangle(spen.paths)
     # wsvg(spen.paths, filename="SVGPath Test.svg")
 
     upList = []

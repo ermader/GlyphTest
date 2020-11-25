@@ -8,6 +8,8 @@ Created on November 23, 2020
 
 from svgpathtools import Line, QuadraticBezier, CubicBezier, Path, bpoints2bezier
 from Bezier import Bezier
+from svgpathtools.paths2svg import big_bounding_box
+import PathUtilities
 
 def pointFromComplexPoint(cpoint):
     return (cpoint.real, cpoint.imag)
@@ -62,4 +64,8 @@ def crossesY(path, y):
 def midpoint(line):
     mp = (line.start + line.end) / 2
     return mp
+
+def boundsRectangle(paths):
+    xmin, xmax, ymin, ymax = big_bounding_box(paths)
+    return PathUtilities.GTBoundsRectangle((xmin, ymin), (xmax, ymax))
 
