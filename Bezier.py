@@ -261,6 +261,10 @@ class Bezier(object):
         return self._direction
 
     @property
+    def midpoint(self):
+        return self.get(0.5)
+
+    @property
     def dcPoints(self):
         if not self._dcPoints:
             dpoints = []

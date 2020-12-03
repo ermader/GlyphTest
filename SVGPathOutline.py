@@ -148,8 +148,11 @@ class SVGPathSegment(object):
 
 
 class SVGPathContour(MutableSequence):
-    def __init__(self):
-        self._segments = []
+    def __init__(self, *segments):
+        if len(segments) > 0:
+            self._segments = segments
+        else:
+            self._segments = []
 
     def __getitem__(self, index):
         return self._segments[index]

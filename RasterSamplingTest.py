@@ -280,7 +280,7 @@ def main():
     cp.popStrokeAtributes()
 
     # drawOutline(cp, outline)
-    cp.drawPaths(spen.outline)
+    cp.drawPaths(outline)
 
     cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
     cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
@@ -300,7 +300,7 @@ def main():
         # rasters.append([p1, p2])
         rasters.append(SVGPathSegment(Line(p1, p2)))
         # cp.drawPointsAsSegments(raster, color=PathUtilities.GTColor.fromName("red"))
-        cp.drawPaths([Path(raster._segment)], color=PathUtilities.GTColor.fromName("red"))
+        cp.drawPaths([SVGPathContour(raster)], color=PathUtilities.GTColor.fromName("red"))
 
     midpoints = []
     widths = []
@@ -329,8 +329,8 @@ def main():
     # x = by + a
     # line = [(my0*b + a, my0), (myn*b + a, myn)]
     # cp.drawPointsAsSegments(line)
-    line = Line(complex(my0*b + a, my0), complex(myn*b + a, myn))
-    cp.drawPaths([Path(line)])
+    line = SVGPathSegment(Line(complex(my0*b + a, my0), complex(myn*b + a, myn)))
+    cp.drawPaths([SVGPathContour(line)])
     cp.popStrokeAtributes()
 
     # numer = 0
