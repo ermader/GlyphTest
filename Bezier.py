@@ -202,6 +202,14 @@ class Bezier(object):
         return (min, max)
 
     @property
+    def start(self):
+        return self._controlPoints[0]
+
+    @property
+    def end(self):
+        return self._controlPoints[-1]
+
+    @property
     def bbox(self):
         if not self._bbox:
             extrema = self.extrema
@@ -824,6 +832,53 @@ class BContour(object):
 
         return (closest, cip)
 
+    def pointToString(self, point):
+        return ",".join([str(i) for i in point])
+
+    def d(self, useSandT=False, use_closed_attrib=False, rel=False):
+        """Returns a path d-string for the path object.
+        For an explanation of useSandT and use_closed_attrib, see the
+        compatibility notes in the README."""
+
+        commands = []
+        pen = firstPoint = self.beziers[0].start
+        commands.append(f"M{self.pointToString(firstPoint)}")
+
+        for bezier in self.beziers:
+            segment = bezier.controlPoints
+            if len(segment) == 2:
+                # a line
+                penX, penY = pen
+                x, y = segment[1]
+
+                if penX == x and penY == y:
+                    continue
+                elif penX == x:
+                    # vertical line
+                    commands.append(f"V{y}")
+                elif penY == y:
+                    # horizontal line
+                    commands.append(f"H{x}")
+                else:
+                    point = self.pointToString(segment[1])
+                    commands.append(f"L{point}")
+                pen = (x, y)
+            elif len(segment) == 3:
+                    p1 = self.pointToString(segment[1])
+                    p2 = self.pointToString(segment[2])
+                    commands.append(f"Q{p1} {p2}")
+                    pen = segment[2]
+            elif len(segment) == 4:
+                p1 = self.pointToString(segment[1])
+                p2 = self.pointToString(segment[2])
+                p3 = self.pointToString(segment[3])
+                commands.append(f"C{p1} {p2} {p3}")
+                pen = segment[3]
+
+        # if use_closed_attrib: commands.append("Z")
+
+        return " ".join(commands)
+
     @property
     def boundsRectangle(self):
         return self._bounds
@@ -869,6 +924,7 @@ def drawContour(cp, contour, color=None):
 
 def drawOutline(cp, outline, color=None):
     for bc in outline.bContours:
+        drawContour(cp, bc, color=color)
         drawContour(cp, bc, color=color)
 
 def fitCurveToPoints(points, polygonal=True):

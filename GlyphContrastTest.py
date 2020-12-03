@@ -108,7 +108,8 @@ def main():
     cp.drawText(bounds.width / 2 + margin, cp._labelFontSize / 4, "center", f"min = {round(min, 2)}, max = {round(max, 2)}, wsf = {round(ratio, 3)}")
 
     cp.drawContours([bounds.contour], PathUtilities.GTColor.fromName("grey"))
-    drawOutline(cp, outline)
+    # drawOutline(cp, outline)
+    cp.drawPaths(outline)
     cp.pushStrokeAttributes(width=4)
 
     _, cop, cip = closePoints[0]

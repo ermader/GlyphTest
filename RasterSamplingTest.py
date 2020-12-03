@@ -305,7 +305,7 @@ def main():
     midpoints = []
     widths = []
     for raster in rasters:
-        mp = midpoint(raster)
+        mp = raster.midpoint
         midpoints.append(mp)
         widths.append(rasterLength(raster))
         # cp.drawPointsAsCircles(raster, 4, [PathUtilities.GTColor.fromName("blue")])

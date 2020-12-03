@@ -118,7 +118,7 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
                         p1 = self.pointToString(segment[1])
                         p2 = self.pointToString(segment[2])
                         p3 = self.pointToString(segment[3])
-                        command = self.getCommand("C");
+                        command = self.getCommand("C")
                         commands.append(f"{command}{p1} {p2} {p3}")
                         self._pen = segment[3]
 
