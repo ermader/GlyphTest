@@ -723,6 +723,9 @@ class BContour(object):
         self._bounds = bounds
         self._lut = []
 
+    def __iter__(self):
+        return self._beziers.__iter__()
+
     def getLUT(self, steps=100):
         if len(self._lut) == steps: return self._lut
 
@@ -837,6 +840,9 @@ class BOutline(object):
 
         self._bContours = bContours
         self._bounds = bounds
+
+    def __iter__(self):
+        return self._bContours.__iter__()
 
     @property
     def bContours(self):

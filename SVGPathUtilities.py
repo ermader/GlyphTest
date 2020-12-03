@@ -62,8 +62,7 @@ def crossesY(path, y):
     return miny <= y <= maxy
 
 def midpoint(line):
-    mp = (line.start + line.end) / 2
-    return mp
+    return (line.start + line.end) / 2
 
 def boundsRectangle(paths):
     xmin, xmax, ymin, ymax = big_bounding_box(paths)

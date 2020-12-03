@@ -7,6 +7,7 @@ Created on November 18, 2020
 """
 
 from svgpathtools import Line, QuadraticBezier, CubicBezier, Path, bpoints2bezier
+from SVGPathOutline import SVGPathOutline, SVGPathContour, SVGPathSegment
 import PathUtilities
 
 def applyTransformToSegment(t, s):
@@ -30,7 +31,7 @@ def applyTransformToPaths(t, paths):
 
 class SVGPathPen:
     def __init__(self, glyphSet, logger):
-        self._paths = []
+        self._outline = SVGPathOutline()
         self._glyphSet = glyphSet
         self.logger = logger
 
@@ -51,22 +52,21 @@ class SVGPathPen:
 
         # This is for glyphs, which are always closed paths,
         # so we assume that the move is the start of a new contour
-        self._path = Path()
-        self._segment = []
+        self._contour = SVGPathContour()
         self.logger.debug(f"moveTo({pt})")
 
     def lineTo(self, pt):
         # an old bug in fontTools.ttLib.tables._g_l_y_f.Glyph.draw()
         # can cause this to be called w/ a zero-length line.
         if pt != self._lastOnCurve:
-            self._path.append(Line(self.convertPoint(self._lastOnCurve), self.convertPoint(pt)))
+            self._contour.append(Line(self.convertPoint(self._lastOnCurve), self.convertPoint(pt)))
             self.logger.debug(f"lineTo({pt})")
             self._lastOnCurve = pt
 
     def curveTo(self, *points):
         cpoints = [self.convertPoint(self._lastOnCurve)]
         cpoints.extend([self.convertPoint(p) for p in points])
-        self._path.append(CubicBezier(*cpoints))
+        self._contour.append(CubicBezier(*cpoints))
         self.logger.debug(f"CurveTo({points})")
         self._lastOnCurve = points[-1]
 
@@ -75,15 +75,15 @@ class SVGPathPen:
         cpoints.extend([self.convertPoint(p) for p in points])
 
         if len(cpoints) <= 3:
-            self._path.append(QuadraticBezier(*cpoints))
+            self._contour.append(QuadraticBezier(*cpoints))
         else:
             # a starting on-curve point, two or more off-curve points, and a final on-curve point
             startPoint = cpoints[0]
             for i in range(1, len(cpoints) - 2):
                 impliedPoint = ((cpoints[i] + cpoints[i + 1]) / 2)
-                self._path.append(QuadraticBezier(startPoint, cpoints[i], impliedPoint))
+                self._contour.append(QuadraticBezier(startPoint, cpoints[i], impliedPoint))
                 startPoint = impliedPoint
-            self._path.append(QuadraticBezier(startPoint, cpoints[-2], cpoints[-1]))
+            self._contour.append(QuadraticBezier(startPoint, cpoints[-2], cpoints[-1]))
         self.logger.debug(f"qCurveTo({points})")
         self._lastOnCurve = points[-1]
 
@@ -91,10 +91,10 @@ class SVGPathPen:
         raise NotImplementedError
 
     def closePath(self):
-        self._paths.append(self._path)
-        if self._path[0].start != self._path[-1].end:
-            self._path.append(Line(self._path[-1].end, self._path[0].start))
-        self._path = Path()
+        if self._contour[0].start != self._contour[-1].end:
+            self._contour.append(Line(self._contour[-1].end, self._contour[0].start))
+        self._outline.append(self._contour)
+        self._contour = SVGPathContour()
         self.logger.debug("closePath()")
 
     def endPath(self):
@@ -122,9 +122,9 @@ class SVGPathPen:
         spen = SVGPathPen(self._glyphSet, self.logger)
         glyph.draw(spen)
         paths = applyTransformToPaths(t, spen.paths) if t else spen.paths
-        self._paths.extend(paths)
+        self._outline.extend(paths)
 
     @property
-    def paths(self):
-        return self._paths
+    def outline(self):
+        return self._outline
 

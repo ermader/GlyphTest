@@ -21,6 +21,7 @@ import BezierUtilities as buitls
 from SegmentPen import SegmentPen
 from SVGPathPen import SVGPathPen
 from svgpathtools import Line, Path, is_bezier_segment, wsvg
+from SVGPathOutline import SVGPathOutline, SVGPathContour, SVGPathSegment
 import SVGPathUtilities
 from UFOFont import UFOFont
 import PathUtilities
@@ -68,41 +69,38 @@ def splitCurve(curve, splits):
 
 def sortByP0(list):
     if len(list) == 0: return
-    if is_bezier_segment(list[0]):
+    if isinstance(list[0], SVGPathSegment):
         list.sort(key=lambda b: b.start.imag)
     else:
         list.sort(key=lambda b: b.controlPoints[0][0])
 
-def crossesY(path, y):
-    _, _, miny, maxy = path.bbox()
-    return miny <= y <= maxy
+# def crossesY(path, y):
+#     _, _, miny, maxy = path.bbox()
+#     return miny <= y <= maxy
 
-def controlPoints(curve):
-    if is_bezier_segment(curve):
-        return curve.bpoints()
-    else:
-        return curve.controlPoints
+# def controlPoints(curve):
+#     if is_bezier_segment(curve):
+#         return curve.bpoints()
+#     else:
+#         return curve.controlPoints
 
 def midpoint(line):
-    if is_bezier_segment(line):
-        return SVGPathUtilities.midpoint(line)
+    if isinstance(line, SVGPathSegment):
+        return line.midpoint
     else:
         return PathUtilities.midpoint(line)
 
 def rasterLength(raster):
-    if is_bezier_segment(raster):
+    if isinstance(raster, SVGPathSegment):
         return raster.length()
     else:
         return PathUtilities.length(raster)
 
 def curvesAtY(curveList, y):
-    if is_bezier_segment(curveList[0]):
-        return list(filter(lambda curve: crossesY(curve, y), curveList))
-    else:
-        return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
+    return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
 
 def intersection(curve, raster):
-    if is_bezier_segment(curve):
+    if isinstance(curve, SVGPathSegment):
         t = curve.intersect(raster)[0][0]
         return curve.point(t)
     else:
@@ -154,10 +152,10 @@ def unzipPoints(points):
 #     return a, b, xbar, ybar
 #
 
-def curveDirection(curve):
-    if is_bezier_segment(curve):
-        return SVGPathUtilities.curveDirection(curve)
-    return curve.direction
+# def curveDirection(curve):
+#     if is_bezier_segment(curve):
+#         return SVGPathUtilities.curveDirection(curve)
+#     return curve.direction
 
 def main():
     argumentList = argv
@@ -191,13 +189,13 @@ def main():
 
     # pen = SegmentPen(font.glyphSet, logger)
     # font.glyphSet[glyph.name()].draw(pen)
-    # contours = pen.contours
-    # outline = BOutline(contours)
+    # outline = BOutline(pen.contours)
     # outlineBounds = outline.boundsRectangle
 
     spen = SVGPathPen(font.glyphSet, logger)
     font.glyphSet[glyph.name()].draw(spen)
-    outlineBounds = SVGPathUtilities.boundsRectangle(spen.paths)
+    outline = spen.outline
+    outlineBounds = outline.boundsRectangle
     # wsvg(spen.paths, filename="SVGPath Test.svg")
 
     upList = []
@@ -210,8 +208,8 @@ def main():
     advance = glyph.glyphMetric("advanceWidth")
     typoBounds = PathUtilities.GTBoundsRectangle((0, descent), (advance, ascent))
 
-    # for bContour in outline.bContours:
-    #     for curve in bContour.beziers:
+    # for bContour in outline:
+    #     for curve in bContour:
     #         if curve.direction == Bezier.dir_up: upList.append(curve)
     #         elif curve.direction == Bezier.dir_down: downList.append(curve)
     #         elif curve.direction == Bezier.dir_flat: flatList.append(curve)
@@ -221,12 +219,11 @@ def main():
     # sortByP0(downList)
     # sortByP0(flatList)
 
-    for path in spen.paths:
-        for curve in path:
-            direction = curveDirection(curve)
-            if direction == Bezier.dir_up: upList.append(curve)
-            elif direction == Bezier.dir_down: downList.append(curve)
-            elif direction == Bezier.dir_flat: flatList.append(curve)
+    for contour in outline:
+        for curve in contour:
+            if curve.direction == Bezier.dir_up: upList.append(curve)
+            elif curve.direction == Bezier.dir_down: downList.append(curve)
+            elif curve.direction == Bezier.dir_flat: flatList.append(curve)
             else: mixedList.append(curve)
 
     sortByP0(upList)
@@ -234,19 +231,19 @@ def main():
     sortByP0(flatList)
 
     print("up list:")
-    for b in upList: print(controlPoints(b))
+    for b in upList: print(b.controlPoints)
 
     print("\ndown list:")
-    for b in downList: print(controlPoints(b))
+    for b in downList: print(b.controlPoints)
 
     print("\nflat list:")
-    for b in flatList: print(controlPoints(b))
+    for b in flatList: print(b.controlPoints)
 
 
     if len(mixedList) > 0:
         print("\nmixed list:")
         for b in mixedList:
-            print(controlPoints(b))
+            print(b.controlPoints)
 
             # splits = []
             # splitCurve(b, splits)
@@ -283,7 +280,7 @@ def main():
     cp.popStrokeAtributes()
 
     # drawOutline(cp, outline)
-    cp.drawPaths(spen.paths)
+    cp.drawPaths(spen.outline)
 
     cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
     cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
@@ -296,14 +293,14 @@ def main():
     left, _, right, _ = typoBounds.union(outlineBounds).points
     for y in range(lowerBound, upperBound, interval):
         # raster = [(left, y), (right, y)]
-        raster = Line(complex(left, y), complex(right, y))
+        raster = SVGPathSegment(Line(complex(left, y), complex(right, y)))
 
         p1 = leftmostIntersection(curvesAtY(upList, y), raster)
         p2 = leftmostIntersection(curvesAtY(downList, y), raster)
         # rasters.append([p1, p2])
-        rasters.append(Line(p1, p2))
+        rasters.append(SVGPathSegment(Line(p1, p2)))
         # cp.drawPointsAsSegments(raster, color=PathUtilities.GTColor.fromName("red"))
-        cp.drawPaths([Path(raster)], color=PathUtilities.GTColor.fromName("red"))
+        cp.drawPaths([Path(raster._segment)], color=PathUtilities.GTColor.fromName("red"))
 
     midpoints = []
     widths = []
@@ -313,8 +310,8 @@ def main():
         widths.append(rasterLength(raster))
         # cp.drawPointsAsCircles(raster, 4, [PathUtilities.GTColor.fromName("blue")])
         # cp.drawPointsAsCircles([mp], 4, [PathUtilities.GTColor.fromName("green")])
-        cp.drawComplexPointsAsCircles([raster.start, raster.end], 4, [PathUtilities.GTColor.fromName("blue")])
-        cp.drawComplexPointsAsCircles([mp], 4, [PathUtilities.GTColor.fromName("green")])
+        cp.drawPointsAsCircles(raster.controlPoints, 4, [PathUtilities.GTColor.fromName("blue")])
+        cp.drawPointsAsCircles([mp], 4, [PathUtilities.GTColor.fromName("green")])
 
     # a, b, xbar, ybar = bestFit(midpoints)
 

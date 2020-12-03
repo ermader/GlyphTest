@@ -182,6 +182,11 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         if color: self.popStrokeAtributes()
 
     def drawPointsAsCircles(self, points, radius, colors=None, fill=True):
+        if isinstance(points[0], complex):
+            getXY = lambda p: (p.real, p.imag)
+        else:
+            getXY = lambda p: p
+
         if colors:
             if fill:
                 self._fillColor = colors[0]
@@ -192,7 +197,7 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
 
         i = 0
         for point in points:
-            x, y = point
+            x, y = getXY(point)
             color = colors[i % len(colors)] if colors else None
             i += 1
             if fill:
