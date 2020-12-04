@@ -62,7 +62,7 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
         self.setStrokeDash(dash)
 
     def pointToString(self, point):
-        return " ".join([str(i) for i in point])
+        return ",".join([str(i) for i in point])
 
     def getCommand(self, command):
         if self._poly:

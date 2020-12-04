@@ -153,6 +153,8 @@ class SVGPathContour(MutableSequence):
             self._segments = segments
         else:
             self._segments = []
+        self._start = None
+        self._end = None
 
     def __getitem__(self, index):
         return self._segments[index]
@@ -160,14 +162,14 @@ class SVGPathContour(MutableSequence):
     def __setitem__(self, index, value):
         self._segments[index] = SVGPathSegment(value)
         # self._length = None
-        # self._start = self._segments[0].start
-        # self._end = self._segments[-1].end
+        self._start = self._segments[0].start
+        self._end = self._segments[-1].end
 
     def __delitem__(self, index):
         del self._segments[index]
         # self._length = None
-        # self._start = self._segments[0].start
-        # self._end = self._segments[-1].end
+        self._start = self._segments[0].start
+        self._end = self._segments[-1].end
 
     def __iter__(self):
         return self._segments.__iter__()
@@ -184,6 +186,28 @@ class SVGPathContour(MutableSequence):
     def __repr__(self):
         segments = ", \n     ".join(repr(x) for x in self._segments)
         return f"SVGPathContour({segments})"
+
+    @property
+    def start(self):
+        if not self._start:
+            self._start = self._segments[0].start
+        return self._start
+
+    @start.setter
+    def start(self, pt):
+        self._start = pt
+        self._segments[0].start = pt
+
+    @property
+    def end(self):
+        if not self._end:
+            self._end = self._segments[-1].end
+        return self._end
+
+    @end.setter
+    def end(self, pt):
+        self._end = pt
+        self._segments[-1].end = pt
 
     @property
     def boundsRectangle(self):

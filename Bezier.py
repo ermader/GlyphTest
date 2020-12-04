@@ -734,6 +734,8 @@ class BContour(object):
         self._beziers = beziers
         self._bounds = bounds
         self._lut = []
+        self._start = beziers[0].start
+        self._end = beziers[-1].end
 
     def __iter__(self):
         return self._beziers.__iter__()
@@ -841,8 +843,12 @@ class BContour(object):
         compatibility notes in the README."""
 
         commands = []
-        pen = firstPoint = self.beziers[0].start
+        lastCommand = ""
+        pen = firstPoint = self.start
         commands.append(f"M{self.pointToString(firstPoint)}")
+
+        def getCommand(command, lastCommand):
+            return " " if lastCommand == command else command, command
 
         for bezier in self.beziers:
             segment = bezier.controlPoints
@@ -855,29 +861,42 @@ class BContour(object):
                     continue
                 elif penX == x:
                     # vertical line
-                    commands.append(f"V{y}")
+                    command, lastCommand = getCommand("V", lastCommand)
+                    commands.append(f"{command}{y}")
                 elif penY == y:
                     # horizontal line
-                    commands.append(f"H{x}")
+                    command, lastCommand = getCommand("H", lastCommand)
+                    commands.append(f"{command}{x}")
                 else:
                     point = self.pointToString(segment[1])
-                    commands.append(f"L{point}")
+                    command, lastCommand = getCommand("L", lastCommand)
+                    commands.append(f"{command}{point}")
                 pen = (x, y)
             elif len(segment) == 3:
                     p1 = self.pointToString(segment[1])
                     p2 = self.pointToString(segment[2])
-                    commands.append(f"Q{p1} {p2}")
+                    command, lastCommand = getCommand("Q", lastCommand)
+                    commands.append(f"{command}{p1} {p2}")
                     pen = segment[2]
             elif len(segment) == 4:
                 p1 = self.pointToString(segment[1])
                 p2 = self.pointToString(segment[2])
                 p3 = self.pointToString(segment[3])
-                commands.append(f"C{p1} {p2} {p3}")
+                command, lastCommand = getCommand("C", lastCommand)
+                commands.append(f"{command}{p1} {p2} {p3}")
                 pen = segment[3]
 
         # if use_closed_attrib: commands.append("Z")
 
-        return " ".join(commands)
+        return "".join(commands)
+
+    @property
+    def start(self):
+        return self._start
+
+    @property
+    def end(self):
+        return self._end
 
     @property
     def boundsRectangle(self):
