@@ -146,7 +146,53 @@ class ContourPlotter(GlyphPlotterEngine.GlyphPlotterEngine):
             attributes = f"fill='none' {self._strokeAttributes()}"
 
         for path in paths:
-            self._content.append(f"<path d='{path.d()}' {attributes}/>")
+            commands = []
+            pointToString = lambda p: self.pointToString(path.pointXY(p))
+
+            firstPoint = path.start
+            self.moveToXY(*path.pointXY(firstPoint))
+            commands.append(f"M{pointToString(firstPoint)}")
+
+            for curve in path:
+                segment = curve.controlPoints
+                if len(segment) == 2:
+                    # a line
+                    penX, penY = self._pen
+                    x, y = path.pointXY(segment[1])
+
+                    if penX == x and penY == y:
+                        continue
+                    elif penX == x:
+                        # vertical line
+                        command = self.getCommand("V")
+                        commands.append(f"{command}{y}")
+                    elif penY == y:
+                        # horizontal line
+                        command = self.getCommand("H")
+                        commands.append(f"{command}{x}")
+                    else:
+                        point = pointToString(segment[1])
+                        command = self.getCommand("L")
+                        commands.append(f"{command}{point}")
+                    self._pen = (x, y)
+                elif len(segment) == 3:
+                    p1 = pointToString(segment[1])
+                    p2 = pointToString(segment[2])
+                    command = self.getCommand("Q")
+                    commands.append(f"{command}{p1} {p2}")
+                    self._pen = path.pointXY(segment[2])
+                elif len(segment) == 4:
+                    p1 = pointToString(segment[1])
+                    p2 = pointToString(segment[2])
+                    p3 = pointToString(segment[3])
+                    command = self.getCommand("C")
+                    commands.append(f"{command}{p1} {p2} {p3}")
+                    self._pen = path.pointXY(segment[3])
+
+            # if use_closed_attrib: commands.append("Z")
+
+            path = "".join(commands)
+            self._content.append(f"<path d='{path}' {attributes}/>")
 
         if fill:
             self.popFillAttributes()

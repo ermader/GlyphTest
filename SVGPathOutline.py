@@ -187,6 +187,14 @@ class SVGPathContour(MutableSequence):
         segments = ", \n     ".join(repr(x) for x in self._segments)
         return f"SVGPathContour({segments})"
 
+    @classmethod
+    def pointXY(cls, point):
+        return point.real, point.imag
+
+    @classmethod
+    def xyPoint(cls, x, y):
+        return complex(x, y)
+
     @property
     def start(self):
         if not self._start:

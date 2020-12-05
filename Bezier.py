@@ -906,6 +906,15 @@ class BContour(object):
     def beziers(self):
         return self._beziers
 
+    @classmethod
+    def pointXY(cls, point):
+        return point
+
+
+    @classmethod
+    def xyPoint(cls, x, y):
+        return x, y
+
 class BOutline(object):
     def __init__(self, contours):
         bounds = PathUtilities.GTBoundsRectangle()
