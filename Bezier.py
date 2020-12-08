@@ -931,6 +931,13 @@ class BOutline(object):
     def __iter__(self):
         return self._bContours.__iter__()
 
+    @classmethod
+    def xyPoint(cls, x, y):
+        return BContour.xyPoint(x, y)
+
+    @classmethod
+    def segmentFromPoints(cls, points):
+        return BContour([Bezier(points)])
     @property
     def bContours(self):
         return self._bContours

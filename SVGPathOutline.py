@@ -6,7 +6,7 @@ Created on November 30, 2020
 @author Eric Mader
 """
 
-from svgpathtools import Line, QuadraticBezier, CubicBezier, Path, bpoints2bezier
+from svgpathtools import Line, QuadraticBezier, CubicBezier, Path, is_bezier_segment, bpoints2bezier
 from Bezier import Bezier
 import PathUtilities
 
@@ -28,7 +28,11 @@ ILENGTH_MAXITS = 10000
 
 class SVGPathSegment(object):
     def __init__(self, segment):
-        self._segment = segment
+        if is_bezier_segment(segment):
+            self._segment = segment
+        else:
+            self._segment = bpoints2bezier(segment)
+
         self._direction = self._computeDirection()
 
     def __repr__(self):
@@ -267,6 +271,18 @@ class SVGPathOutline(MutableSequence):  # maybe take font, glyph name and constr
 
     def __len__(self):
         return len(self._contours)
+
+    @classmethod
+    def xyPoint(cls, x, y):
+        return SVGPathContour.xyPoint(x, y)
+
+    @classmethod
+    def segmentFromPoints(cls, points):
+        return SVGPathSegment(bpoints2bezier(points))
+
+    @classmethod
+    def pathFromSegments(cls, *segments):
+        return SVGPathContour(*segments)
 
     @property
     def boundsRectangle(self):

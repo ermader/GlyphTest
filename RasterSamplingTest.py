@@ -293,14 +293,19 @@ def main():
     left, _, right, _ = typoBounds.union(outlineBounds).points
     for y in range(lowerBound, upperBound, interval):
         # raster = [(left, y), (right, y)]
-        raster = SVGPathSegment(Line(complex(left, y), complex(right, y)))
+        p1 = outline.xyPoint(left, y)
+        p2 = outline.xyPoint(right, y)
+        raster = outline.segmentFromPoints([p1, p2])
+        # raster = SVGPathSegment(Line(complex(left, y), complex(right, y)))
 
         p1 = leftmostIntersection(curvesAtY(upList, y), raster)
         p2 = leftmostIntersection(curvesAtY(downList, y), raster)
         # rasters.append([p1, p2])
-        rasters.append(SVGPathSegment(Line(p1, p2)))
+        # rasters.append(SVGPathSegment(Line(p1, p2)))
+        rasters.append(outline.segmentFromPoints([p1, p2]))
         # cp.drawPointsAsSegments(raster, color=PathUtilities.GTColor.fromName("red"))
-        cp.drawPaths([SVGPathContour(raster)], color=PathUtilities.GTColor.fromName("red"))
+        # cp.drawPaths([SVGPathContour(raster)], color=PathUtilities.GTColor.fromName("red"))
+        cp.drawPaths([outline.pathFromSegments(raster)], color=PathUtilities.GTColor.fromName("red"))
 
     midpoints = []
     widths = []
@@ -329,8 +334,12 @@ def main():
     # x = by + a
     # line = [(my0*b + a, my0), (myn*b + a, myn)]
     # cp.drawPointsAsSegments(line)
-    line = SVGPathSegment(Line(complex(my0*b + a, my0), complex(myn*b + a, myn)))
-    cp.drawPaths([SVGPathContour(line)])
+    p1 = outline.xyPoint(my0*b + a, my0)
+    p2 = outline.xyPoint(myn*b + a, myn)
+    # line = SVGPathSegment(Line(complex(my0*b + a, my0), complex(myn*b + a, myn)))
+    line = outline.segmentFromPoints([p1, p2])
+    # cp.drawPaths([SVGPathContour(line)])
+    cp.drawPaths([outline.pathFromSegments(line)])
     cp.popStrokeAtributes()
 
     # numer = 0
