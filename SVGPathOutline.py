@@ -82,6 +82,14 @@ class SVGPathSegment(object):
         tol = None if isinstance(self._segment, Line) else 1e-12
         return self._segment.intersect(other._segment, tol)
 
+    @classmethod
+    def pointXY(cls, point):
+        return point.real, point.imag
+
+    @classmethod
+    def xyPoint(cls, x, y):
+        return complex(x, y)
+
     @property
     def start(self):
         return self._segment.start
@@ -193,11 +201,11 @@ class SVGPathContour(MutableSequence):
 
     @classmethod
     def pointXY(cls, point):
-        return point.real, point.imag
+        return SVGPathSegment.pointXY(point)
 
     @classmethod
     def xyPoint(cls, x, y):
-        return complex(x, y)
+        return SVGPathSegment.xyPoint(x, y)
 
     @property
     def start(self):
@@ -273,8 +281,12 @@ class SVGPathOutline(MutableSequence):  # maybe take font, glyph name and constr
         return len(self._contours)
 
     @classmethod
+    def pointXY(cls, point):
+        return SVGPathSegment.pointXY(point)
+
+    @classmethod
     def xyPoint(cls, x, y):
-        return SVGPathContour.xyPoint(x, y)
+        return SVGPathSegment.xyPoint(x, y)
 
     @classmethod
     def segmentFromPoints(cls, points):

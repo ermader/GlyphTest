@@ -94,7 +94,7 @@ def rasterLength(raster):
     if isinstance(raster, SVGPathSegment):
         return raster.length()
     else:
-        return PathUtilities.length(raster)
+        return PathUtilities.length(raster.controlPoints)
 
 def curvesAtY(curveList, y):
     return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
@@ -105,21 +105,22 @@ def intersection(curve, raster):
         return curve.point(t)
     else:
         if curve.order == 1:
-            return buitls.lli(curve.controlPoints, raster)
+            return buitls.lli(curve.controlPoints, raster.controlPoints)
 
-        roots = curve.roots(raster)
+        roots = curve.roots(raster.controlPoints)
         return curve.get(roots[0])
 
 
 def leftmostIntersection(curves, raster):
-    leftmost = complex(65536, 65536)
+    leftmostX = leftmostY = 65536
 
     for curve in curves:
-        ip = intersection(curve, raster)
-        if ip.real < leftmost.real:
-            leftmost = ip
+        ipx, ipy = curve.pointXY(intersection(curve, raster))
+        if ipy < leftmostY:
+            leftmostY = ipy
+            leftmostX = ipx
 
-    return leftmost
+    return curves[-1].xyPoint(leftmostX, leftmostY)
 
 def unzipPoints(points):
     xs = []
@@ -158,6 +159,7 @@ def unzipPoints(points):
 #     return curve.direction
 
 def main():
+    useBezierOutline = True
     argumentList = argv
     args = None
     programName = basename(argumentList.pop(0))
@@ -187,14 +189,14 @@ def main():
     charCode = font.unicodeForName(glyphName)
     charInfo = f"U+{charCode:04X} {CharNames.CharNames.getCharName(charCode)}"
 
-    # pen = SegmentPen(font.glyphSet, logger)
-    # font.glyphSet[glyph.name()].draw(pen)
-    # outline = BOutline(pen.contours)
-    # outlineBounds = outline.boundsRectangle
-
-    spen = SVGPathPen(font.glyphSet, logger)
-    font.glyphSet[glyph.name()].draw(spen)
-    outline = spen.outline
+    if useBezierOutline:
+        pen = SegmentPen(font.glyphSet, logger)
+        font.glyphSet[glyph.name()].draw(pen)
+        outline = BOutline(pen.contours)
+    else:
+        spen = SVGPathPen(font.glyphSet, logger)
+        font.glyphSet[glyph.name()].draw(spen)
+        outline = spen.outline
     outlineBounds = outline.boundsRectangle
     # wsvg(spen.paths, filename="SVGPath Test.svg")
 
@@ -353,7 +355,9 @@ def main():
     print(f"a = {round(a, 2)}, b = {round(b, 4)}, R\u00B2 = {round(r2, 4)}")
 
     # strokeAngle = round(PathUtilities.slopeAngle(line), 1)
-    strokeAngle = round(PathUtilities.lineSlopeAngle(line), 1)
+    # strokeAngle = round(PathUtilities.lineSlopeAngle(line), 1)
+    strokeAngle = round(PathUtilities.slopeAngle(line.controlPoints), 1)
+
     avgWidth = round(statistics.mean(widths), 2)
     quartiles = statistics.quantiles(widths, n=4, method="inclusive")
     q1 = round(quartiles[0], 2)
@@ -368,8 +372,9 @@ def main():
 
     # cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}")
     # cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
-    cp.drawText(line.end.real + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}\u00B0")
-    cp.drawText(line.end.real + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
+    lineEndX, _ = line.pointXY(line.end)
+    cp.drawText(lineEndX + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}\u00B0")
+    cp.drawText(lineEndX + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
 
     image = cp.generateFinalImage()
 

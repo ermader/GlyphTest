@@ -372,6 +372,10 @@ class GTBoundsRectangle(object):
         if newRight < newLeft or newTop < newBottom: return None  # maybe want <=, >=?
         return GTBoundsRectangle((newLeft, newBottom), (newRight, newTop))
 
+def pointXY(point):
+    if isinstance(point, complex):
+        return point.real, point.imag
+    return point
 def minMax(a, b):
     """\
     Return a tuple with the min value first, then the max value.
@@ -382,8 +386,8 @@ def endPoints(segment):
     """\
     Return the x, y coordinates of the start and end of the segment.
     """
-    p0x, p0y = segment[0]
-    p1x, p1y = segment[-1]
+    p0x, p0y = pointXY(segment[0])
+    p1x, p1y = pointXY(segment[-1])
 
     return (p0x, p0y, p1x, p1y)
 

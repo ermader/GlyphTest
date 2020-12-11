@@ -354,6 +354,14 @@ class Bezier(object):
         # getcontext().prec -= 2
         return result
 
+    @classmethod
+    def pointXY(cls, point):
+        return point
+
+    @classmethod
+    def xyPoint(cls, x, y):
+        return x, y
+
     @property
     def length(self):
         if not self._length:
@@ -737,6 +745,21 @@ class BContour(object):
         self._start = beziers[0].start
         self._end = beziers[-1].end
 
+    def __getitem__(self, index):
+        return self._beziers[index]
+
+    def __setitem__(self, index, value):
+        self._beziers[index] = Bezier(value)
+        # self._length = None
+        self._start = self._beziers[0].start
+        self._end = self._beziers[-1].end
+
+    def __delitem__(self, index):
+        del self._beziers[index]
+        # self._length = None
+        self._start = self._beziers[0].start
+        self._end = self._beziers[-1].end
+
     def __iter__(self):
         return self._beziers.__iter__()
 
@@ -908,12 +931,11 @@ class BContour(object):
 
     @classmethod
     def pointXY(cls, point):
-        return point
-
+        return Bezier.pointXY(point)
 
     @classmethod
     def xyPoint(cls, x, y):
-        return x, y
+        return Bezier.xyPoint(x, y)
 
 class BOutline(object):
     def __init__(self, contours):
@@ -932,12 +954,21 @@ class BOutline(object):
         return self._bContours.__iter__()
 
     @classmethod
+    def pointXY(cls, point):
+        return Bezier.pointXY(point)
+
+    @classmethod
     def xyPoint(cls, x, y):
-        return BContour.xyPoint(x, y)
+        return Bezier.xyPoint(x, y)
 
     @classmethod
     def segmentFromPoints(cls, points):
-        return BContour([Bezier(points)])
+        return Bezier(points)
+
+    @classmethod
+    def pathFromSegments(cls, *segments):
+        return BContour([s.controlPoints for s in segments])
+
     @property
     def bContours(self):
         return self._bContours
