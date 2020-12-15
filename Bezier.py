@@ -581,6 +581,13 @@ class Bezier(object):
 
         return list(filter(onLine, self.roots(line)))
 
+    def intersectWithLine(self, line):
+        if self.order == 1:
+            return butils.lli(self.controlPoints, line.controlPoints)
+
+        roots = self.roots(line.controlPoints)
+        return self.get(roots[0])
+
     @staticmethod
     def curveIntersects(c1, c2, intersectionThreshold=0.5):
         pairs = []
@@ -964,6 +971,17 @@ class BOutline(object):
     @classmethod
     def segmentFromPoints(cls, points):
         return Bezier(points)
+
+    @classmethod
+    def unzipPoints(cls, points):
+        xs = []
+        ys = []
+
+        for x, y in points:
+            xs.append(x)
+            ys.append(y)
+
+        return xs, ys
 
     @classmethod
     def pathFromSegments(cls, *segments):

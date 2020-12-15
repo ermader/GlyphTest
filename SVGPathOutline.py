@@ -82,6 +82,10 @@ class SVGPathSegment(object):
         tol = None if isinstance(self._segment, Line) else 1e-12
         return self._segment.intersect(other._segment, tol)
 
+    def intersectWithLine(self, line):
+        t = self.intersect(line)[0][0]
+        return self.point(t)
+
     @classmethod
     def pointXY(cls, point):
         return point.real, point.imag
@@ -287,6 +291,17 @@ class SVGPathOutline(MutableSequence):  # maybe take font, glyph name and constr
     @classmethod
     def xyPoint(cls, x, y):
         return SVGPathSegment.xyPoint(x, y)
+
+    @classmethod
+    def unzipPoints(cls, points):
+        xs = []
+        ys = []
+
+        for p in points:
+            xs.append(p.real)
+            ys.append(p.imag)
+
+        return xs, ys
 
     @classmethod
     def segmentFromPoints(cls, points):

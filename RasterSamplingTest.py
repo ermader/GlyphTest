@@ -68,98 +68,38 @@ def splitCurve(curve, splits):
         splitCurve(r, splits)
 
 def sortByP0(list):
+    # could just be: return segment.pointXY(segment.start)[0]
+    # (which could then be inline in the sort call...)
+    # Or mabye add startX() property to segments...
+    def startX(segment):
+        x, _ = segment.pointXY(segment.start)
+        return x
+
     if len(list) == 0: return
-    if isinstance(list[0], SVGPathSegment):
-        list.sort(key=lambda b: b.start.imag)
-    else:
-        list.sort(key=lambda b: b.controlPoints[0][0])
-
-# def crossesY(path, y):
-#     _, _, miny, maxy = path.bbox()
-#     return miny <= y <= maxy
-
-# def controlPoints(curve):
-#     if is_bezier_segment(curve):
-#         return curve.bpoints()
-#     else:
-#         return curve.controlPoints
-
-def midpoint(line):
-    if isinstance(line, SVGPathSegment):
-        return line.midpoint
-    else:
-        return PathUtilities.midpoint(line)
+    list.sort(key=lambda b: startX(b))
 
 def rasterLength(raster):
-    if isinstance(raster, SVGPathSegment):
-        return raster.length()
-    else:
-        return PathUtilities.length(raster.controlPoints)
+    # if isinstance(raster, SVGPathSegment):
+    #     return raster.length()
+    # else:
+    return PathUtilities.length(raster.controlPoints)
 
 def curvesAtY(curveList, y):
     return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
-
-def intersection(curve, raster):
-    if isinstance(curve, SVGPathSegment):
-        t = curve.intersect(raster)[0][0]
-        return curve.point(t)
-    else:
-        if curve.order == 1:
-            return buitls.lli(curve.controlPoints, raster.controlPoints)
-
-        roots = curve.roots(raster.controlPoints)
-        return curve.get(roots[0])
-
 
 def leftmostIntersection(curves, raster):
     leftmostX = leftmostY = 65536
 
     for curve in curves:
-        ipx, ipy = curve.pointXY(intersection(curve, raster))
+        ipx, ipy = curve.pointXY(curve.intersectWithLine(raster))
         if ipy < leftmostY:
             leftmostY = ipy
             leftmostX = ipx
 
     return curves[-1].xyPoint(leftmostX, leftmostY)
 
-def unzipPoints(points):
-    xs = []
-    ys = []
-
-    if isinstance(points[0], complex):
-        for p in points:
-            xs.append(p.real)
-            ys.append(p.imag)
-    else:
-        for x, y in points:
-            xs.append(x)
-            ys.append(y)
-
-    return xs, ys
-
-# def bestFit(points):
-#     xs, ys = unzipPoints(points)
-#     n = len(points)
-#     xbar = statistics.mean(xs)
-#     ybar = statistics.mean(ys)
-#
-#     numer = sum([x * y for x, y in points]) - n * xbar * ybar
-#     denom = sum([x**2 for x in xs]) - n * xbar**2
-#
-#     if denom == 0: return math.inf, math.inf, xbar, ybar
-#
-#     b = numer/denom
-#     a = ybar - b*xbar
-#     return a, b, xbar, ybar
-#
-
-# def curveDirection(curve):
-#     if is_bezier_segment(curve):
-#         return SVGPathUtilities.curveDirection(curve)
-#     return curve.direction
-
 def main():
-    useBezierOutline = True
+    useBezierOutline = False
     argumentList = argv
     args = None
     programName = basename(argumentList.pop(0))
@@ -198,7 +138,6 @@ def main():
         font.glyphSet[glyph.name()].draw(spen)
         outline = spen.outline
     outlineBounds = outline.boundsRectangle
-    # wsvg(spen.paths, filename="SVGPath Test.svg")
 
     upList = []
     downList = []
@@ -209,17 +148,6 @@ def main():
     descent = font.typographicDescender
     advance = glyph.glyphMetric("advanceWidth")
     typoBounds = PathUtilities.GTBoundsRectangle((0, descent), (advance, ascent))
-
-    # for bContour in outline:
-    #     for curve in bContour:
-    #         if curve.direction == Bezier.dir_up: upList.append(curve)
-    #         elif curve.direction == Bezier.dir_down: downList.append(curve)
-    #         elif curve.direction == Bezier.dir_flat: flatList.append(curve)
-    #         else: mixedList.append(curve)
-    #
-    # sortByP0(upList)
-    # sortByP0(downList)
-    # sortByP0(flatList)
 
     for contour in outline:
         for curve in contour:
@@ -281,7 +209,6 @@ def main():
         cp.drawContours([outlineBounds.contour], color=PathUtilities.GTColor.fromName("magenta"))
     cp.popStrokeAtributes()
 
-    # drawOutline(cp, outline)
     cp.drawPaths(outline)
 
     cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
@@ -298,15 +225,10 @@ def main():
         p1 = outline.xyPoint(left, y)
         p2 = outline.xyPoint(right, y)
         raster = outline.segmentFromPoints([p1, p2])
-        # raster = SVGPathSegment(Line(complex(left, y), complex(right, y)))
 
         p1 = leftmostIntersection(curvesAtY(upList, y), raster)
         p2 = leftmostIntersection(curvesAtY(downList, y), raster)
-        # rasters.append([p1, p2])
-        # rasters.append(SVGPathSegment(Line(p1, p2)))
         rasters.append(outline.segmentFromPoints([p1, p2]))
-        # cp.drawPointsAsSegments(raster, color=PathUtilities.GTColor.fromName("red"))
-        # cp.drawPaths([SVGPathContour(raster)], color=PathUtilities.GTColor.fromName("red"))
         cp.drawPaths([outline.pathFromSegments(raster)], color=PathUtilities.GTColor.fromName("red"))
 
     midpoints = []
@@ -315,17 +237,13 @@ def main():
         mp = raster.midpoint
         midpoints.append(mp)
         widths.append(rasterLength(raster))
-        # cp.drawPointsAsCircles(raster, 4, [PathUtilities.GTColor.fromName("blue")])
-        # cp.drawPointsAsCircles([mp], 4, [PathUtilities.GTColor.fromName("green")])
         cp.drawPointsAsCircles(raster.controlPoints, 4, [PathUtilities.GTColor.fromName("blue")])
         cp.drawPointsAsCircles([mp], 4, [PathUtilities.GTColor.fromName("green")])
-
-    # a, b, xbar, ybar = bestFit(midpoints)
 
     # linregress(midpoints) can generate warnings if the best fit line is
     # vertical. So we swap x, y and do the best fit that way.
     # (which of course, will generate warnings if the best fit line is horizontal)
-    xs, ys = unzipPoints(midpoints)
+    xs, ys = outline.unzipPoints(midpoints)
     b, a, rValue, pValue, stdErr = scipy.stats.linregress(ys, xs)
     r2 = rValue * rValue
 
@@ -334,13 +252,9 @@ def main():
     cp.pushStrokeAttributes(width=2, opacity=0.25, color=PathUtilities.GTColor.fromName("green"))
 
     # x = by + a
-    # line = [(my0*b + a, my0), (myn*b + a, myn)]
-    # cp.drawPointsAsSegments(line)
     p1 = outline.xyPoint(my0*b + a, my0)
     p2 = outline.xyPoint(myn*b + a, myn)
-    # line = SVGPathSegment(Line(complex(my0*b + a, my0), complex(myn*b + a, myn)))
     line = outline.segmentFromPoints([p1, p2])
-    # cp.drawPaths([SVGPathContour(line)])
     cp.drawPaths([outline.pathFromSegments(line)])
     cp.popStrokeAtributes()
 
@@ -354,8 +268,6 @@ def main():
     # r2 = numer / denom
     print(f"a = {round(a, 2)}, b = {round(b, 4)}, R\u00B2 = {round(r2, 4)}")
 
-    # strokeAngle = round(PathUtilities.slopeAngle(line), 1)
-    # strokeAngle = round(PathUtilities.lineSlopeAngle(line), 1)
     strokeAngle = round(PathUtilities.slopeAngle(line.controlPoints), 1)
 
     avgWidth = round(statistics.mean(widths), 2)
@@ -370,8 +282,6 @@ def main():
 
     cp.setFillColor(PathUtilities.GTColor.fromName("black"))
 
-    # cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}")
-    # cp.drawText(line[-1][0] + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
     lineEndX, _ = line.pointXY(line.end)
     cp.drawText(lineEndX + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}\u00B0")
     cp.drawText(lineEndX + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")

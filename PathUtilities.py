@@ -376,6 +376,7 @@ def pointXY(point):
     if isinstance(point, complex):
         return point.real, point.imag
     return point
+
 def minMax(a, b):
     """\
     Return a tuple with the min value first, then the max value.
