@@ -99,8 +99,24 @@ class SVGPathSegment(object):
         return self._segment.start
 
     @property
+    def startX(self):
+        return self.start.real
+
+    @property
+    def startY(self):
+        return self.start.imag
+
+    @property
     def end(self):
         return self._segment.end
+
+    @property
+    def endX(self):
+        return self.end.real
+
+    @property
+    def endY(self):
+        return self.end.imag
 
     @property
     def midpoint(self):

@@ -206,8 +206,24 @@ class Bezier(object):
         return self._controlPoints[0]
 
     @property
+    def startX(self):
+        return self.start[0]
+
+    @property
+    def startY(self):
+        return self.start[1]
+
+    @property
     def end(self):
         return self._controlPoints[-1]
+
+    @property
+    def endX(self):
+        return self.end[0]
+
+    @property
+    def endY(self):
+        return self.end[1]
 
     @property
     def bbox(self):

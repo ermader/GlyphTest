@@ -68,15 +68,8 @@ def splitCurve(curve, splits):
         splitCurve(r, splits)
 
 def sortByP0(list):
-    # could just be: return segment.pointXY(segment.start)[0]
-    # (which could then be inline in the sort call...)
-    # Or mabye add startX() property to segments...
-    def startX(segment):
-        x, _ = segment.pointXY(segment.start)
-        return x
-
     if len(list) == 0: return
-    list.sort(key=lambda b: startX(b))
+    list.sort(key=lambda b: b.startX)
 
 def rasterLength(raster):
     # if isinstance(raster, SVGPathSegment):
@@ -99,7 +92,7 @@ def leftmostIntersection(curves, raster):
     return curves[-1].xyPoint(leftmostX, leftmostY)
 
 def main():
-    useBezierOutline = False
+    useBezierOutline = True
     argumentList = argv
     args = None
     programName = basename(argumentList.pop(0))
@@ -221,7 +214,6 @@ def main():
     interval = round(height * .02)
     left, _, right, _ = typoBounds.union(outlineBounds).points
     for y in range(lowerBound, upperBound, interval):
-        # raster = [(left, y), (right, y)]
         p1 = outline.xyPoint(left, y)
         p2 = outline.xyPoint(right, y)
         raster = outline.segmentFromPoints([p1, p2])
