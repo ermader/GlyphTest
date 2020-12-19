@@ -13,6 +13,8 @@ import logging
 import warnings
 import statistics
 import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
 import scipy.stats
 import CharNames  # From UnicodeData...
 from GlyphTest import GTFont
@@ -72,9 +74,6 @@ def sortByP0(list):
     list.sort(key=lambda b: b.startX)
 
 def rasterLength(raster):
-    # if isinstance(raster, SVGPathSegment):
-    #     return raster.length()
-    # else:
     return PathUtilities.length(raster.controlPoints)
 
 def curvesAtY(curveList, y):
@@ -283,6 +282,24 @@ def main():
     imageFile = open(f"RasterSamplingTest {fullName}_{glyphName}.svg", "wt", encoding="UTF-8")
     imageFile.write(image)
     imageFile.close()
+
+    # # Turn off the debug info from matplotlib
+    matplotlib.set_loglevel("warn")
+    matplotlib.use("svg")
+    fig, ax = plt.subplots()
+    n, bins, patches = ax.hist(widths, bins=10, density=True)
+
+    # add a 'best fit' line
+    mu = statistics.mean(widths)
+    sigma = statistics.stdev(widths)
+    y = ((1 / (np.sqrt(2 * np.pi) * sigma)) *
+         np.exp(-0.5 * (1 / sigma * (bins - mu)) ** 2))
+    ax.plot(bins, y, '--')
+    ax.set_xlabel('Width')
+    ax.set_ylabel('Probability density')
+    ax.set_title(f"Histogram of Stroke Widths of {fullName}_{glyphName}")
+
+    plt.savefig(f"{fullName}_{glyphName}_Histogram")
 
 
 if __name__ == "__main__":
