@@ -84,7 +84,7 @@ def leftmostIntersection(curves, raster):
 
     for curve in curves:
         ipx, ipy = curve.pointXY(curve.intersectWithLine(raster))
-        if ipy < leftmostY:
+        if ipx < leftmostX:
             leftmostY = ipy
             leftmostX = ipx
 
