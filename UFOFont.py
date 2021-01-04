@@ -6,7 +6,7 @@ Created on October 14, 2020
 @author Eric Mader
 """
 
-from ufoLib import glifLib, plistlib
+from fontTools.ufoLib import glifLib, plistlib
 from SegmentPen import SegmentPen
 
 class UFOFont(object):

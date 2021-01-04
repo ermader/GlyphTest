@@ -16,6 +16,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import scipy.stats
+import statsmodels.api
 import CharNames  # From UnicodeData...
 from GlyphTest import GTFont
 from Bezier import Bezier, BOutline, drawOutline
@@ -90,6 +91,47 @@ def leftmostIntersection(curves, raster):
 
     return curves[-1].xyPoint(leftmostX, leftmostY)
 
+def direction(curve):
+    startY = curve.startY
+    endY = curve.endY
+
+    # if curve.order == 1:
+    #     if startY < endY: return Bezier.dir_up
+    #     if startY > endY: return Bezier.dir_down
+    #     return Bezier.dir_flat
+
+    minY = min(startY, endY)
+    maxY = max(startY, endY)
+    # cps = curve.controlPoints
+    #
+    # if curve.order == 2:
+    #     cp1x, cp1y = curve.pointXY(cps[1])
+    #     if cp1y < minY or cp1y > maxY: return Bezier.dir_mixed
+    #     if startY < endY: return Bezier.dir_up
+    #     if startY > endY: return Bezier.dir_down
+    #
+    # if curve.order == 3:
+    #     cp2x, cp2y = curve.pointXY(cps[2])
+    #     if cp2y < minY or cp2y > maxY: return Bezier.dir_mixed
+    #     if startY < endY: return Bezier.dir_up
+    #     if startY > endY: return Bezier.dir_down
+    #
+    # # For now, assume any higher-order curves are mixed
+    # return Bezier.dir_mixed
+
+    ocps = curve.controlPoints[1:-1]
+    for ocp in ocps:
+        ocpx, ocpy = curve.pointXY(ocp)
+        if ocpy < minY or ocpy > maxY: return Bezier.dir_mixed
+
+    # if we get here, the curve is either order 1 or
+    # has a uniform direction. Curves with order 2 or higher
+    # with startY and endY equal are likely mixed and got caught
+    # above.
+    if startY < endY: return Bezier.dir_up
+    if startY > endY: return Bezier.dir_down
+    return Bezier.dir_flat
+
 def main():
     useBezierOutline = True
     argumentList = argv
@@ -143,10 +185,17 @@ def main():
 
     for contour in outline:
         for curve in contour:
-            if curve.direction == Bezier.dir_up: upList.append(curve)
-            elif curve.direction == Bezier.dir_down: downList.append(curve)
-            elif curve.direction == Bezier.dir_flat: flatList.append(curve)
+            dir = direction(curve)
+            if dir == Bezier.dir_up: upList.append(curve)
+            elif dir == Bezier.dir_down: downList.append(curve)
+            elif dir == Bezier.dir_flat: flatList.append(curve)
             else: mixedList.append(curve)
+            # else:
+            #     startY = curve.startY
+            #     endY = curve.endY
+            #     if endY > startY: upList.append(curve)
+            #     elif endY < startY: downList.append(curve)
+            #     else: flatList.append(curve)
 
     sortByP0(upList)
     sortByP0(downList)
@@ -171,6 +220,12 @@ def main():
             # splitCurve(b, splits)
             #
             # for s in splits: print(f"    {controlPoints(s)}")
+            nTangents = 10
+            for i in range(nTangents + 1):
+                t = i / nTangents
+                px, py = b.get(t)
+                tx, ty = b._tangent(t)
+                print(f"    ({px}, {py}), ({tx}, {ty})")
         print()
 
     cp = ContourPlotter.ContourPlotter(typoBounds.union(outlineBounds).points)
@@ -287,19 +342,29 @@ def main():
     matplotlib.set_loglevel("warn")
     matplotlib.use("svg")
     fig, ax = plt.subplots()
-    n, bins, patches = ax.hist(widths, bins=10, density=True)
+    n, bins, patches = ax.hist(widths, bins=12, align='mid', density=True)
 
     # add a 'best fit' line
     mu = statistics.mean(widths)
     sigma = statistics.stdev(widths)
     y = ((1 / (np.sqrt(2 * np.pi) * sigma)) *
          np.exp(-0.5 * (1 / sigma * (bins - mu)) ** 2))
-    ax.plot(bins, y, '--')
+
+    # train = np.random.normal(loc=mu, scale=sigma, size=512)
+    # kernel = scipy.stats.gaussian_kde(train)
+    widths.sort()
+    # kernel = scipy.stats.gaussian_kde(widths)
+    # kernel = scipy.stats.gaussian_kde(bins)
+
+    dens = statsmodels.api.nonparametric.KDEUnivariate(widths)
+    dens.fit(bw=0.9)
+
+    ax.plot(bins, y, 'm--', widths, dens.evaluate(widths), "r--")
     ax.set_xlabel('Width')
     ax.set_ylabel('Probability density')
     ax.set_title(f"Histogram of Stroke Widths of {fullName}_{glyphName}")
 
-    plt.savefig(f"{fullName}_{glyphName}_Histogram")
+    plt.savefig(f"{fullName}_{glyphName}_Histogram.svg")
 
 
 if __name__ == "__main__":

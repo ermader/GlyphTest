@@ -167,7 +167,7 @@ class TestArgs:
         args.completeInit()
         return args
 
-    def getGlyph(aelf, font):
-        if aelf.glyphName: return font.glyphForName(aelf.glyphName)
-        if aelf.glyphID: return font.glyphForIndex(aelf.glyphID)
-        if aelf.charCode: return font.glyphForCharacter(aelf.charCode)
+    def getGlyph(self, font):
+        if self.glyphName: return font.glyphForName(self.glyphName)
+        if self.glyphID: return font.glyphForIndex(self.glyphID)
+        if self.charCode: return font.glyphForCharacter(self.charCode)

@@ -114,6 +114,7 @@ def glifOutlineTest(font, glyphName, pen, color=None):
     logger = pen.logger
     logger.debug(f"{font.glyphSet.dirName}/{glyphName}.glif")
     glyph = font.glyphForName(glyphName)
+    pen._contours = []
     glyph.draw(pen)
     outline = Bezier.BOutline(pen.contours)
     bounds = outline.boundsRectangle
@@ -125,7 +126,8 @@ def glifOutlineTest(font, glyphName, pen, color=None):
     cp.drawContours([bounds.contour], colorGreen)
     cp.popStrokeAtributes()
 
-    fontName = font.glyphSet.dirName.split("/")[-2]
+    # fontName = font.glyphSet.dirName.split("/")[-2]
+    fontName = font.glyphSet.fs.root_path.split("/")[-2]
 
     image = cp.generateFinalImage()
     imageFile = open(f"{fontName}_{glyphName}.svg", "wt", encoding="UTF-8")
