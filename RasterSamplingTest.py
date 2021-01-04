@@ -189,13 +189,27 @@ def main():
             if dir == Bezier.dir_up: upList.append(curve)
             elif dir == Bezier.dir_down: downList.append(curve)
             elif dir == Bezier.dir_flat: flatList.append(curve)
-            else: mixedList.append(curve)
+            # else: mixedList.append(curve)
             # else:
             #     startY = curve.startY
             #     endY = curve.endY
             #     if endY > startY: upList.append(curve)
             #     elif endY < startY: downList.append(curve)
             #     else: flatList.append(curve)
+            else:
+                dirfun = lambda x, y: (x < y) - (x > y)
+                nTangents = 10
+                ycoords = []
+                for i in range(nTangents + 1):
+                    t = i / nTangents
+                    px, py = curve.pointXY(curve.get(t))
+                    ycoords.append(py)
+                dirs = [dirfun(ycoords[i], ycoords[i+1]) for i in range(nTangents-1)]
+                up = 1 in dirs
+                down = -1 in dirs
+                if up and not down: upList.append(curve)
+                elif down and not up: downList.append(curve)
+                else: mixedList.append(curve)
 
     sortByP0(upList)
     sortByP0(downList)
@@ -213,6 +227,8 @@ def main():
 
     if len(mixedList) > 0:
         print("\nmixed list:")
+        # dirfun = lambda x, y: (x < y) - (x > y)
+
         for b in mixedList:
             print(b.controlPoints)
 
@@ -220,12 +236,20 @@ def main():
             # splitCurve(b, splits)
             #
             # for s in splits: print(f"    {controlPoints(s)}")
-            nTangents = 10
-            for i in range(nTangents + 1):
-                t = i / nTangents
-                px, py = b.get(t)
-                tx, ty = b._tangent(t)
-                print(f"    ({px}, {py}), ({tx}, {ty})")
+            # nTangents = 10
+            # ycoords = []
+            # for i in range(nTangents + 1):
+            #     t = i / nTangents
+            #     px, py = b.pointXY(b.get(t))
+            #     # tx, ty = b._tangent(t)
+            #     # print(f"    ({px}, {py}), ({tx}, {ty})")
+            #     ycoords.append(py)
+            # dirs = [dirfun(ycoords[i], ycoords[i+1]) for i in range(nTangents-1)]
+            # up = 1 in dirs
+            # down = -1 in dirs
+            # if up and not down: print("    really dir_up")
+            # elif down and not up: print("    really dir_down")
+            # else: print("    really dir_mixed")
         print()
 
     cp = ContourPlotter.ContourPlotter(typoBounds.union(outlineBounds).points)

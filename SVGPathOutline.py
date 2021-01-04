@@ -56,6 +56,10 @@ class SVGPathSegment(object):
         """returns the coordinates of the Bezier curve evaluated at t."""
         return self._segment.point(t)
 
+    def get(self, t):
+        """returns the coordinates of the Bezier curve evaluated at t."""
+        return self._segment.point(t)
+
     def points(self, ts):
         """Faster than running Path.point many times."""
         return self._segment.poly(ts)
