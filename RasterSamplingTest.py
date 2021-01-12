@@ -8,6 +8,8 @@ Created on October 26, 2020
 
 from os.path import basename
 from sys import argv, exit, stderr
+import re
+from io import StringIO
 import math
 import logging
 import warnings
@@ -358,9 +360,16 @@ def main():
 
     image = cp.generateFinalImage()
 
+    vbPattern = re.compile("viewBox=[\"']0 0 ([0-9.]+) ([0-9.]+)[\"']")
+    vbw, vbh = vbPattern.search(image).group(1, 2)
+    rWidth = float(vbw)
+    rHeight = float(vbh)
+
+    sStart, sEnd = re.search("</svg>", image).span()
+
     imageFile = open(f"RasterSamplingTest {fullName}_{glyphName}.svg", "wt", encoding="UTF-8")
-    imageFile.write(image)
-    imageFile.close()
+    imageFile.write(image[:sStart])
+    # imageFile.close()
 
     # # Turn off the debug info from matplotlib
     matplotlib.set_loglevel("warn")
@@ -388,7 +397,18 @@ def main():
     ax.set_ylabel('Probability density')
     ax.set_title(f"Histogram of Stroke Widths of {fullName}_{glyphName}")
 
-    plt.savefig(f"{fullName}_{glyphName}_Histogram.svg")
+    pltString = StringIO()
+    plt.savefig(pltString, format="svg")
+    pltString.seek(0)
+    pltImage = pltString.read()
+    cStart, cEnd = re.search("<!-- Created with matplotlib", pltImage).span()
+
+    imageFile.write(vbPattern.sub(f'x="{rWidth}" y="400"', pltImage[cStart:]))
+    imageFile.write(image[sStart:])
+    imageFile.close()
+
+
+    # plt.savefig(f"{fullName}_{glyphName}_Histogram.svg")
 
 
 if __name__ == "__main__":
