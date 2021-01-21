@@ -8,6 +8,7 @@ Created on October 26, 2020
 
 from os.path import basename
 from sys import argv, exit, stderr
+import xml.etree.ElementTree as ET
 import re
 from io import StringIO
 import math
@@ -360,10 +361,34 @@ def main():
 
     image = cp.generateFinalImage()
 
-    vbPattern = re.compile("viewBox=[\"']0 0 ([0-9.]+) ([0-9.]+)[\"']")
-    vbw, vbh = vbPattern.search(image).group(1, 2)
-    rWidth = float(vbw)
-    rHeight = float(vbh)
+    root = ET.fromstring(image)
+    svgNameSpace = root.tag[1:-4]  # remove initial "{" and final "}svg"
+    nameSpaces = {"svg": svgNameSpace}
+
+    viewBox = re.findall("([0-9.]+)+", root.attrib['viewBox'])
+    rWidth = float(viewBox[2])
+
+    # root[0] is the labels: font name, glyph name, stroke angle, mean stroke width
+    textOffset = -float(root[0][2].attrib["y"])
+
+    # root[1] is the diagram
+    diagTranslations = re.findall("translate\(([0-9.]+), ([0-9.]+)\)", root[1].attrib["transform"])
+    diagTranslationBefore = float(diagTranslations[0][1])
+    diagTranslationAfter = float(diagTranslations[1][1])
+    paths = root[1].findall("svg:path", nameSpaces)
+
+    # the fist three paths are the bounding boxes and the baseline
+    # then a path for each contour in the glyph followed by a
+    # path for each raster line, and finally the stroke midpoint line
+    firstRaster = 3 + len(outline.contours)
+    midRasterPath = paths[(len(paths)-firstRaster-1)//2+firstRaster]
+    midRasterOffset = int(re.findall("M0,(\d+)", midRasterPath.attrib["d"])[0])
+
+    histOffset = diagTranslationBefore - midRasterOffset - diagTranslationAfter - 172.6 - textOffset + diagTranslationBefore
+    # vbPattern = re.compile("viewBox=[\"']0 0 ([0-9.]+) ([0-9.]+)[\"']")
+    # vbw, vbh = vbPattern.search(image).group(1, 2)
+    # rWidth = float(vbw)
+    # rHeight = float(vbh)
 
     sStart, sEnd = re.search("</svg>", image).span()
 
@@ -403,7 +428,7 @@ def main():
     pltImage = pltString.read()
     cStart, cEnd = re.search("<!-- Created with matplotlib", pltImage).span()
 
-    imageFile.write(vbPattern.sub(f'x="{rWidth}" y="400"', pltImage[cStart:]))
+    imageFile.write(re.sub("viewBox=", f'x="{rWidth}" y="{histOffset}" viewBox=', pltImage[cStart:]))
     imageFile.write(image[sStart:])
     imageFile.close()
 

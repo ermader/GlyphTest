@@ -1008,6 +1008,10 @@ class BOutline(object):
         return self._bContours
 
     @property
+    def contours(self):
+        return self._bContours
+
+    @property
     def boundsRectangle(self):
         return self._bounds
 

@@ -332,6 +332,10 @@ class SVGPathOutline(MutableSequence):  # maybe take font, glyph name and constr
         return SVGPathContour(*segments)
 
     @property
+    def contours(self):
+        return self._contours
+
+    @property
     def boundsRectangle(self):
         bounds = PathUtilities.GTBoundsRectangle()
 
