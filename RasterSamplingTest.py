@@ -135,6 +135,9 @@ def direction(curve):
     if startY > endY: return Bezier.dir_down
     return Bezier.dir_flat
 
+def pathCoordinate(path):
+    return int(re.findall("M0,(\d+)", path.attrib["d"])[0])
+
 def main():
     useBezierOutline = True
     argumentList = argv
@@ -381,8 +384,7 @@ def main():
     # then a path for each contour in the glyph followed by a
     # path for each raster line, and finally the stroke midpoint line
     firstRaster = 3 + len(outline.contours)
-    midRasterPath = paths[(len(paths)-firstRaster-1)//2+firstRaster]
-    midRasterOffset = int(re.findall("M0,(\d+)", midRasterPath.attrib["d"])[0])
+    midRasterOffset = (pathCoordinate(paths[firstRaster]) + pathCoordinate(paths[-2]))/2
 
     histOffset = diagTranslationBefore - midRasterOffset - diagTranslationAfter - 172.6 - textOffset + diagTranslationBefore
     # vbPattern = re.compile("viewBox=[\"']0 0 ([0-9.]+) ([0-9.]+)[\"']")
