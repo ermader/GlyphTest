@@ -136,7 +136,11 @@ def direction(curve):
     return Bezier.dir_flat
 
 def pathCoordinate(path):
-    return int(re.findall("M0,(\d+)", path.attrib["d"])[0])
+    # This assumes that the y-coordinate is a positive integer
+    return int(re.findall("M-?[0-9\.]+,(\d+)", path.attrib["d"])[0])
+
+def pt2px(pt):
+    return pt * 96 / 72
 
 def main():
     useBezierOutline = True
@@ -334,14 +338,6 @@ def main():
     cp.drawPaths([outline.pathFromSegments(line)])
     cp.popStrokeAtributes()
 
-    # numer = 0
-    # denom = 0
-    # for midpoint in midpoints:
-    #     mx, my = midpoint
-    #     fy = a + (b * mx)
-    #     numer += (fy - ybar) ** 2
-    #     denom += (my - ybar) ** 2
-    # r2 = numer / denom
     print(f"a = {round(a, 2)}, b = {round(b, 4)}, R\u00B2 = {round(r2, 4)}")
 
     strokeAngle = round(PathUtilities.slopeAngle(line.controlPoints), 1)
@@ -376,7 +372,6 @@ def main():
     diagTranslations = re.findall("translate\(([0-9.]+), ([0-9.]+)\)", root[1].attrib["transform"])
     diagTranslationBefore = float(diagTranslations[0][1])
     diagTranslationAfter = float(diagTranslations[1][1])
-    topMargins = (rHeight - diagTranslationBefore) / 2
     paths = root[1].findall("svg:path", nameSpaces)
 
     # the fist three paths are the bounding boxes and the baseline
@@ -385,18 +380,7 @@ def main():
     firstRaster = 3 + len(outline.contours)
     midRasterOffset = (pathCoordinate(paths[firstRaster]) + pathCoordinate(paths[-2]))/2
 
-    # vbPattern = re.compile("viewBox=[\"']0 0 ([0-9.]+) ([0-9.]+)[\"']")
-    # vbw, vbh = vbPattern.search(image).group(1, 2)
-    # rWidth = float(vbw)
-    # rHeight = float(vbh)
-
-    # sStart, sEnd = re.search("</svg>", image).span()
-
-    # imageFile = open(f"RasterSamplingTest {fullName}_{glyphName}.svg", "wt", encoding="UTF-8")
-    # imageFile.write(image[:sStart])
-    # imageFile.close()
-
-    # # Turn off the debug info from matplotlib
+    # Turn off the debug info from matplotlib
     matplotlib.set_loglevel("warn")
     matplotlib.use("svg")
     fig, ax = plt.subplots()
@@ -408,11 +392,7 @@ def main():
     y = ((1 / (np.sqrt(2 * np.pi) * sigma)) *
          np.exp(-0.5 * (1 / sigma * (bins - mu)) ** 2))
 
-    # train = np.random.normal(loc=mu, scale=sigma, size=512)
-    # kernel = scipy.stats.gaussian_kde(train)
     widths.sort()
-    # kernel = scipy.stats.gaussian_kde(widths)
-    # kernel = scipy.stats.gaussian_kde(bins)
 
     dens = statsmodels.api.nonparametric.KDEUnivariate(widths)
     dens.fit(bw=0.9)
@@ -427,25 +407,19 @@ def main():
     pltString.seek(0)
     pltImage = pltString.read()
     pltRoot = ET.fromstring(pltImage)
-    pltWidth = float(pltRoot.attrib["width"][:-2])  # skip "pt" after width
-    pltHeight = float(pltRoot.attrib["height"][:-2])  # skip "pt" after height
-    histOffset = diagTranslationBefore - midRasterOffset - diagTranslationAfter - (pltHeight / 2) # - topMargins
+
+    # This assumes that the width and height attributes are in points...
+    pltWidth = pt2px(float(pltRoot.attrib["width"][:-2]) ) # skip "pt" after width
+    pltHeight = pt2px(float(pltRoot.attrib["height"][:-2]))  # skip "pt" after height
+    histOffset = diagTranslationBefore - midRasterOffset - diagTranslationAfter - (pltHeight / 2)
 
     root.set("viewBox", f"0 0 {rWidth + pltWidth} {rHeight}")
     root.append(pltRoot)
     root[2].set("x", f"{rWidth}")
     root[2].set("y", f"{histOffset}")
-    root[2].set("width", f"{pltWidth}")  # remove "pt" from width, height
-    root[2].set("height", f"{pltHeight}")
-    cStart, cEnd = re.search("<!-- Created with matplotlib", pltImage).span()
 
     ET.register_namespace("", nameSpaces["svg"])
     ET.ElementTree(root).write(f"RasterSamplingTest {fullName}_{glyphName}.svg", xml_declaration=True, encoding="UTF-8")
-
-
-
-    # plt.savefig(f"{fullName}_{glyphName}_Histogram.svg")
-
 
 if __name__ == "__main__":
     main()
