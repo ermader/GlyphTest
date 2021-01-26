@@ -370,14 +370,13 @@ def main():
 
     viewBox = re.findall("([0-9.]+)+", root.attrib['viewBox'])
     rWidth = float(viewBox[2])
-
-    # root[0] is the labels: font name, glyph name, stroke angle, mean stroke width
-    textOffset = -float(root[0][2].attrib["y"])
+    rHeight = float(viewBox[3])
 
     # root[1] is the diagram
     diagTranslations = re.findall("translate\(([0-9.]+), ([0-9.]+)\)", root[1].attrib["transform"])
     diagTranslationBefore = float(diagTranslations[0][1])
     diagTranslationAfter = float(diagTranslations[1][1])
+    topMargins = (rHeight - diagTranslationBefore) / 2
     paths = root[1].findall("svg:path", nameSpaces)
 
     # the fist three paths are the bounding boxes and the baseline
@@ -386,16 +385,15 @@ def main():
     firstRaster = 3 + len(outline.contours)
     midRasterOffset = (pathCoordinate(paths[firstRaster]) + pathCoordinate(paths[-2]))/2
 
-    histOffset = diagTranslationBefore - midRasterOffset - diagTranslationAfter - 172.6 - textOffset + diagTranslationBefore
     # vbPattern = re.compile("viewBox=[\"']0 0 ([0-9.]+) ([0-9.]+)[\"']")
     # vbw, vbh = vbPattern.search(image).group(1, 2)
     # rWidth = float(vbw)
     # rHeight = float(vbh)
 
-    sStart, sEnd = re.search("</svg>", image).span()
+    # sStart, sEnd = re.search("</svg>", image).span()
 
-    imageFile = open(f"RasterSamplingTest {fullName}_{glyphName}.svg", "wt", encoding="UTF-8")
-    imageFile.write(image[:sStart])
+    # imageFile = open(f"RasterSamplingTest {fullName}_{glyphName}.svg", "wt", encoding="UTF-8")
+    # imageFile.write(image[:sStart])
     # imageFile.close()
 
     # # Turn off the debug info from matplotlib
@@ -428,11 +426,22 @@ def main():
     plt.savefig(pltString, format="svg")
     pltString.seek(0)
     pltImage = pltString.read()
+    pltRoot = ET.fromstring(pltImage)
+    pltWidth = float(pltRoot.attrib["width"][:-2])  # skip "pt" after width
+    pltHeight = float(pltRoot.attrib["height"][:-2])  # skip "pt" after height
+    histOffset = diagTranslationBefore - midRasterOffset - diagTranslationAfter - (pltHeight / 2) # - topMargins
+
+    root.set("viewBox", f"0 0 {rWidth + pltWidth} {rHeight}")
+    root.append(pltRoot)
+    root[2].set("x", f"{rWidth}")
+    root[2].set("y", f"{histOffset}")
+    root[2].set("width", f"{pltWidth}")  # remove "pt" from width, height
+    root[2].set("height", f"{pltHeight}")
     cStart, cEnd = re.search("<!-- Created with matplotlib", pltImage).span()
 
-    imageFile.write(re.sub("viewBox=", f'x="{rWidth}" y="{histOffset}" viewBox=', pltImage[cStart:]))
-    imageFile.write(image[sStart:])
-    imageFile.close()
+    ET.register_namespace("", nameSpaces["svg"])
+    ET.ElementTree(root).write(f"RasterSamplingTest {fullName}_{glyphName}.svg", xml_declaration=True, encoding="UTF-8")
+
 
 
     # plt.savefig(f"{fullName}_{glyphName}_Histogram.svg")
