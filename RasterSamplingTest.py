@@ -383,7 +383,8 @@ def main():
     # Turn off the debug info from matplotlib
     matplotlib.set_loglevel("warn")
     matplotlib.use("svg")
-    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, **{"figsize": [6.4, 9.6]})
+    figWidth, figHeight = matplotlib.rcParams["figure.figsize"]
+    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=[figWidth, figHeight * 2])
 
     n, bins, patches = ax1.hist(widths, bins=12, align='mid', density=True)
 
