@@ -384,7 +384,9 @@ def main():
     matplotlib.set_loglevel("warn")
     matplotlib.use("svg")
     figWidth, figHeight = matplotlib.rcParams["figure.figsize"]
-    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=[figWidth, figHeight * 2])
+    gridSpec = {"height_ratios": [80, 20], "hspace": 0.1}
+    figSize = [figWidth, figHeight * 1.25]
+    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, gridspec_kw=gridSpec, figsize=figSize)
 
     n, bins, patches = ax1.hist(widths, bins=12, align='mid', density=True)
 
