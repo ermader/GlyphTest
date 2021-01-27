@@ -383,8 +383,9 @@ def main():
     # Turn off the debug info from matplotlib
     matplotlib.set_loglevel("warn")
     matplotlib.use("svg")
-    fig, ax = plt.subplots()
-    n, bins, patches = ax.hist(widths, bins=12, align='mid', density=True)
+    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, **{"figsize": [6.4, 9.6]})
+
+    n, bins, patches = ax1.hist(widths, bins=12, align='mid', density=True)
 
     # add a 'best fit' line
     mu = statistics.mean(widths)
@@ -397,10 +398,12 @@ def main():
     dens = statsmodels.api.nonparametric.KDEUnivariate(widths)
     dens.fit(bw=0.9)
 
-    ax.plot(bins, y, 'm--', widths, dens.evaluate(widths), "r--")
-    ax.set_xlabel('Width')
-    ax.set_ylabel('Probability density')
-    ax.set_title(f"Histogram of Stroke Widths of {fullName}_{glyphName}")
+    ax1.plot(bins, y, 'm--', widths, dens.evaluate(widths), "r--")
+    ax1.set_ylabel('Probability density')
+    ax1.set_title(f"Stroke Widths of {fullName}_{glyphName}")
+
+    ax2.set_xlabel('Width')
+    ax2.boxplot(widths, vert=False, flierprops={"markerfacecolor": "r"})
 
     pltString = StringIO()
     plt.savefig(pltString, format="svg")
