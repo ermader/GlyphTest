@@ -139,8 +139,13 @@ def pathCoordinate(path):
     # This assumes that the y-coordinate is a positive integer
     return int(re.findall("M-?[0-9\.]+,(\d+)", path.attrib["d"])[0])
 
-def pt2px(pt):
-    return pt * 96 / 72
+def lengthInPx(value):
+    pxPerInch = 96
+    unitsPerInch = {"in": 1, "cm": 2.54, "mm": 25.4, "pt": 72, "pc": 6, "px": pxPerInch}
+    number, units = re.findall("([+-]?[0-9.]+)([a-z]{2})?", value)[0]
+    if not units: units = "px"
+    perInch = unitsPerInch.get(units)
+    return float(number) * pxPerInch / perInch
 
 def main():
     useBezierOutline = True
@@ -414,9 +419,8 @@ def main():
     pltImage = pltString.read()
     pltRoot = ET.fromstring(pltImage)
 
-    # This assumes that the width and height attributes are in points...
-    pltWidth = pt2px(float(pltRoot.attrib["width"][:-2]) ) # skip "pt" after width
-    pltHeight = pt2px(float(pltRoot.attrib["height"][:-2]))  # skip "pt" after height
+    pltWidth = lengthInPx(pltRoot.attrib["width"])
+    pltHeight = lengthInPx(pltRoot.attrib["height"])
     histOffset = diagTranslationBefore - midRasterOffset - diagTranslationAfter - (pltHeight / 2)
 
     root.set("viewBox", f"0 0 {rWidth + pltWidth} {rHeight}")
