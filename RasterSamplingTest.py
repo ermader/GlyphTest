@@ -142,10 +142,14 @@ def pathCoordinate(path):
 def lengthInPx(value):
     pxPerInch = 96
     unitsPerInch = {"in": 1, "cm": 2.54, "mm": 25.4, "pt": 72, "pc": 6, "px": pxPerInch}
+
+    # this RE will match all valid length specifications, and some that aren't
+    # we assume that the input value is well-formed
     number, units = re.findall("([+-]?[0-9.]+)([a-z]{2})?", value)[0]
-    if not units: units = "px"
-    perInch = unitsPerInch.get(units)
-    return float(number) * pxPerInch / perInch
+    perInch = unitsPerInch.get(units if units else "px")
+
+    # ignore any invalid unit specification
+    return float(number) * pxPerInch / (perInch if perInch else pxPerInch)
 
 def main():
     useBezierOutline = True
