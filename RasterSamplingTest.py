@@ -409,13 +409,15 @@ def main():
 
     dens = statsmodels.api.nonparametric.KDEUnivariate(widths)
     dens.fit(bw=0.9)
+    densVals = dens.evaluate(widths)
 
-    ax1.plot(bins, y, 'm--', widths, dens.evaluate(widths), "r--")
+    ax1.plot(bins, y, 'm--', widths, densVals, "r--")
+    ax1.vlines([avgWidth, median], 0, max(max(n), densVals.max()), colors=["tab:green", "tab:orange"])
     ax1.set_ylabel('Probability density')
     ax1.set_title(f"Stroke Widths of {fullName}_{glyphName}")
 
     ax2.set_xlabel('Width')
-    ax2.boxplot(widths, vert=False, flierprops={"markerfacecolor": "r"})
+    ax2.boxplot(widths, vert=False, showmeans=True, meanline=True, flierprops={"markerfacecolor": "r"})
 
     pltString = StringIO()
     plt.savefig(pltString, format="svg")
