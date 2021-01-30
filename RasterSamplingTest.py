@@ -191,6 +191,8 @@ def main():
         font.glyphSet[glyph.name()].draw(spen)
         outline = spen.outline
     outlineBounds = outline.boundsRectangle
+    outlineBoundsLeft = outlineBounds.left if outlineBounds.left >= 0 else 0
+    outlineBoundsCenter = outlineBoundsLeft + outlineBounds.width / 2
 
     upList = []
     downList = []
@@ -301,8 +303,12 @@ def main():
 
     cp.drawPaths(outline)
 
-    cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
-    cp.drawText(typoBounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
+    tbl = typoBounds.left if outlineBounds.left >= 0 else -outlineBounds.left
+
+    # cp.drawText(tbl + typoBounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
+    # cp.drawText(tbl + typoBounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
+    cp.drawText(outlineBounds.left + outlineBounds.width / 2, outlineBounds.bottom - cp._labelFontSize, "center", fullName, margin=False)
+    cp.drawText(outlineBounds.left + outlineBounds.width / 2, outlineBounds.bottom - cp._labelFontSize * 2.2, "center", charInfo, margin=False)
 
     rasters = []
     height = outlineBounds.height
@@ -363,9 +369,11 @@ def main():
 
     cp.setFillColor(PathUtilities.GTColor.fromName("black"))
 
-    lineEndX, _ = line.pointXY(line.end)
+    # lineEndX, _ = line.pointXY(line.end)
+    lineEndX = outlineBoundsCenter
     cp.drawText(lineEndX + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}\u00B0")
-    cp.drawText(lineEndX + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
+    # cp.drawText(lineEndX + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
+    cp.drawText(lineEndX + margin, -cp._labelFontSize * 3, "center", f"Median stroke width = {median}")
 
     image = cp.generateFinalImage()
 
