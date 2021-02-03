@@ -210,10 +210,8 @@ def main():
     flatList = []
     mixedList = []
 
-    ascent = font.typographicAscender
-    descent = font.typographicDescender
-    advance = glyph.glyphMetric("advanceWidth")
-    typoBounds = PathUtilities.GTBoundsRectangle((0, descent), (advance, ascent))
+    baseline = [(min(0, outlineBounds.left), 0), (outlineBounds.right, 0)]
+    baselineBounds = PathUtilities.GTBoundsRectangle(*baseline)
 
     for contour in outline:
         for curve in contour:
@@ -284,7 +282,8 @@ def main():
             # else: print("    really dir_mixed")
         print()
 
-    cp = ContourPlotter.ContourPlotter(typoBounds.union(outlineBounds).points)
+    overallBounds = baselineBounds.union(outlineBounds)
+    cp = ContourPlotter.ContourPlotter(overallBounds.points)
 
     # Make room for two lines in the content margins
     cp._contentMargins.top *= 2
@@ -296,30 +295,22 @@ def main():
     fullNameWidth = TextUtilities.stringWidth(fullName, ctFont)
     charInfoWidth = TextUtilities.stringWidth(charInfo, ctFont)
     labelWidth = max(fullNameWidth, charInfoWidth)
-    if labelWidth > typoBounds.width:
-        margin = (labelWidth - typoBounds.width) / 2
+    if labelWidth > overallBounds.width:
+        margin = (labelWidth - overallBounds.width) / 2
         cp._contentMargins.left = margin
         cp._contentMargins.right = margin
     else:
         margin = cp._contentMargins.left
 
     cp.pushStrokeAttributes( dash="2,4")
-    if args.typoBounds:
-        cyan = PathUtilities.GTColor.fromName("cyan")
-        cp.drawContours([typoBounds.contour], color=cyan)
-        cp.drawPointsAsSegments([(0, 0), (advance, 0)], color=cyan)
-    if args.glyphBounds:
-        cp.drawContours([outlineBounds.contour], color=PathUtilities.GTColor.fromName("magenta"))
+    cp.drawPointsAsSegments(baseline, color=PathUtilities.GTColor.fromName("cyan"))
+    cp.drawContours([outlineBounds.contour], color=PathUtilities.GTColor.fromName("magenta"))
     cp.popStrokeAtributes()
 
     cp.drawPaths(outline)
 
-    tbl = typoBounds.left if outlineBounds.left >= 0 else -outlineBounds.left
-
-    # cp.drawText(tbl + typoBounds.width / 2 + margin, cp._labelFontSize * 2, "center", fullName)
-    # cp.drawText(tbl + typoBounds.width / 2 + margin, cp._labelFontSize / 4, "center", charInfo)
-    cp.drawText(outlineBounds.left + outlineBounds.width / 2, outlineBounds.bottom - cp._labelFontSize, "center", fullName, margin=False)
-    cp.drawText(outlineBounds.left + outlineBounds.width / 2, outlineBounds.bottom - cp._labelFontSize * 2.2, "center", charInfo, margin=False)
+    cp.drawText(outlineBoundsCenter + margin, cp._labelFontSize * 2, "center", fullName)
+    cp.drawText(outlineBoundsCenter + margin, cp._labelFontSize / 4, "center", charInfo)
 
     rasters = []
     height = outlineBounds.height
@@ -381,11 +372,8 @@ def main():
 
     cp.setFillColor(PathUtilities.GTColor.fromName("black"))
 
-    # lineEndX, _ = line.pointXY(line.end)
-    lineEndX = outlineBoundsCenter
-    cp.drawText(lineEndX + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}\u00B0")
-    # cp.drawText(lineEndX + margin, -cp._labelFontSize * 3, "center", f"Mean stroke width = {avgWidth}")
-    cp.drawText(lineEndX + margin, -cp._labelFontSize * 3, "center", f"Median stroke width = {median}")
+    cp.drawText(outlineBoundsCenter + margin, -cp._labelFontSize * 1.5, "center", f"Stroke angle = {strokeAngle}\u00B0")
+    cp.drawText(outlineBoundsCenter + margin, -cp._labelFontSize * 3, "center", f"Median stroke width = {median}")
 
     image = cp.generateFinalImage()
 
