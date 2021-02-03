@@ -41,7 +41,7 @@ class TestArgumentIterator(ArgumentIterator):
         """
         fontFile = self.nextExtra(valueName + " file")
         fontName = None
-        if fontFile.endswith(".ttc") or fontFile.endswith(".otf"):
+        if fontFile.endswith(".ttc"):
             fontName = self.nextExtra(valueName + " name")
         elif not fontFile.endswith(".ttf") and not fontFile.endswith(".otf") and not fontFile.endswith(".ufo"):
             raise ValueError(f"Expected file name with “.ttf” or “.otf” or “.ufo”; got “{fontFile}”.")
