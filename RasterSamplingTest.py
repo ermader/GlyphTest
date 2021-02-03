@@ -94,6 +94,17 @@ def leftmostIntersection(curves, raster):
 
     return curves[-1].xyPoint(leftmostX, leftmostY)
 
+def rightmostIntersection(curves, raster):
+    rightmostX = rightmostY = -65536
+
+    for curve in curves:
+        ipx, ipy = curve.pointXY(curve.intersectWithLine(raster))
+        if ipx > rightmostX:
+            rightmostY = ipy
+            rightmostX = ipx
+
+    return curves[-1].xyPoint(rightmostX, rightmostY)
+
 def direction(curve):
     startY = curve.startY
     endY = curve.endY
@@ -312,8 +323,8 @@ def main():
 
     rasters = []
     height = outlineBounds.height
-    lowerBound = round(height * .30)
-    upperBound = round(height * .70)
+    lowerBound = round(outlineBounds.bottom + height * .30)
+    upperBound = round(outlineBounds.bottom + height * .70)
     interval = round(height * .02)
     left, _, right, _ = typoBounds.union(outlineBounds).points
     for y in range(lowerBound, upperBound, interval):
@@ -322,6 +333,7 @@ def main():
         raster = outline.segmentFromPoints([p1, p2])
 
         p1 = leftmostIntersection(curvesAtY(upList, y), raster)
+        # p1 = rightmostIntersection(curvesAtY(upList, y), raster)
         p2 = leftmostIntersection(curvesAtY(downList, y), raster)
         rasters.append(outline.segmentFromPoints([p1, p2]))
         cp.drawPaths([outline.pathFromSegments(raster)], color=PathUtilities.GTColor.fromName("red"))
@@ -410,6 +422,7 @@ def main():
     # add a 'best fit' line
     mu = statistics.mean(widths)
     sigma = statistics.stdev(widths)
+    if sigma == 0.0: sigma = 1.0  # hack: if all widths are the same, sigma == 0...
     y = ((1 / (np.sqrt(2 * np.pi) * sigma)) *
          np.exp(-0.5 * (1 / sigma * (bins - mu)) ** 2))
 

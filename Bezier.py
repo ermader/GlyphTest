@@ -429,7 +429,7 @@ class Bezier(object):
             p = self.controlPoints
 
         def reduce(t):
-            return 0 <= t <= 1
+            return 0 <= t <= 1 or butils.approximately(t, 0) or butils.approximately(t, 1)
 
         order = len(p) - 1
         if order == 2:
@@ -602,7 +602,9 @@ class Bezier(object):
             return butils.lli(self.controlPoints, line.controlPoints)
 
         roots = self.roots(line.controlPoints)
-        return self.get(roots[0])
+        root = 0 if roots[0] < 0 else 1 if roots[0] > 1 else roots[0]
+
+        return self.get(root)
 
     @staticmethod
     def curveIntersects(c1, c2, intersectionThreshold=0.5):
