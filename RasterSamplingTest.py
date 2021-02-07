@@ -6,7 +6,7 @@ Created on October 26, 2020
 @author Eric Mader
 """
 
-from os.path import basename
+import os
 from sys import argv, exit, stderr
 import xml.etree.ElementTree as ET
 import re
@@ -41,9 +41,17 @@ class RasterSamplingTestArgs(TestArgs):
 
     boundsTypes = {"typographic": (True, False), "glyph": (False, True), "both": (True, True)}
 
-    def __init__(self, argumentList):
+    def __init__(self):
         self.typoBounds = self.glyphBounds = False
-        TestArgs.__init__(self, argumentList)
+        self.outdir = ""
+        self.silent = False
+        TestArgs.__init__(self)
+
+    @classmethod
+    def forArguments(cls, argumentList):
+        args = RasterSamplingTestArgs()
+        args.processArguments(argumentList)
+        return args
 
     def processArgument(self, argument, arguments):
         if argument == "--bounds":
@@ -92,7 +100,7 @@ def leftmostIntersection(curves, raster):
             leftmostY = ipy
             leftmostX = ipx
 
-    return curves[-1].xyPoint(leftmostX, leftmostY)
+    return curves[0].xyPoint(leftmostX, leftmostY)
 
 def rightmostIntersection(curves, raster):
     rightmostX = rightmostY = -65536
@@ -103,7 +111,7 @@ def rightmostIntersection(curves, raster):
             rightmostY = ipy
             rightmostX = ipx
 
-    return curves[-1].xyPoint(rightmostX, rightmostY)
+    return curves[0].xyPoint(rightmostX, rightmostY)
 
 def direction(curve):
     startY = curve.startY
@@ -218,69 +226,72 @@ class RasterSamplingTest(object):
                 elif dir == Bezier.dir_flat:
                     flatList.append(curve)
                 # else: mixedList.append(curve)
-                # else:
-                #     startY = curve.startY
-                #     endY = curve.endY
-                #     if endY > startY: upList.append(curve)
-                #     elif endY < startY: downList.append(curve)
-                #     else: flatList.append(curve)
                 else:
-                    dirfun = lambda x, y: (x < y) - (x > y)
-                    nTangents = 10
-                    ycoords = []
-                    for i in range(nTangents + 1):
-                        t = i / nTangents
-                        px, py = curve.pointXY(curve.get(t))
-                        ycoords.append(py)
-                    dirs = [dirfun(ycoords[i], ycoords[i + 1]) for i in range(nTangents - 1)]
-                    up = 1 in dirs
-                    down = -1 in dirs
-                    if up and not down:
-                        upList.append(curve)
-                    elif down and not up:
-                        downList.append(curve)
-                    else:
-                        mixedList.append(curve)
+                    startY = curve.startY
+                    endY = curve.endY
+                    if endY > startY: upList.append(curve)
+                    elif endY < startY: downList.append(curve)
+                    else: flatList.append(curve)
+                # else:
+                #     dirfun = lambda x, y: (x < y) - (x > y)
+                #     nTangents = 10
+                #     ycoords = []
+                #     for i in range(nTangents + 1):
+                #         t = i / nTangents
+                #         px, py = curve.pointXY(curve.get(t))
+                #         ycoords.append(py)
+                #     dirs = [dirfun(ycoords[i], ycoords[i + 1]) for i in range(nTangents - 1)]
+                #     up = 1 in dirs
+                #     down = -1 in dirs
+                #     if up and not down:
+                #         upList.append(curve)
+                #     elif down and not up:
+                #         downList.append(curve)
+                #     else:
+                #         mixedList.append(curve)
 
         sortByP0(upList)
         sortByP0(downList)
         sortByP0(flatList)
 
-        print("up list:")
-        for b in upList: print(b.controlPoints)
+        if not args.silent:
+            print("up list:")
+            for b in upList: print(b.controlPoints)
 
-        print("\ndown list:")
-        for b in downList: print(b.controlPoints)
+            print("\ndown list:")
+            for b in downList: print(b.controlPoints)
 
-        print("\nflat list:")
-        for b in flatList: print(b.controlPoints)
+            print("\nflat list:")
+            for b in flatList: print(b.controlPoints)
 
-        if len(mixedList) > 0:
-            print("\nmixed list:")
-            # dirfun = lambda x, y: (x < y) - (x > y)
+            if len(mixedList) > 0:
+                print("\nmixed list:")
+                # dirfun = lambda x, y: (x < y) - (x > y)
 
-            for b in mixedList:
-                print(b.controlPoints)
+                for b in mixedList:
+                    print(b.controlPoints)
 
-                # splits = []
-                # splitCurve(b, splits)
-                #
-                # for s in splits: print(f"    {controlPoints(s)}")
-                # nTangents = 10
-                # ycoords = []
-                # for i in range(nTangents + 1):
-                #     t = i / nTangents
-                #     px, py = b.pointXY(b.get(t))
-                #     # tx, ty = b._tangent(t)
-                #     # print(f"    ({px}, {py}), ({tx}, {ty})")
-                #     ycoords.append(py)
-                # dirs = [dirfun(ycoords[i], ycoords[i+1]) for i in range(nTangents-1)]
-                # up = 1 in dirs
-                # down = -1 in dirs
-                # if up and not down: print("    really dir_up")
-                # elif down and not up: print("    really dir_down")
-                # else: print("    really dir_mixed")
-            print()
+                    # splits = []
+                    # splitCurve(b, splits)
+                    #
+                    # for s in splits: print(f"    {controlPoints(s)}")
+                    # nTangents = 10
+                    # ycoords = []
+                    # for i in range(nTangents + 1):
+                    #     t = i / nTangents
+                    #     px, py = b.pointXY(b.get(t))
+                    #     # tx, ty = b._tangent(t)
+                    #     # print(f"    ({px}, {py}), ({tx}, {ty})")
+                    #     ycoords.append(py)
+                    # dirs = [dirfun(ycoords[i], ycoords[i+1]) for i in range(nTangents-1)]
+                    # up = 1 in dirs
+                    # down = -1 in dirs
+                    # if up and not down: print("    really dir_up")
+                    # elif down and not up: print("    really dir_down")
+                    # else: print("    really dir_mixed")
+                print()
+        else:
+            print(f"{fullName}:")
 
         overallBounds = baselineBounds.union(outlineBounds)
         cp = ContourPlotter.ContourPlotter(overallBounds.points)
@@ -369,6 +380,7 @@ class RasterSamplingTest(object):
         maxWidth = round(max(widths), 2)
         print(f"angle = {strokeAngle}\u00B0")
         print(f"widths: min = {minWidth}, Q1 = {q1}, median = {median}, mean = {avgWidth}, Q3 = {q3}, max = {maxWidth}")
+        if args.silent: print()
 
         cp.setFillColor(PathUtilities.GTColor.fromName("black"))
 
@@ -445,19 +457,20 @@ class RasterSamplingTest(object):
         root[2].set("y", f"{histOffset}")
 
         ET.register_namespace("", nameSpaces["svg"])
-        ET.ElementTree(root).write(f"RasterSamplingTest {fullName}_{glyphName}.svg", xml_declaration=True,
+        svgName = os.path.join(args.outdir, f"RasterSamplingTest {fullName}_{glyphName}.svg")
+        ET.ElementTree(root).write(svgName, xml_declaration=True,
                                    encoding="UTF-8")
 
 
 def main():
     argumentList = argv
     args = None
-    programName = basename(argumentList.pop(0))
+    programName = os.path.basename(argumentList.pop(0))
     if len(argumentList) == 0:
         print(__doc__, file=stderr)
         exit(1)
     try:
-        args = RasterSamplingTestArgs(argumentList)
+        args = RasterSamplingTestArgs.forArguments(argumentList)
     except ValueError as error:
         print(programName + ": " + str(error), file=stderr)
         exit(1)

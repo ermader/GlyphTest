@@ -57,7 +57,7 @@ class TestArgumentIterator(ArgumentIterator):
         return glist
 
 class TestArgs:
-    def __init__(self, argumentList):
+    def __init__(self):
         self.debug = False
         self.fontFile = None
         self.fontName = None
@@ -66,6 +66,13 @@ class TestArgs:
         self.charCode = None
         # self.steps = 20
 
+    @classmethod
+    def forArguments(cls, argumentList):
+        args = TestArgs()
+        args.processArguments(argumentList)
+        return args
+
+    def processArguments(self, argumentList):
         arguments = TestArgumentIterator(argumentList)
         argumentsSeen = {}
 
@@ -124,48 +131,48 @@ class TestArgs:
             raise ValueError(f"GlyphID must be a positive integer; got {arg}")
         return int(arg)
 
-    @classmethod
-    def forArguments(cls, argumentList):
-        """\
-        Return a new TestArgs object representing the given
-        argument list.
-        Raise ValueError if the argument list is missing required options,
-        is missing required extra arguments for options,
-        has unsupported options, or has unsupported extra arguments.
-        """
-
-        # pylint: disable=too-many-branches
-
-        arguments = TestArgumentIterator(argumentList)
-        args = TestArgs()
-        argumentsSeen = {}
-
-        for argument in arguments:
-            if argument in argumentsSeen:
-                raise ValueError("Duplicate option “" + argument + "”.")
-            argumentsSeen[argument] = True
-
-            if argument == "--font":
-                args.fontFile, args.fontName = arguments.nextExtraAsFont("font")
-            elif argument == "--glyph":
-                extra = arguments.nextExtra("glyph")
-                if len(extra) == 1:
-                    args.charCode = ord(extra)
-                elif extra[0] == "/":
-                    args.glyphName = extra[1:]
-                elif extra[0] == "u":
-                    args.charCode = cls.getHexCharCode(extra[1:])
-                elif extra[0:3] == "gid":
-                    args.glyphID = cls.getGlyphID(extra[3:])
-            elif argument == "--steps":
-                args.steps = arguments.nextExtraAsPosInt("steps")
-            elif argument == "--debug":
-                args.debug = True
-            else:
-                raise ValueError(f"Unrecognized option “{argument}”.")
-
-        args.completeInit()
-        return args
+    # @classmethod
+    # def forArguments(cls, argumentList):
+    #     """\
+    #     Return a new TestArgs object representing the given
+    #     argument list.
+    #     Raise ValueError if the argument list is missing required options,
+    #     is missing required extra arguments for options,
+    #     has unsupported options, or has unsupported extra arguments.
+    #     """
+    #
+    #     # pylint: disable=too-many-branches
+    #
+    #     arguments = TestArgumentIterator(argumentList)
+    #     args = TestArgs()
+    #     argumentsSeen = {}
+    #
+    #     for argument in arguments:
+    #         if argument in argumentsSeen:
+    #             raise ValueError("Duplicate option “" + argument + "”.")
+    #         argumentsSeen[argument] = True
+    #
+    #         if argument == "--font":
+    #             args.fontFile, args.fontName = arguments.nextExtraAsFont("font")
+    #         elif argument == "--glyph":
+    #             extra = arguments.nextExtra("glyph")
+    #             if len(extra) == 1:
+    #                 args.charCode = ord(extra)
+    #             elif extra[0] == "/":
+    #                 args.glyphName = extra[1:]
+    #             elif extra[0] == "u":
+    #                 args.charCode = cls.getHexCharCode(extra[1:])
+    #             elif extra[0:3] == "gid":
+    #                 args.glyphID = cls.getGlyphID(extra[3:])
+    #         elif argument == "--steps":
+    #             args.steps = arguments.nextExtraAsPosInt("steps")
+    #         elif argument == "--debug":
+    #             args.debug = True
+    #         else:
+    #             raise ValueError(f"Unrecognized option “{argument}”.")
+    #
+    #     args.completeInit()
+    #     return args
 
     def getGlyph(self, font):
         if self.glyphName: return font.glyphForName(self.glyphName)
