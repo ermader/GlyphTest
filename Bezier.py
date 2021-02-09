@@ -500,7 +500,7 @@ class Bezier(object):
             x2 = t1 * math.cos((phi + butils.tau) / 3) - a / 3
             x3 = t1 * math.cos((phi + 2 * butils.tau) / 3) - a / 3
             return list(filter(reduce, [x1, x2, x3]))
-        elif discriminant == 0:
+        elif butils.approximately(discriminant, 0):  # discriminant == 0:
             u1 = butils.crt(-q2) if q2 < 0 else -butils.crt(q2)
             x1 = 2 * u1 - a / 3
             x2 = -u1 - a / 3

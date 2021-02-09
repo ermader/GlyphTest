@@ -44,6 +44,7 @@ class RasterSamplingTestArgs(TestArgs):
     def __init__(self):
         self.typoBounds = self.glyphBounds = False
         self.outdir = ""
+        # self.indir = ""
         self.silent = False
         TestArgs.__init__(self)
 
@@ -290,8 +291,8 @@ class RasterSamplingTest(object):
                     # elif down and not up: print("    really dir_down")
                     # else: print("    really dir_mixed")
                 print()
-        else:
-            print(f"{fullName}:")
+        # else:
+        #     print(f"{os.path.relpath(args.fontFile, args.indir)}:")
 
         overallBounds = baselineBounds.union(outlineBounds)
         cp = ContourPlotter.ContourPlotter(overallBounds.points)
@@ -460,6 +461,8 @@ class RasterSamplingTest(object):
         svgName = os.path.join(args.outdir, f"RasterSamplingTest {fullName}_{glyphName}.svg")
         ET.ElementTree(root).write(svgName, xml_declaration=True,
                                    encoding="UTF-8")
+
+        plt.close(fig)
 
 
 def main():
