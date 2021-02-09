@@ -178,15 +178,20 @@ class RasterSamplingTest(object):
         if args.fontFile.endswith(".ufo"):
             self._font = UFOFont(args.fontFile)
         else:
-            self._font = GTFont(args.fontFile, fontName=args.fontName)
+            self._font = GTFont(args.fontFile, fontName=args.fontName, fontNumber=args.fontNumber)
 
     def run(self):
         useBezierOutline = True  # should be in the args...
         args = self._args
         font = self._font
+        indent = ""
 
         fullName = font.fullName
         if fullName.startswith("."): fullName = fullName[1:]
+
+        if args.silent:
+            indent = "    "
+            print(f"{indent}{fullName}:")
 
         level = logging.DEBUG if args.debug else logging.WARNING
         logging.basicConfig(level=level)
@@ -205,6 +210,11 @@ class RasterSamplingTest(object):
             spen = SVGPathPen(font.glyphSet, logger)
             font.glyphSet[glyph.name()].draw(spen)
             outline = spen.outline
+
+        contourCount = len(outline.contours)
+        if contourCount > 3:
+            print(f"{indent}(this glyph has {contourCount} contours, so results may not be useful.)")
+
         outlineBounds = outline.boundsRectangle
         outlineBoundsLeft = outlineBounds.left if outlineBounds.left >= 0 else 0
         outlineBoundsCenter = outlineBoundsLeft + outlineBounds.width / 2
@@ -368,7 +378,7 @@ class RasterSamplingTest(object):
         cp.drawPaths([outline.pathFromSegments(line)])
         cp.popStrokeAtributes()
 
-        print(f"a = {round(a, 2)}, b = {round(b, 4)}, R\u00B2 = {round(r2, 4)}")
+        print(f"{indent}a = {round(a, 2)}, b = {round(b, 4)}, R\u00B2 = {round(r2, 4)}")
 
         strokeAngle = round(PathUtilities.slopeAngle(line.controlPoints), 1)
 
@@ -379,8 +389,8 @@ class RasterSamplingTest(object):
         q3 = round(quartiles[2], 2)
         minWidth = round(min(widths), 2)
         maxWidth = round(max(widths), 2)
-        print(f"angle = {strokeAngle}\u00B0")
-        print(f"widths: min = {minWidth}, Q1 = {q1}, median = {median}, mean = {avgWidth}, Q3 = {q3}, max = {maxWidth}")
+        print(f"{indent}angle = {strokeAngle}\u00B0")
+        print(f"{indent}widths: min = {minWidth}, Q1 = {q1}, median = {median}, mean = {avgWidth}, Q3 = {q3}, max = {maxWidth}")
         if args.silent: print()
 
         cp.setFillColor(PathUtilities.GTColor.fromName("black"))

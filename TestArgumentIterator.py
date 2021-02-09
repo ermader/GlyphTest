@@ -61,6 +61,7 @@ class TestArgs:
         self.debug = False
         self.fontFile = None
         self.fontName = None
+        self.fontNumber = None
         self.glyphName = None
         self.glyphID = None
         self.charCode = None
