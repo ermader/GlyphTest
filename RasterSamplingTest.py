@@ -213,7 +213,7 @@ class RasterSamplingTest(object):
 
         contourCount = len(outline.contours)
         if contourCount > 3:
-            print(f"{indent}(this glyph has {contourCount} contours, so results may not be useful.)")
+            print(f"{indent}(this glyph has {contourCount} contours, so results may not be useful)")
 
         outlineBounds = outline.boundsRectangle
         outlineBoundsLeft = outlineBounds.left if outlineBounds.left >= 0 else 0
@@ -345,9 +345,13 @@ class RasterSamplingTest(object):
             p2 = outline.xyPoint(right, y)
             raster = outline.segmentFromPoints([p1, p2])
 
-            p1 = leftmostIntersection(curvesAtY(upList, y), raster)
+            upCurvesAtY = curvesAtY(upList, y)
+            if len(upCurvesAtY) == 0: continue
+            p1 = leftmostIntersection(upCurvesAtY, raster)
             # p1 = rightmostIntersection(curvesAtY(upList, y), raster)
-            p2 = leftmostIntersection(curvesAtY(downList, y), raster)
+            downCurvesAtY = curvesAtY(downList, y)
+            if len(downCurvesAtY) == 0: continue
+            p2 = leftmostIntersection(downCurvesAtY, raster)
             rasters.append(outline.segmentFromPoints([p1, p2]))
             cp.drawPaths([outline.pathFromSegments(raster)], color=PathUtilities.GTColor.fromName("red"))
 
