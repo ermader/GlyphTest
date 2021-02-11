@@ -331,6 +331,19 @@ class SVGPathOutline(MutableSequence):  # maybe take font, glyph name and constr
     def pathFromSegments(cls, *segments):
         return SVGPathContour(*segments)
 
+    @classmethod
+    def fromContours(cls, contours):
+        outline = SVGPathOutline()
+
+        for contour in contours:
+            segments = []
+            for segment in contour:
+                segments.append(cls.segmentFromPoints(segment))
+
+            outline.append(cls.pathFromSegments(*segments))
+
+        return outline
+
     @property
     def contours(self):
         return self._contours

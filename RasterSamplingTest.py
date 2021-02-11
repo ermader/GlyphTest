@@ -171,6 +171,14 @@ def lengthInPx(value):
     # ignore any invalid unit specification
     return float(number) * pxPerInch / (perInch if perInch else pxPerInch)
 
+def scaleContours(contours, unitsPerEM):
+    if unitsPerEM != 1000:
+        scaleFactor = 1000 / unitsPerEM
+        scaleTransform = PathUtilities.GTTransform.scale(scaleFactor, scaleFactor)
+        return scaleTransform.applyToContours(contours)
+
+    return contours
+
 class RasterSamplingTest(object):
     def __init__(self, args):
         self._args = args
@@ -202,14 +210,17 @@ class RasterSamplingTest(object):
         charCode = font.unicodeForName(glyphName)
         charInfo = f"U+{charCode:04X} {CharNames.CharNames.getCharName(charCode)}"
 
+        unitsPerEM = font.unitsPerEm()
+
         if useBezierOutline:
             pen = SegmentPen(font.glyphSet, logger)
             font.glyphSet[glyph.name()].draw(pen)
-            outline = BOutline(pen.contours)
+            outline = BOutline(scaleContours(pen.contours, unitsPerEM))
         else:
             spen = SVGPathPen(font.glyphSet, logger)
             font.glyphSet[glyph.name()].draw(spen)
-            outline = spen.outline
+            scaled = scaleContours(spen.outline, unitsPerEM)
+            outline = SVGPathOutline.fromContours(scaled)
 
         contourCount = len(outline.contours)
         if contourCount > 3:
