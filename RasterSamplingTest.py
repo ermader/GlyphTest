@@ -360,7 +360,7 @@ class RasterSamplingTest(object):
         for raster in rasters:
             mp = raster.midpoint
             midpoints.append(mp)
-            widths.append(rasterLength(raster))
+            widths.append(round(rasterLength(raster), 2))
             cp.drawPointsAsCircles(raster.controlPoints, 4, [PathUtilities.GTColor.fromName("blue")])
             cp.drawPointsAsCircles([mp], 4, [PathUtilities.GTColor.fromName("green")])
 
