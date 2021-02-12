@@ -440,11 +440,18 @@ class RasterSamplingTest(object):
         matplotlib.set_loglevel("warn")
         matplotlib.use("svg")
         figWidth, figHeight = matplotlib.rcParams["figure.figsize"]
-        gridSpec = {"height_ratios": [80, 20], "hspace": 0.1}
+        gridSpec = {"height_ratios": [10, 70, 20], "hspace": 0.1}
         figSize = [figWidth, figHeight * 1.25]
-        fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, gridspec_kw=gridSpec, figsize=figSize)
+        fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, sharex=True, gridspec_kw=gridSpec, figsize=figSize)
 
-        n, bins, patches = ax1.hist(widths, bins=12, align='mid', density=True)
+        ax1.set_title(f"Stroke Widths of {fullName}_{glyphName}")
+        ax1.set_axis_off()
+
+        collLabels = ["Min", "Q1", "Median", "Mean", "Q3", "Max"]
+        cellText = [[f"{minWidth}", f"{q1}", f"{median}", f"{avgWidth}", f"{q3}", f"{maxWidth}"]]
+        ax1.table(cellText=cellText, cellLoc="center", colLabels=collLabels, loc="upper center", edges="closed")
+
+        n, bins, patches = ax2.hist(widths, bins=12, align='mid', density=True)
 
         # add a 'best fit' line
         mu = statistics.mean(widths)
@@ -459,13 +466,12 @@ class RasterSamplingTest(object):
         dens.fit(bw=0.9)
         densVals = dens.evaluate(widths)
 
-        ax1.plot(bins, y, 'm--', widths, densVals, "r--")
-        ax1.vlines([avgWidth, median], 0, max(max(n), densVals.max()), colors=["tab:green", "tab:orange"])
-        ax1.set_ylabel('Probability density')
-        ax1.set_title(f"Stroke Widths of {fullName}_{glyphName}")
+        ax2.plot(bins, y, 'm--', widths, densVals, "r--")
+        ax2.vlines([avgWidth, median], 0, max(max(n), densVals.max()), colors=["tab:green", "tab:orange"])
+        ax2.set_ylabel('Probability density')
 
-        ax2.set_xlabel('Width')
-        ax2.boxplot(widths, vert=False, showmeans=True, meanline=True, flierprops={"markerfacecolor": "r"})
+        ax3.set_xlabel('Width')
+        ax3.boxplot(widths, vert=False, showmeans=True, meanline=True, flierprops={"markerfacecolor": "r"})
 
         pltString = StringIO()
         plt.savefig(pltString, format="svg")
