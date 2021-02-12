@@ -56,7 +56,7 @@ def main():
         testArgs.glyphName = toolArgs.glyphName
         testArgs.glyphID = toolArgs.glyphID
         testArgs.charCode = toolArgs.charCode
-        reldir = os.path.dirname(os.path.relpath(path, toolArgs.inputDir))
+        reldir = os.path.dirname(os.path.relpath(path, os.path.dirname(toolArgs.inputDir)))
         testArgs.outdir = os.path.join(toolArgs.outputDir, reldir)
         testArgs.silent = True
         os.makedirs(testArgs.outdir, exist_ok=True)
