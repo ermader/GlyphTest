@@ -172,7 +172,7 @@ def lengthInPx(value):
     return float(number) * pxPerInch / (perInch if perInch else pxPerInch)
 
 def scaleContours(contours, unitsPerEM):
-    if unitsPerEM != 1000:
+    if unitsPerEM > 1000:
         scaleFactor = 1000 / unitsPerEM
         scaleTransform = PathUtilities.GTTransform.scale(scaleFactor, scaleFactor)
         return scaleTransform.applyToContours(contours)
@@ -412,7 +412,7 @@ class RasterSamplingTest(object):
 
         cp.drawText(outlineBoundsCenter + margin, -cp._labelFontSize * 1.5, "center",
                     f"Stroke angle = {strokeAngle}\u00B0")
-        cp.drawText(outlineBoundsCenter + margin, -cp._labelFontSize * 3, "center", f"Median stroke width = {median}")
+        cp.drawText(outlineBoundsCenter + margin, -cp._labelFontSize * 3, "center", f"Best fit R\u00B2 = {round(r2, 4)}")
 
         image = cp.generateFinalImage()
 
