@@ -91,79 +91,6 @@ def splitCurve(curve, splits):
     else:
         splitCurve(r, splits)
 
-def sortByP0(list):
-    if len(list) == 0: return
-    list.sort(key=lambda b: b.startX)
-
-def rasterLength(raster):
-    return PathUtilities.length(raster.controlPoints)
-
-def curvesAtY(curveList, y):
-    return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
-
-def leftmostIntersection(curves, raster):
-    leftmostX = leftmostY = 65536
-
-    for curve in curves:
-        ipx, ipy = curve.pointXY(curve.intersectWithLine(raster))
-        if ipx < leftmostX:
-            leftmostY = ipy
-            leftmostX = ipx
-
-    return curves[0].xyPoint(leftmostX, leftmostY)
-
-def rightmostIntersection(curves, raster):
-    rightmostX = rightmostY = -65536
-
-    for curve in curves:
-        ipx, ipy = curve.pointXY(curve.intersectWithLine(raster))
-        if ipx > rightmostX:
-            rightmostY = ipy
-            rightmostX = ipx
-
-    return curves[0].xyPoint(rightmostX, rightmostY)
-
-def direction(curve):
-    startY = curve.startY
-    endY = curve.endY
-
-    # if curve.order == 1:
-    #     if startY < endY: return Bezier.dir_up
-    #     if startY > endY: return Bezier.dir_down
-    #     return Bezier.dir_flat
-
-    minY = min(startY, endY)
-    maxY = max(startY, endY)
-    # cps = curve.controlPoints
-    #
-    # if curve.order == 2:
-    #     cp1x, cp1y = curve.pointXY(cps[1])
-    #     if cp1y < minY or cp1y > maxY: return Bezier.dir_mixed
-    #     if startY < endY: return Bezier.dir_up
-    #     if startY > endY: return Bezier.dir_down
-    #
-    # if curve.order == 3:
-    #     cp2x, cp2y = curve.pointXY(cps[2])
-    #     if cp2y < minY or cp2y > maxY: return Bezier.dir_mixed
-    #     if startY < endY: return Bezier.dir_up
-    #     if startY > endY: return Bezier.dir_down
-    #
-    # # For now, assume any higher-order curves are mixed
-    # return Bezier.dir_mixed
-
-    ocps = curve.controlPoints[1:-1]
-    for ocp in ocps:
-        ocpx, ocpy = curve.pointXY(ocp)
-        if ocpy < minY or ocpy > maxY: return Bezier.dir_mixed
-
-    # if we get here, the curve is either order 1 or
-    # has a uniform direction. Curves with order 2 or higher
-    # with startY and endY equal are likely mixed and got caught
-    # above.
-    if startY < endY: return Bezier.dir_up
-    if startY > endY: return Bezier.dir_down
-    return Bezier.dir_flat
-
 class RasterSamplingTest(object):
     def __init__(self, args):
         self._args = args
@@ -172,6 +99,85 @@ class RasterSamplingTest(object):
             self._font = UFOFont(args.fontFile)
         else:
             self._font = GTFont(args.fontFile, fontName=args.fontName, fontNumber=args.fontNumber)
+
+    @classmethod
+    def sortByP0(cls, list):
+        if len(list) == 0: return
+        list.sort(key=lambda b: b.startX)
+
+    @classmethod
+    def rasterLength(cls, raster):
+        return PathUtilities.length(raster.controlPoints)
+
+    @classmethod
+    def curvesAtY(cls, curveList, y):
+        return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
+
+    @classmethod
+    def leftmostIntersection(cls, curves, raster):
+        leftmostX = leftmostY = 65536
+
+        for curve in curves:
+            ipx, ipy = curve.pointXY(curve.intersectWithLine(raster))
+            if ipx < leftmostX:
+                leftmostY = ipy
+                leftmostX = ipx
+
+        return curves[0].xyPoint(leftmostX, leftmostY)
+
+    @classmethod
+    def rightmostIntersection(cls, curves, raster):
+        rightmostX = rightmostY = -65536
+
+        for curve in curves:
+            ipx, ipy = curve.pointXY(curve.intersectWithLine(raster))
+            if ipx > rightmostX:
+                rightmostY = ipy
+                rightmostX = ipx
+
+        return curves[0].xyPoint(rightmostX, rightmostY)
+
+    @classmethod
+    def direction(cls, curve):
+        startY = curve.startY
+        endY = curve.endY
+
+        # if curve.order == 1:
+        #     if startY < endY: return Bezier.dir_up
+        #     if startY > endY: return Bezier.dir_down
+        #     return Bezier.dir_flat
+
+        minY = min(startY, endY)
+        maxY = max(startY, endY)
+        # cps = curve.controlPoints
+        #
+        # if curve.order == 2:
+        #     cp1x, cp1y = curve.pointXY(cps[1])
+        #     if cp1y < minY or cp1y > maxY: return Bezier.dir_mixed
+        #     if startY < endY: return Bezier.dir_up
+        #     if startY > endY: return Bezier.dir_down
+        #
+        # if curve.order == 3:
+        #     cp2x, cp2y = curve.pointXY(cps[2])
+        #     if cp2y < minY or cp2y > maxY: return Bezier.dir_mixed
+        #     if startY < endY: return Bezier.dir_up
+        #     if startY > endY: return Bezier.dir_down
+        #
+        # # For now, assume any higher-order curves are mixed
+        # return Bezier.dir_mixed
+
+        ocps = curve.controlPoints[1:-1]
+        for ocp in ocps:
+            ocpx, ocpy = curve.pointXY(ocp)
+            if ocpy < minY or ocpy > maxY: return Bezier.dir_mixed
+
+        # if we get here, the curve is either order 1 or
+        # has a uniform direction. Curves with order 2 or higher
+        # with startY and endY equal are likely mixed and got caught
+        # above.
+        if startY < endY: return Bezier.dir_up
+        if startY > endY: return Bezier.dir_down
+        return Bezier.dir_flat
 
     @classmethod
     def pathCoordinate(cls, path):
@@ -267,7 +273,7 @@ class RasterSamplingTest(object):
 
         for contour in outline:
             for curve in contour:
-                dir = direction(curve)
+                dir = self.direction(curve)
                 if dir == Bezier.dir_up:
                     upList.append(curve)
                 elif dir == Bezier.dir_down:
@@ -299,9 +305,9 @@ class RasterSamplingTest(object):
                 #     else:
                 #         mixedList.append(curve)
 
-        sortByP0(upList)
-        sortByP0(downList)
-        sortByP0(flatList)
+        self.sortByP0(upList)
+        self.sortByP0(downList)
+        self.sortByP0(flatList)
 
         if not args.silent:
             print("up list:")
@@ -383,17 +389,17 @@ class RasterSamplingTest(object):
             p2 = outline.xyPoint(right, y)
             raster = outline.segmentFromPoints([p1, p2])
 
-            upCurvesAtY = curvesAtY(upList, y)
+            upCurvesAtY = self.curvesAtY(upList, y)
             if len(upCurvesAtY) == 0: continue
 
             if args.widthMethod == RasterSamplingTestArgs.widthMethodLeftmost:
-                p1 = leftmostIntersection(upCurvesAtY, raster)
+                p1 = self.leftmostIntersection(upCurvesAtY, raster)
             elif args.widthMethod == RasterSamplingTestArgs.widthMethodRightmost:
-                p1 = rightmostIntersection(curvesAtY(upList, y), raster)
+                p1 = self.rightmostIntersection(self.curvesAtY(upList, y), raster)
 
-            downCurvesAtY = curvesAtY(downList, y)
+            downCurvesAtY = self.curvesAtY(downList, y)
             if len(downCurvesAtY) == 0: continue
-            p2 = leftmostIntersection(downCurvesAtY, raster)
+            p2 = self.leftmostIntersection(downCurvesAtY, raster)
             rasters.append(outline.segmentFromPoints([p1, p2]))
             cp.drawPaths([outline.pathFromSegments(raster)], color=PathUtilities.GTColor.fromName("red"))
 
@@ -402,7 +408,7 @@ class RasterSamplingTest(object):
         for raster in rasters:
             mp = raster.midpoint
             midpoints.append(mp)
-            widths.append(round(rasterLength(raster), 2))
+            widths.append(round(self.rasterLength(raster), 2))
             cp.drawPointsAsCircles(raster.controlPoints, 4, [PathUtilities.GTColor.fromName("blue")])
             cp.drawPointsAsCircles([mp], 4, [PathUtilities.GTColor.fromName("green")])
 
