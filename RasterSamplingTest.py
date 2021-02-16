@@ -39,10 +39,15 @@ import TextUtilities
 
 class RasterSamplingTestArgs(TestArgs):
 
+    widthMethodLeftmost = 0
+    widthMethodRightmost = 1
+    widthMethodLeastspread = 2
     boundsTypes = {"typographic": (True, False), "glyph": (False, True), "both": (True, True)}
+    widthMethods = {"leftmost": widthMethodLeftmost, "rightmost": widthMethodRightmost, "leastspread": widthMethodLeastspread}
 
     def __init__(self):
         self.typoBounds = self.glyphBounds = False
+        self.widthMethod = self.widthMethodLeftmost
         self.outdir = ""
         # self.indir = ""
         self.silent = False
@@ -59,6 +64,10 @@ class RasterSamplingTestArgs(TestArgs):
             boundsType = arguments.nextExtra("bounds")
             if boundsType in self.boundsTypes.keys():
                 self.typoBounds, self.glyphBounds = self.boundsTypes[boundsType]
+        elif argument == "--widthMethod":
+            widthMethod = arguments.nextExtra("width method")
+            if widthMethod in self.widthMethods.keys():
+                self.widthMethod = self.widthMethods[widthMethod]
         else:
             TestArgs.processArgument(self, argument, arguments)
 
@@ -358,8 +367,12 @@ class RasterSamplingTest(object):
 
             upCurvesAtY = curvesAtY(upList, y)
             if len(upCurvesAtY) == 0: continue
-            p1 = leftmostIntersection(upCurvesAtY, raster)
-            # p1 = rightmostIntersection(curvesAtY(upList, y), raster)
+
+            if args.widthMethod == RasterSamplingTestArgs.widthMethodLeftmost:
+                p1 = leftmostIntersection(upCurvesAtY, raster)
+            elif args.widthMethod == RasterSamplingTestArgs.widthMethodRightmost:
+                p1 = rightmostIntersection(curvesAtY(upList, y), raster)
+
             downCurvesAtY = curvesAtY(downList, y)
             if len(downCurvesAtY) == 0: continue
             p2 = leftmostIntersection(downCurvesAtY, raster)
@@ -408,6 +421,17 @@ class RasterSamplingTest(object):
         print(f"{indent}widths: min = {minWidth}, Q1 = {q1}, median = {median}, mean = {avgWidth}, Q3 = {q3}, max = {maxWidth}")
         if args.silent: print()
 
+        cp.pushStrokeAttributes(width=2, opacity=0.25, color=PathUtilities.GTColor.fromName("orange"))
+        p1x, p1y = outline.pointXY(p1)
+        p2x, p2y = outline.pointXY(p2)
+        halfMedian = median / 2
+        line = outline.segmentFromPoints([outline.xyPoint(p1x - halfMedian, p1y), outline.xyPoint(p2x - halfMedian, p2y)])
+        cp.drawPaths([outline.pathFromSegments(line)])
+        line = outline.segmentFromPoints([outline.xyPoint(p1x + halfMedian, p1y), outline.xyPoint(p2x + halfMedian, p2y)])
+        cp.drawPaths([outline.pathFromSegments(line)])
+        cp.popStrokeAtributes()
+
+
         cp.setFillColor(PathUtilities.GTColor.fromName("black"))
 
         cp.drawText(outlineBoundsCenter + margin, -cp._labelFontSize * 1.5, "center",
@@ -433,8 +457,8 @@ class RasterSamplingTest(object):
         # the fist three paths are the bounding boxes and the baseline
         # then a path for each contour in the glyph followed by a
         # path for each raster line, and finally the stroke midpoint line
-        firstRaster = 3 + len(outline.contours)
-        midRasterOffset = (pathCoordinate(paths[firstRaster]) + pathCoordinate(paths[-2])) / 2
+        firstRaster = 2 + len(outline.contours)
+        midRasterOffset = (pathCoordinate(paths[firstRaster]) + pathCoordinate(paths[-4])) / 2
 
         # Turn off the debug info from matplotlib
         matplotlib.set_loglevel("warn")
