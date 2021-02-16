@@ -188,6 +188,22 @@ def scaleContours(contours, unitsPerEM):
 
     return contours
 
+def medianLines(outline, line, median):
+    startX, startY = line.pointXY(line.start)
+    endX, endY = line.pointXY(line.end)
+    m2 = median / 2
+
+    p1 = line.xyPoint(startX - m2, startY)
+    p2 = line.xyPoint(endX - m2, endY)
+    leftLine = outline.segmentFromPoints([p1, p2])
+
+
+    p1 = line.xyPoint(startX + m2, startY)
+    p2 = line.xyPoint(endX + m2, endY)
+    rightLine = outline.segmentFromPoints([p1, p2])
+
+    return leftLine, rightLine
+
 class RasterSamplingTest(object):
     def __init__(self, args):
         self._args = args
@@ -422,13 +438,9 @@ class RasterSamplingTest(object):
         if args.silent: print()
 
         cp.pushStrokeAttributes(width=2, opacity=0.25, color=PathUtilities.GTColor.fromName("orange"))
-        p1x, p1y = outline.pointXY(p1)
-        p2x, p2y = outline.pointXY(p2)
-        halfMedian = median / 2
-        line = outline.segmentFromPoints([outline.xyPoint(p1x - halfMedian, p1y), outline.xyPoint(p2x - halfMedian, p2y)])
-        cp.drawPaths([outline.pathFromSegments(line)])
-        line = outline.segmentFromPoints([outline.xyPoint(p1x + halfMedian, p1y), outline.xyPoint(p2x + halfMedian, p2y)])
-        cp.drawPaths([outline.pathFromSegments(line)])
+        leftLine, rightLine = medianLines(outline, line, median)
+        cp.drawPaths([outline.pathFromSegments(leftLine)])
+        cp.drawPaths([outline.pathFromSegments(rightLine)])
         cp.popStrokeAtributes()
 
 
