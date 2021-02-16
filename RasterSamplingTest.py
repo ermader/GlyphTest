@@ -164,46 +164,6 @@ def direction(curve):
     if startY > endY: return Bezier.dir_down
     return Bezier.dir_flat
 
-def pathCoordinate(path):
-    # This assumes that the y-coordinate is a positive integer
-    return int(re.findall("M-?[0-9\.]+,(\d+)", path.attrib["d"])[0])
-
-def lengthInPx(value):
-    pxPerInch = 96
-    unitsPerInch = {"in": 1, "cm": 2.54, "mm": 25.4, "pt": 72, "pc": 6, "px": pxPerInch}
-
-    # this RE will match all valid length specifications, and some that aren't
-    # we assume that the input value is well-formed
-    number, units = re.findall("([+-]?[0-9.]+)([a-z]{2})?", value)[0]
-    perInch = unitsPerInch.get(units if units else "px")
-
-    # ignore any invalid unit specification
-    return float(number) * pxPerInch / (perInch if perInch else pxPerInch)
-
-def scaleContours(contours, unitsPerEM):
-    if unitsPerEM > 1000:
-        scaleFactor = 1000 / unitsPerEM
-        scaleTransform = PathUtilities.GTTransform.scale(scaleFactor, scaleFactor)
-        return scaleTransform.applyToContours(contours)
-
-    return contours
-
-def medianLines(outline, line, median):
-    startX, startY = line.pointXY(line.start)
-    endX, endY = line.pointXY(line.end)
-    m2 = median / 2
-
-    p1 = line.xyPoint(startX - m2, startY)
-    p2 = line.xyPoint(endX - m2, endY)
-    leftLine = outline.segmentFromPoints([p1, p2])
-
-
-    p1 = line.xyPoint(startX + m2, startY)
-    p2 = line.xyPoint(endX + m2, endY)
-    rightLine = outline.segmentFromPoints([p1, p2])
-
-    return leftLine, rightLine
-
 class RasterSamplingTest(object):
     def __init__(self, args):
         self._args = args
@@ -212,6 +172,48 @@ class RasterSamplingTest(object):
             self._font = UFOFont(args.fontFile)
         else:
             self._font = GTFont(args.fontFile, fontName=args.fontName, fontNumber=args.fontNumber)
+
+    @classmethod
+    def pathCoordinate(cls, path):
+        # This assumes that the y-coordinate is a positive integer
+        return int(re.findall("M-?[0-9\.]+,(\d+)", path.attrib["d"])[0])
+
+    @classmethod
+    def lengthInPx(cls, value):
+        pxPerInch = 96
+        unitsPerInch = {"in": 1, "cm": 2.54, "mm": 25.4, "pt": 72, "pc": 6, "px": pxPerInch}
+
+        # this RE will match all valid length specifications, and some that aren't
+        # we assume that the input value is well-formed
+        number, units = re.findall("([+-]?[0-9.]+)([a-z]{2})?", value)[0]
+        perInch = unitsPerInch.get(units if units else "px")
+
+        # ignore any invalid unit specification
+        return float(number) * pxPerInch / (perInch if perInch else pxPerInch)
+
+    def scaleContours(self, contours):
+        upem = self._font.unitsPerEm()
+        if upem > 1000:
+            scaleFactor = 1000 / upem
+            scaleTransform = PathUtilities.GTTransform.scale(scaleFactor, scaleFactor)
+            return scaleTransform.applyToContours(contours)
+
+        return contours
+
+    def medianLines(self, line, median):
+        startX, startY = line.pointXY(line.start)
+        endX, endY = line.pointXY(line.end)
+        m2 = median / 2
+
+        p1 = line.xyPoint(startX - m2, startY)
+        p2 = line.xyPoint(endX - m2, endY)
+        leftLine = self.outline.segmentFromPoints([p1, p2])
+
+        p1 = line.xyPoint(startX + m2, startY)
+        p2 = line.xyPoint(endX + m2, endY)
+        rightLine = self.outline.segmentFromPoints([p1, p2])
+
+        return leftLine, rightLine
 
     def run(self):
         useBezierOutline = True  # should be in the args...
@@ -235,17 +237,17 @@ class RasterSamplingTest(object):
         charCode = font.unicodeForName(glyphName)
         charInfo = f"U+{charCode:04X} {CharNames.CharNames.getCharName(charCode)}"
 
-        unitsPerEM = font.unitsPerEm()
-
         if useBezierOutline:
             pen = SegmentPen(font.glyphSet, logger)
             font.glyphSet[glyph.name()].draw(pen)
-            outline = BOutline(scaleContours(pen.contours, unitsPerEM))
+            outline = BOutline(self.scaleContours(pen.contours))
         else:
             spen = SVGPathPen(font.glyphSet, logger)
             font.glyphSet[glyph.name()].draw(spen)
-            scaled = scaleContours(spen.outline, unitsPerEM)
+            scaled = self.scaleContours(spen.outline)
             outline = SVGPathOutline.fromContours(scaled)
+
+        self.outline = outline
 
         contourCount = len(outline.contours)
         if contourCount > 3:
@@ -438,7 +440,7 @@ class RasterSamplingTest(object):
         if args.silent: print()
 
         cp.pushStrokeAttributes(width=2, opacity=0.25, color=PathUtilities.GTColor.fromName("orange"))
-        leftLine, rightLine = medianLines(outline, line, median)
+        leftLine, rightLine = self.medianLines(line, median)
         cp.drawPaths([outline.pathFromSegments(leftLine)])
         cp.drawPaths([outline.pathFromSegments(rightLine)])
         cp.popStrokeAtributes()
@@ -470,7 +472,7 @@ class RasterSamplingTest(object):
         # then a path for each contour in the glyph followed by a
         # path for each raster line, and finally the stroke midpoint line
         firstRaster = 2 + len(outline.contours)
-        midRasterOffset = (pathCoordinate(paths[firstRaster]) + pathCoordinate(paths[-4])) / 2
+        midRasterOffset = (self.pathCoordinate(paths[firstRaster]) + self.pathCoordinate(paths[-4])) / 2
 
         # Turn off the debug info from matplotlib
         matplotlib.set_loglevel("warn")
@@ -515,8 +517,8 @@ class RasterSamplingTest(object):
         pltImage = pltString.read()
         pltRoot = ET.fromstring(pltImage)
 
-        pltWidth = lengthInPx(pltRoot.attrib["width"])
-        pltHeight = lengthInPx(pltRoot.attrib["height"])
+        pltWidth = self.lengthInPx(pltRoot.attrib["width"])
+        pltHeight = self.lengthInPx(pltRoot.attrib["height"])
         histOffset = diagTranslationBefore - midRasterOffset - diagTranslationAfter - (pltHeight / 2)
 
         root.set("viewBox", f"0 0 {rWidth + pltWidth} {rHeight}")
