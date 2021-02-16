@@ -379,6 +379,7 @@ class RasterSamplingTest(object):
         cp.drawText(outlineBoundsCenter + margin, cp._labelFontSize / 4, "center", charInfo)
 
         rasters = []
+        missedRasterCount = 0
         height = outlineBounds.height
         lowerBound = round(outlineBounds.bottom + height * .30)
         upperBound = round(outlineBounds.bottom + height * .70)
@@ -390,7 +391,9 @@ class RasterSamplingTest(object):
             raster = outline.segmentFromPoints([p1, p2])
 
             upCurvesAtY = self.curvesAtY(upList, y)
-            if len(upCurvesAtY) == 0: continue
+            if len(upCurvesAtY) == 0:
+                missedRasterCount += 1
+                continue
 
             if args.widthMethod == RasterSamplingTestArgs.widthMethodLeftmost:
                 p1 = self.leftmostIntersection(upCurvesAtY, raster)
@@ -429,6 +432,9 @@ class RasterSamplingTest(object):
         line = outline.segmentFromPoints([p1, p2])
         cp.drawPaths([outline.pathFromSegments(line)])
         cp.popStrokeAtributes()
+
+        if missedRasterCount > 0:
+            print(f"{missedRasterCount} rasters did not intersect the glyph.")
 
         print(f"{indent}a = {round(a, 2)}, b = {round(b, 4)}, R\u00B2 = {round(r2, 4)}")
 
