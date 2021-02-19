@@ -75,7 +75,7 @@ oppositeDirection = {
     Bezier.dir_up: Bezier.dir_down,
     Bezier.dir_down: Bezier.dir_up,
     Bezier.dir_flat: Bezier.dir_flat,
-    Bezier.dir_mixed: Bezier.dir_mixed
+    # Bezier.dir_mixed: Bezier.dir_mixed
 }
 
 def splitCurve(curve, splits):
@@ -151,30 +151,15 @@ class RasterSamplingTest(object):
         startY = curve.startY
         endY = curve.endY
 
-        # if curve.order == 1:
-        #     if startY < endY: return Bezier.dir_up
-        #     if startY > endY: return Bezier.dir_down
-        #     return Bezier.dir_flat
-
         minY = min(startY, endY)
         maxY = max(startY, endY)
-        # cps = curve.controlPoints
-        #
-        # if curve.order == 2:
-        #     cp1x, cp1y = curve.pointXY(cps[1])
-        #     if cp1y < minY or cp1y > maxY: return Bezier.dir_mixed
-        #     if startY < endY: return Bezier.dir_up
-        #     if startY > endY: return Bezier.dir_down
-        #
-        # if curve.order == 3:
-        #     cp2x, cp2y = curve.pointXY(cps[2])
-        #     if cp2y < minY or cp2y > maxY: return Bezier.dir_mixed
-        #     if startY < endY: return Bezier.dir_up
-        #     if startY > endY: return Bezier.dir_down
-        #
-        # # For now, assume any higher-order curves are mixed
-        # return Bezier.dir_mixed
 
+        #
+        # For the purposes of edge detection
+        # we don't care if the curve actually
+        # has a mixed direction, only that it
+        # tends upward or downward.
+        #
         # ocps = curve.controlPoints[1:-1]
         # for ocp in ocps:
         #     ocpx, ocpy = curve.pointXY(ocp)
@@ -272,10 +257,6 @@ class RasterSamplingTest(object):
         outlineBoundsLeft = outlineBounds.left if outlineBounds.left >= 0 else 0
         outlineBoundsCenter = outlineBoundsLeft + outlineBounds.width / 2
 
-        # upList = []
-        # downList = []
-        # flatList = []
-        # mixedList = []
         curveList = []
 
         baseline = [(min(0, outlineBounds.left), 0), (outlineBounds.right, 0)]
@@ -284,80 +265,6 @@ class RasterSamplingTest(object):
         for contour in outline:
             for curve in contour:
                 curveList.append(curve)
-                # dir = self.direction(curve)
-                # if dir == Bezier.dir_up:
-                #     upList.append(curve)
-                # elif dir == Bezier.dir_down:
-                #     downList.append(curve)
-                # elif dir == Bezier.dir_flat:
-                #     flatList.append(curve)
-                # # else: mixedList.append(curve)
-                # else:
-                #     startY = curve.startY
-                #     endY = curve.endY
-                #     if endY > startY: upList.append(curve)
-                #     elif endY < startY: downList.append(curve)
-                #     else: flatList.append(curve)
-                # # else:
-                # #     dirfun = lambda x, y: (x < y) - (x > y)
-                # #     nTangents = 10
-                # #     ycoords = []
-                # #     for i in range(nTangents + 1):
-                # #         t = i / nTangents
-                # #         px, py = curve.pointXY(curve.get(t))
-                # #         ycoords.append(py)
-                # #     dirs = [dirfun(ycoords[i], ycoords[i + 1]) for i in range(nTangents - 1)]
-                # #     up = 1 in dirs
-                # #     down = -1 in dirs
-                # #     if up and not down:
-                # #         upList.append(curve)
-                # #     elif down and not up:
-                # #         downList.append(curve)
-                # #     else:
-                # #         mixedList.append(curve)
-
-        # self.sortByP0(upList)
-        # self.sortByP0(downList)
-        # self.sortByP0(flatList)
-
-        # if not args.silent:
-        #     print("up list:")
-        #     for b in upList: print(b.controlPoints)
-        #
-        #     print("\ndown list:")
-        #     for b in downList: print(b.controlPoints)
-        #
-        #     print("\nflat list:")
-        #     for b in flatList: print(b.controlPoints)
-        #
-        #     if len(mixedList) > 0:
-        #         print("\nmixed list:")
-        #         # dirfun = lambda x, y: (x < y) - (x > y)
-        #
-        #         for b in mixedList:
-        #             print(b.controlPoints)
-        #
-        #             # splits = []
-        #             # splitCurve(b, splits)
-        #             #
-        #             # for s in splits: print(f"    {controlPoints(s)}")
-        #             # nTangents = 10
-        #             # ycoords = []
-        #             # for i in range(nTangents + 1):
-        #             #     t = i / nTangents
-        #             #     px, py = b.pointXY(b.get(t))
-        #             #     # tx, ty = b._tangent(t)
-        #             #     # print(f"    ({px}, {py}), ({tx}, {ty})")
-        #             #     ycoords.append(py)
-        #             # dirs = [dirfun(ycoords[i], ycoords[i+1]) for i in range(nTangents-1)]
-        #             # up = 1 in dirs
-        #             # down = -1 in dirs
-        #             # if up and not down: print("    really dir_up")
-        #             # elif down and not up: print("    really dir_down")
-        #             # else: print("    really dir_mixed")
-        #         print()
-        # # else:
-        # #     print(f"{os.path.relpath(args.fontFile, args.indir)}:")
 
         overallBounds = baselineBounds.union(outlineBounds)
         cp = ContourPlotter.ContourPlotter(overallBounds.points)
@@ -401,22 +308,14 @@ class RasterSamplingTest(object):
             p2 = outline.xyPoint(right, y)
             raster = outline.segmentFromPoints([p1, p2])
 
-            # upCurvesAtY = self.curvesAtY(upList, y)
             curvesAtY = self.curvesAtY(curveList, y)
             self.sortByP0(curvesAtY)
             if len(curvesAtY) == 0:
                 missedRasterCount += 1
                 continue
 
-            # if args.widthMethod == RasterSamplingTestArgs.widthMethodLeftmost:
-            #     p1 = self.leftmostIntersection(upCurvesAtY, raster)
-            # elif args.widthMethod == RasterSamplingTestArgs.widthMethodRightmost:
-            #     p1 = self.rightmostIntersection(self.curvesAtY(upList, y), raster)
-            #
-            # downCurvesAtY = self.curvesAtY(downList, y)
-            # if len(downCurvesAtY) == 0: continue
-            # p2 = self.leftmostIntersection(downCurvesAtY, raster)
             p1 = curvesAtY[0].intersectWithLine(raster)
+            # We should handle a flat curve here...
             direction = oppositeDirection[self.direction(curvesAtY[0])]
             if args.widthMethod == RasterSamplingTestArgs.widthMethodLeftmost:
                 p2 = self.leftmostIntersection(curvesAtY[1:], raster, direction)
