@@ -121,30 +121,32 @@ class RasterSamplingTest(object):
         return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
 
     @classmethod
-    def leftmostIntersection(cls, curves, raster, direction):
-        leftmostX = leftmostY = 65536
+    def leftmostIntersection(cls, intersections, curves, direction):
+        leftmostX = 65536
+        leftmostC = -1
 
-        for curve in curves:
+        for index, curve in enumerate(curves):
             if cls.direction(curve) == direction:
-                ipx, ipy = curve.pointXY(curve.intersectWithLine(raster))
+                ipx, _ = curve.pointXY(intersections[index])
                 if ipx < leftmostX:
-                    leftmostY = ipy
                     leftmostX = ipx
+                    leftmostC = index
 
-        return curves[0].xyPoint(leftmostX, leftmostY)
+        return intersections[leftmostC]
 
     @classmethod
-    def rightmostIntersection(cls, curves, raster, direction):
-        rightmostX = rightmostY = -65536
+    def rightmostIntersection(cls, intersections, curves, direction):
+        rightmostX = -65536
+        rightmostC = -1
 
-        for curve in curves:
+        for index, curve in enumerate(curves):
             if cls.direction(curve) == direction:
-                ipx, ipy = curve.pointXY(curve.intersectWithLine(raster))
+                ipx, _ = curve.pointXY(intersections[index])
                 if ipx > rightmostX:
-                    rightmostY = ipy
                     rightmostX = ipx
+                    rightmostC = index
 
-        return curves[0].xyPoint(rightmostX, rightmostY)
+        return intersections[rightmostC]
 
     @classmethod
     def direction(cls, curve):
@@ -309,18 +311,30 @@ class RasterSamplingTest(object):
             raster = outline.segmentFromPoints([p1, p2])
 
             curvesAtY = self.curvesAtY(curveList, y)
-            self.sortByP0(curvesAtY)
             if len(curvesAtY) == 0:
                 missedRasterCount += 1
                 continue
 
-            p1 = curvesAtY[0].intersectWithLine(raster)
-            # We should handle a flat curve here...
-            direction = oppositeDirection[self.direction(curvesAtY[0])]
+            intersections = [c.intersectWithLine(raster) for c in curvesAtY]
+
+            leftmostX = 65536
+            leftmostCurve = -1
+            for index, ip in enumerate(intersections):
+                # if ip is None, the curve is a line
+                # that's colinear with the raster
+                if ip is not None:
+                    ipx, _ = outline.pointXY(ip)
+                    if ipx < leftmostX:
+                        leftmostX = ipx
+                        leftmostCurve = index
+
+            p1 = intersections[leftmostCurve]
+            direction = oppositeDirection[self.direction(curvesAtY[leftmostCurve])]
+
             if args.widthMethod == RasterSamplingTestArgs.widthMethodLeftmost:
-                p2 = self.leftmostIntersection(curvesAtY[1:], raster, direction)
+                p2 = self.leftmostIntersection(intersections, curvesAtY, direction)
             elif args.widthMethod == RasterSamplingTestArgs.widthMethodRightmost:
-                p2 = self.rightmostIntersection(curvesAtY[1:], raster, direction)
+                p2 = self.rightmostIntersection(intersections, curvesAtY, direction)
 
             if p1 == p2:
                 missedRasterCount += 1
