@@ -406,10 +406,7 @@ class RasterSamplingTest(object):
             widthsL, midpointsL, bL, aL, rValueL, pValueL, stdErrL = self.bestFit(rastersLeft, outline)
             widthsR, midpointsR, bR, aR, rValueR, pValueR, stdErrR = self.bestFit(rastersRight, outline)
 
-            r2L = rValueL * rValueL
-            r2R = rValueR * rValueR
-
-            if r2L >= r2R:
+            if stdErrL <= stdErrR:
                 rasters = rastersLeft
                 widths, midpoints, b, a, rValue, pValue, stdErr = widthsL, midpointsL, bL, aL, rValueL, pValueL, stdErrL
             else:
