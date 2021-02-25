@@ -78,6 +78,12 @@ oppositeDirection = {
     # Bezier.dir_mixed: Bezier.dir_mixed
 }
 
+widthSelection = {
+    RasterSamplingTestArgs.widthMethodLeftmost: (True, False),
+    RasterSamplingTestArgs.widthMethodRightmost: (False, True),
+    RasterSamplingTestArgs.widthMethodLeastspread: (True, True)
+}
+
 def splitCurve(curve, splits):
     p1, p2, p3 = curve.controlPoints
     q1 = p1
@@ -121,6 +127,21 @@ class RasterSamplingTest(object):
         return list(filter(lambda curve: curve.boundsRectangle.crossesY(y), curveList))
 
     @classmethod
+    def leftmostPoint(cls, points, outline):
+        leftmostX = 65536
+        leftmostIndex = -1
+        for index, point in enumerate(points):
+            # if point is None, the curve is a line
+            # that's colinear with the raster
+            if point is not None:
+                ipx, _ = outline.pointXY(point)
+                if ipx < leftmostX:
+                    leftmostX = ipx
+                    leftmostIndex = index
+
+        return leftmostIndex
+
+    @classmethod
     def leftmostIntersection(cls, intersections, curves, direction):
         leftmostX = 65536
         leftmostC = -1
@@ -147,6 +168,23 @@ class RasterSamplingTest(object):
                     rightmostC = index
 
         return intersections[rightmostC]
+
+    @classmethod
+    def bestFit(cls, rasters, outline):
+        midpoints = []
+        widths = []
+        for raster in rasters:
+            mp = raster.midpoint
+            midpoints.append(mp)
+            widths.append(round(cls.rasterLength(raster), 2))
+
+        # linregress(midpoints) can generate warnings if the best fit line is
+        # vertical. So we swap x, y and do the best fit that way.
+        # (which of course, will generate warnings if the best fit line is horizontal)
+        xs, ys = outline.unzipPoints(midpoints)
+        b, a, rValue, pValue, stdErr = scipy.stats.linregress(ys, xs)
+
+        return widths, midpoints, b, a, rValue, pValue, stdErr
 
     @classmethod
     def direction(cls, curve):
@@ -298,7 +336,15 @@ class RasterSamplingTest(object):
         cp.drawText(outlineBoundsCenter + margin, cp._labelFontSize * 2, "center", fullName)
         cp.drawText(outlineBoundsCenter + margin, cp._labelFontSize / 4, "center", charInfo)
 
-        rasters = []
+        if args.widthMethod == RasterSamplingTestArgs.widthMethodLeftmost:
+            p2function = self.leftmostIntersection
+        elif args.widthMethod == RasterSamplingTestArgs.widthMethodRightmost:
+            p2function = self.rightmostIntersection
+
+        doLeft, doRight = widthSelection[args.widthMethod]
+
+        rastersLeft = []
+        rastersRight = []
         missedRasterCount = 0
         height = outlineBounds.height
         lowerBound = round(outlineBounds.bottom + height * .30)
@@ -317,47 +363,69 @@ class RasterSamplingTest(object):
 
             intersections = [c.intersectWithLine(raster) for c in curvesAtY]
 
-            leftmostX = 65536
-            leftmostCurve = -1
-            for index, ip in enumerate(intersections):
-                # if ip is None, the curve is a line
-                # that's colinear with the raster
-                if ip is not None:
-                    ipx, _ = outline.pointXY(ip)
-                    if ipx < leftmostX:
-                        leftmostX = ipx
-                        leftmostCurve = index
+            # leftmostX = 65536
+            # leftmostCurve = -1
+            # for index, ip in enumerate(intersections):
+            #     # if ip is None, the curve is a line
+            #     # that's colinear with the raster
+            #     if ip is not None:
+            #         ipx, _ = outline.pointXY(ip)
+            #         if ipx < leftmostX:
+            #             leftmostX = ipx
+            #             leftmostCurve = index
 
+            leftmostCurve = self.leftmostPoint(intersections, outline)
             p1 = intersections[leftmostCurve]
             direction = oppositeDirection[self.direction(curvesAtY[leftmostCurve])]
 
-            if args.widthMethod == RasterSamplingTestArgs.widthMethodLeftmost:
+            missedLeft = missedRight = False
+
+            if doLeft:
                 p2 = self.leftmostIntersection(intersections, curvesAtY, direction)
-            elif args.widthMethod == RasterSamplingTestArgs.widthMethodRightmost:
+
+                if p1 != p2:
+                    rastersLeft.append(outline.segmentFromPoints([p1, p2]))
+                else:
+                    missedLeft = True
+
+            if doRight:
                 p2 = self.rightmostIntersection(intersections, curvesAtY, direction)
 
-            if p1 == p2:
-                missedRasterCount += 1
-                continue
+                if p1 != p2:
+                    rastersRight.append(outline.segmentFromPoints([p1, p2]))
+                else:
+                    missedRight = True
 
-            rasters.append(outline.segmentFromPoints([p1, p2]))
+            # if missedLeft or missedRight:
+            #     missedRasterCount += 1
+            #     continue
+
             cp.drawPaths([outline.pathFromSegments(raster)], color=PathUtilities.GTColor.fromName("red"))
 
-        midpoints = []
-        widths = []
-        for raster in rasters:
-            mp = raster.midpoint
-            midpoints.append(mp)
-            widths.append(round(self.rasterLength(raster), 2))
-            cp.drawPointsAsCircles(raster.controlPoints, 4, [PathUtilities.GTColor.fromName("blue")])
-            cp.drawPointsAsCircles([mp], 4, [PathUtilities.GTColor.fromName("green")])
+        if doLeft and doRight:
+            widthsL, midpointsL, bL, aL, rValueL, pValueL, stdErrL = self.bestFit(rastersLeft, outline)
+            widthsR, midpointsR, bR, aR, rValueR, pValueR, stdErrR = self.bestFit(rastersRight, outline)
 
-        # linregress(midpoints) can generate warnings if the best fit line is
-        # vertical. So we swap x, y and do the best fit that way.
-        # (which of course, will generate warnings if the best fit line is horizontal)
-        xs, ys = outline.unzipPoints(midpoints)
-        b, a, rValue, pValue, stdErr = scipy.stats.linregress(ys, xs)
+            r2L = rValueL * rValueL
+            r2R = rValueR * rValueR
+
+            if r2L >= r2R:
+                rasters = rastersLeft
+                widths, midpoints, b, a, rValue, pValue, stdErr = widthsL, midpointsL, bL, aL, rValueL, pValueL, stdErrL
+            else:
+                rasters = rastersRight
+                widths, midpoints, b, a, rValue, pValue, stdErr = widthsR, midpointsR, bR, aR, rValueR, pValueR, stdErrR
+        else:
+            rasters = rastersLeft if doLeft else rastersRight
+            widths, midpoints, b, a, rValue, pValue, strErr = self.bestFit(rasters, outline)
+
         r2 = rValue * rValue
+
+        for raster in rasters:
+            cp.drawPointsAsCircles(raster.controlPoints, 4, [PathUtilities.GTColor.fromName("blue")])
+
+        for midpoint in midpoints:
+            cp.drawPointsAsCircles([midpoint], 4, [PathUtilities.GTColor.fromName("green")])
 
         my0 = outlineBounds.bottom
         myn = outlineBounds.top
