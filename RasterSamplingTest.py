@@ -438,7 +438,7 @@ class RasterSamplingTest(object):
         if missedRasterCount > 0:
             print(f"{missedRasterCount} rasters did not intersect the glyph.")
 
-        print(f"{indent}a = {round(a, 2)}, b = {round(b, 4)}, R\u00B2 = {round(r2, 4)}")
+        print(f"{indent}{chosenWidthMethod}: a = {round(a, 2)}, b = {round(b, 4)}, R\u00B2 = {round(r2, 4)}")
 
         strokeAngle = round(PathUtilities.slopeAngle(line.controlPoints), 1)
 
