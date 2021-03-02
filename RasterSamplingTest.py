@@ -256,6 +256,12 @@ class RasterSamplingTest(object):
         return leftLine, rightLine
 
     def run(self):
+        widthMethodStrings = {
+            RasterSamplingTestArgs.widthMethodLeftmost: "",
+            RasterSamplingTestArgs.widthMethodRightmost: "_rightmost",
+            RasterSamplingTestArgs.widthMethodLeastspread: "_leastspread"
+        }
+
         useBezierOutline = True  # should be in the args...
         args = self._args
         font = self._font
@@ -276,6 +282,8 @@ class RasterSamplingTest(object):
         glyphName = glyph.name()
         charCode = font.unicodeForName(glyphName)
         charInfo = f"U+{charCode:04X} {CharNames.CharNames.getCharName(charCode)}"
+
+        widthMethodString = widthMethodStrings[args.widthMethod]
 
         if useBezierOutline:
             pen = SegmentPen(font.glyphSet, logger)
@@ -363,17 +371,6 @@ class RasterSamplingTest(object):
 
             intersections = [c.intersectWithLine(raster) for c in curvesAtY]
 
-            # leftmostX = 65536
-            # leftmostCurve = -1
-            # for index, ip in enumerate(intersections):
-            #     # if ip is None, the curve is a line
-            #     # that's colinear with the raster
-            #     if ip is not None:
-            #         ipx, _ = outline.pointXY(ip)
-            #         if ipx < leftmostX:
-            #             leftmostX = ipx
-            #             leftmostCurve = index
-
             leftmostCurve = self.leftmostPoint(intersections, outline)
             p1 = intersections[leftmostCurve]
             direction = oppositeDirection[self.direction(curvesAtY[leftmostCurve])]
@@ -408,12 +405,15 @@ class RasterSamplingTest(object):
 
             if stdErrL <= stdErrR:
                 rasters = rastersLeft
+                chosenWidthMethod = "Left"
                 widths, midpoints, b, a, rValue, pValue, stdErr = widthsL, midpointsL, bL, aL, rValueL, pValueL, stdErrL
             else:
                 rasters = rastersRight
+                chosenWidthMethod = "Right"
                 widths, midpoints, b, a, rValue, pValue, stdErr = widthsR, midpointsR, bR, aR, rValueR, pValueR, stdErrR
         else:
             rasters = rastersLeft if doLeft else rastersRight
+            chosenWidthMethod = "Left" if doLeft else "Right"
             widths, midpoints, b, a, rValue, pValue, strErr = self.bestFit(rasters, outline)
 
         r2 = rValue * rValue
@@ -464,7 +464,7 @@ class RasterSamplingTest(object):
 
         cp.drawText(outlineBoundsCenter + margin, -cp._labelFontSize * 1.5, "center",
                     f"Stroke angle = {strokeAngle}\u00B0")
-        cp.drawText(outlineBoundsCenter + margin, -cp._labelFontSize * 3, "center", f"Best fit R\u00B2 = {round(r2, 4)}")
+        cp.drawText(outlineBoundsCenter + margin, -cp._labelFontSize * 3, "center", f"{chosenWidthMethod} best fit R\u00B2 = {round(r2, 4)}")
 
         image = cp.generateFinalImage()
 
@@ -541,7 +541,7 @@ class RasterSamplingTest(object):
         root[2].set("y", f"{histOffset}")
 
         ET.register_namespace("", nameSpaces["svg"])
-        svgName = os.path.join(args.outdir, f"RasterSamplingTest {fullName}_{glyphName}.svg")
+        svgName = os.path.join(args.outdir, f"RasterSamplingTest {fullName}{widthMethodString}_{glyphName}.svg")
         ET.ElementTree(root).write(svgName, xml_declaration=True,
                                    encoding="UTF-8")
 

@@ -58,6 +58,7 @@ def main():
         testArgs.charCode = toolArgs.charCode
         reldir = os.path.dirname(os.path.relpath(path, os.path.dirname(toolArgs.inputDir)))
         testArgs.outdir = os.path.join(toolArgs.outputDir, reldir)
+        testArgs.widthMethod = RasterSamplingTest.RasterSamplingTestArgs.widthMethodLeastspread
         testArgs.silent = True
         os.makedirs(testArgs.outdir, exist_ok=True)
 
